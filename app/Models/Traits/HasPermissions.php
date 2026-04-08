@@ -24,12 +24,8 @@ trait HasPermissions
         return $this->role?->name === $name;
     }
 
-    public function assignRole(string|Role $role): void
+    public function assignRole(Role $role): void
     {
-        if (is_string($role)) {
-            $role = Role::where('name', $role)->firstOrFail();
-        }
-
         $this->role_id = $role->id;
         $this->save();
         $this->clearPermissionCache();
