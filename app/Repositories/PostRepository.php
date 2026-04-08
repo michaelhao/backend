@@ -22,6 +22,11 @@ class PostRepository
         return Post::latest()->first();
     }
 
+    public function update(Post $post, array $data): void
+    {
+        $post->update($data);
+    }
+
     public function deleteOldest(): void
     {
         Post::oldest()->first()?->delete();

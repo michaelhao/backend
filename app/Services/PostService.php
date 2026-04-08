@@ -24,7 +24,9 @@ class PostService
         $count = $this->postRepository->count();
 
         $lastPost = $this->postRepository->getLatest();
-        $lastPost?->update(['title' => $lastPost->title.' (已更新)']);
+        if ($lastPost) {
+            $this->postRepository->update($lastPost, ['title' => $lastPost->title.' (已更新)']);
+        }
 
         if ($count > 5) {
             $this->postRepository->deleteOldest();

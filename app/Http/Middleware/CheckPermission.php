@@ -16,6 +16,9 @@ class CheckPermission
         'destroy' => 'delete',
     ];
 
+    /** @var array<string, string> */
+    private static array $permissionRouteCache = [];
+
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
@@ -50,20 +53,29 @@ class CheckPermission
 
     private function permissionToRoute(string $permissionName): string
     {
-        [$module, $action] = explode('.', $permissionName);
-        $controllerClass = "App\\Http\\Controllers\\{$module}Controller";
+        if (empty(self::$permissionRouteCache)) {
+            $this->buildPermissionRouteCache();
+        }
 
-        $routes = Route::getRoutes();
-        foreach ($routes as $route) {
-            $routeAction = $route->getAction();
-            if (isset($routeAction['controller'])) {
-                [$controller, $method] = explode('@', $routeAction['controller']);
-                if ($controller === $controllerClass && $method === $action && $route->getName()) {
-                    return $route->getName();
-                }
-            }
+        if (isset(self::$permissionRouteCache[$permissionName])) {
+            return self::$permissionRouteCache[$permissionName];
         }
 
         abort(403, 'Unauthorized action.');
+    }
+
+    private function buildPermissionRouteCache(): void
+    {
+        foreach (Route::getRoutes() as $route) {
+            $routeAction = $route->getAction();
+            if (isset($routeAction['controller']) && $route->getName()) {
+                [$controller, $method] = explode('@', $routeAction['controller']);
+                $className = class_basename($controller);
+                $module = str_replace('Controller', '', $className);
+                $mappedMethod = $this->methodMap[$method] ?? $method;
+                $key = "{$module}.{$mappedMethod}";
+                self::$permissionRouteCache[$key] = $route->getName();
+            }
+        }
     }
 }

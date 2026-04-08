@@ -21,15 +21,6 @@
         <div class="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700 transition-opacity duration-500 flash-message">{{ session('error') }}</div>
     @endif
 
-    <script>
-        document.querySelectorAll('.flash-message').forEach(el => {
-            setTimeout(() => {
-                el.style.opacity = '0';
-                setTimeout(() => el.remove(), 500);
-            }, 5000);
-        });
-    </script>
-
     <div class="bg-white rounded-lg shadow overflow-hidden">
         <table class="w-full text-sm text-left">
             <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
@@ -56,7 +47,7 @@
                                    class="text-blue-600 hover:text-blue-800">編輯</a>
                             </x-permission>
                             <x-permission name="Role.delete">
-                                <form method="POST" action="{{ route('roles.delete', $role) }}" class="inline"
+                                <form method="POST" action="{{ route('roles.destroy', $role) }}" class="inline"
                                       onsubmit="return confirm('確定要刪除此角色嗎？')">
                                     @csrf
                                     @method('DELETE')
@@ -70,3 +61,16 @@
         </table>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.flash-message').forEach(el => {
+            setTimeout(() => {
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 500);
+            }, 5000);
+        });
+    });
+</script>
+@endpush

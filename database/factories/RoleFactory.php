@@ -10,7 +10,12 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class RoleFactory extends Factory
 {
-    /** @return array<string, mixed> */
+    /**
+     * 'default_route' references 'Dashboard.index' which must exist in the permissions table.
+     * Tests using this factory should call $this->seed(PermissionSeeder::class) first.
+     *
+     * @return array<string, mixed>
+     */
     public function definition(): array
     {
         return [

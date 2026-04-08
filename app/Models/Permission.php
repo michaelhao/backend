@@ -10,16 +10,8 @@ class Permission extends Model
     protected $fillable = [
         'module',
         'action',
-        'name',
         'description',
     ];
-
-    protected static function booted(): void
-    {
-        static::saving(function (Permission $permission) {
-            $permission->name = "{$permission->module}.{$permission->action}";
-        });
-    }
 
     public function roles(): BelongsToMany
     {

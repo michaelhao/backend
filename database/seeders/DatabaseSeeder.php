@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(PermissionSeeder::class);
 
-        $adminRole = Role::where('name', 'Admin')->first();
+        $adminRole = Role::where('name', 'Admin')->firstOrFail();
 
         User::factory()->create([
             'name' => 'Test User',

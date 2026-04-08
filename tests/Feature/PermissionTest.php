@@ -196,7 +196,7 @@ class PermissionTest extends TestCase
 
         $role = Role::where('name', 'Viewer')->first();
 
-        $response = $this->delete(route('roles.delete', $role));
+        $response = $this->delete(route('roles.destroy', $role));
 
         $response->assertRedirect(route('roles.index'));
         $this->assertDatabaseMissing('roles', ['name' => 'Viewer']);
@@ -210,7 +210,7 @@ class PermissionTest extends TestCase
 
         $adminRole = Role::where('name', 'Admin')->first();
 
-        $response = $this->delete(route('roles.delete', $adminRole));
+        $response = $this->delete(route('roles.destroy', $adminRole));
 
         $response->assertRedirect(route('roles.index'));
         $response->assertSessionHas('error');
@@ -236,5 +236,71 @@ class PermissionTest extends TestCase
 
         $role = Role::where('name', 'TestRole')->first();
         $this->assertTrue($role->permissions->contains('id', $defaultPermission->id));
+    }
+
+    public function test_default_route_permission_is_auto_included_on_update(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+
+        $role = Role::where('name', 'Viewer')->first();
+        $otherPermission = Permission::where('name', 'Post.index')->first();
+        $defaultPermission = Permission::where('name', 'Dashboard.index')->first();
+
+        $this->put(route('roles.update', $role), [
+            'name' => 'Updated Viewer',
+            'description' => 'Test update',
+            'default_route' => 'Dashboard.index',
+            'permissions' => [$otherPermission->id],
+        ]);
+
+        $role->refresh();
+        $this->assertTrue($role->permissions->contains('id', $defaultPermission->id));
+    }
+
+    public function test_store_role_fails_with_duplicate_name(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+
+        $permission = Permission::where('name', 'Dashboard.index')->first();
+
+        $response = $this->post(route('roles.store'), [
+            'name' => 'Admin',
+            'default_route' => 'Dashboard.index',
+            'permissions' => [$permission->id],
+        ]);
+
+        $response->assertSessionHasErrors('name');
+    }
+
+    public function test_store_role_fails_with_missing_fields(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+
+        $response = $this->post(route('roles.store'), []);
+
+        $response->assertSessionHasErrors(['name', 'default_route', 'permissions']);
+    }
+
+    public function test_store_role_fails_with_invalid_default_route(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+
+        $permission = Permission::where('name', 'Dashboard.index')->first();
+
+        $response = $this->post(route('roles.store'), [
+            'name' => 'TestRole',
+            'default_route' => 'NonExistent.page',
+            'permissions' => [$permission->id],
+        ]);
+
+        $response->assertSessionHasErrors('default_route');
     }
 }

@@ -52,7 +52,7 @@ class RoleController extends Controller
         return redirect()->route('roles.index')->with('success', '角色已更新');
     }
 
-    public function delete(Role $role)
+    public function destroy(Role $role)
     {
         if (! $this->roleService->deleteRole($role)) {
             return redirect()->route('roles.index')->with('error', '此角色仍有使用者，無法刪除');
