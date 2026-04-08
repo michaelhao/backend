@@ -1,43 +1,45 @@
 # Claude Code 設定
 
-## Git Commit 規則
+## Git Commit rules
 
-- Co-Authored-By 使用以下資訊：
+- Co-Authored-By using the following information：
   ```
   Co-Authored-By: michaelhao <pk111100@gmail.com>
   ```
-## Migrate 規則
-使用 created_at、updated_at 取代 timestamps
-格式為 datetime
+## Migrate rules
+
+- Replace timestamps with created_at and updated_at.
+- Use created_at and updated_at instead of timestamps.
+- Set the format to datetime
 
 ## Layered Architecture Standards
 
 - Model Layer:
 
-職責： 僅定義 Table Schema、Relationship、Casts、Scopes 與 Accessors。
+Responsibilities: Define Table Schemas, Relationships, Casts, Scopes, and Accessors/Mutators only.
 
-禁止： 不得包含複雜的查詢邏輯或業務運算。
+Prohibitions: Must not contain complex query logic or business operations.
 
 - Repository Layer:
 
-職責： 封裝所有的 Eloquent 查詢。
+Responsibilities: Encapsulate all Eloquent (ORM) queries.
 
-方法命名： 使用動詞開頭，如 getById(), getActiveUsers(), createWithProfile()。
+Naming Convention: Use verb-prefixes, such as getById(), getActiveUsers(), or createWithProfile().
 
-目標： 讓 Service 層完全不需要知道資料庫底層實作。
+Goal: Decouple the database implementation from the Service layer, ensuring the Service layer remains agnostic of underlying data sources.
 
 - Service Layer:
 
-職責： 處理業務邏輯 (Business Logic)。例如：金流串接、權限判斷、多個 Repository 的調度、發送通知。
+Responsibilities: Handle Business Logic. This includes payment gateway integration, permission checks, orchestrating multiple Repositories, and triggering notifications.
 
-原則： Service 方法應回傳 DTO 或處理後的資料，而非原始 Request 物件。
+Principles: Service methods should return DTOs (Data Transfer Objects) or processed data, rather than raw Request objects.
 
 
 - Controller Layer:
 
-職責： 僅負責 Request Validation、呼叫 Service、並回傳 Response (Inertia, JSON, 或 View)。
+Responsibilities: Strictly limited to Request Validation, invoking Services, and returning Responses (Inertia, JSON, or Views).
 
-目標： 保持 Skinny Controller，代碼行數應盡可能精簡。
+Goal: Maintain "Skinny Controllers" by keeping the lines of code as concise as possible.
 
 ===
 
