@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Models\Traits;
+
+use App\Models\Role;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+trait HasPermissions
+{
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    public function hasPermissionTo(string $name): bool
+    {
+        $permissions = session('permissions', []);
+
+        return in_array($name, $permissions);
+    }
+
+    public function hasRole(string $name): bool
+    {
+        return $this->role?->name === $name;
+    }
+
+    public function assignRole(string|Role $role): void
+    {
+        if (is_string($role)) {
+            $role = Role::where('name', $role)->firstOrFail();
+        }
+
+        $this->role_id = $role->id;
+        $this->save();
+        $this->clearPermissionCache();
+    }
+
+    public function getDefaultRoute(): ?string
+    {
+        return $this->role?->default_route;
+    }
+
+    public function loadPermissionsToSession(): void
+    {
+        $permissions = $this->role
+            ? $this->role->permissions()->pluck('name')->toArray()
+            : [];
+
+        session(['permissions' => $permissions]);
+    }
+
+    public function clearPermissionCache(): void
+    {
+        session()->forget('permissions');
+    }
+}

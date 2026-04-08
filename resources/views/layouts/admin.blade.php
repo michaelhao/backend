@@ -18,19 +18,32 @@
 
             {{-- 導覽連結 --}}
             <nav class="flex-1 px-4 py-6 space-y-1">
-                <a href="{{ route('dashboard') }}"
-                   class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
-                          {{ request()->routeIs('dashboard') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                    Dashboard
-                </a>
-                <a href="#"
-                   class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
-                    Posts
-                </a>
-                <a href="#"
-                   class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
-                    Users
-                </a>
+                <x-permission name="Dashboard.index">
+                    <a href="{{ route('dashboard') }}"
+                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
+                              {{ request()->routeIs('dashboard') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                        Dashboard
+                    </a>
+                </x-permission>
+                <x-permission name="Post.index">
+                    <a href="#"
+                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
+                        Posts
+                    </a>
+                </x-permission>
+                <x-permission name="User.index">
+                    <a href="#"
+                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
+                        Users
+                    </a>
+                </x-permission>
+                <x-permission name="Role.index">
+                    <a href="{{ route('roles.index') }}"
+                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
+                              {{ request()->routeIs('roles.*') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                        Roles
+                    </a>
+                </x-permission>
             </nav>
         </aside>
 
