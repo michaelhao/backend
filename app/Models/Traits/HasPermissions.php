@@ -19,18 +19,6 @@ trait HasPermissions
         return in_array($name, $permissions);
     }
 
-    public function hasRole(string $name): bool
-    {
-        return $this->role?->name === $name;
-    }
-
-    public function assignRole(Role $role): void
-    {
-        $this->role_id = $role->id;
-        $this->save();
-        $this->clearPermissionCache();
-    }
-
     public function getDefaultRoute(): ?string
     {
         return $this->role?->default_route;
@@ -43,10 +31,5 @@ trait HasPermissions
             : [];
 
         session(['permissions' => $permissions]);
-    }
-
-    public function clearPermissionCache(): void
-    {
-        session()->forget('permissions');
     }
 }

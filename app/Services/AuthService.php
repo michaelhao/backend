@@ -2,13 +2,10 @@
 
 namespace App\Services;
 
-use App\Repositories\RoleRepository;
 use Illuminate\Support\Facades\Auth;
 
 class AuthService
 {
-    public function __construct(private RoleRepository $roleRepository) {}
-
     public function attempt(array $credentials, bool $remember): bool
     {
         return Auth::attempt($credentials, $remember);
@@ -18,12 +15,7 @@ class AuthService
     {
         request()->session()->regenerate();
 
-        $user = Auth::user();
-        $permissions = $user->role
-            ? $this->roleRepository->getPermissionNames($user->role)
-            : [];
-
-        session(['permissions' => $permissions]);
+        Auth::user()->loadPermissionsToSession();
     }
 
     public function logout(): void

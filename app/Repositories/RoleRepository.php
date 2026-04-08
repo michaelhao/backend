@@ -47,12 +47,4 @@ class RoleRepository
     {
         return Role::where('name', $name)->firstOrFail();
     }
-
-    /**
-     * @return array<string>
-     */
-    public function getPermissionNames(Role $role): array
-    {
-        return $role->permissions()->pluck('name')->toArray();
-    }
 }
