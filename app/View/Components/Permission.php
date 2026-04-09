@@ -2,7 +2,9 @@
 
 namespace App\View\Components;
 
+use App\Models\User;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\Component;
 
 class Permission extends Component
@@ -11,7 +13,10 @@ class Permission extends Component
 
     public function shouldRender(): bool
     {
-        return auth()->check() && auth()->user()->hasPermissionTo($this->name);
+        /** @var User $user */
+        $user = Auth::user();
+
+        return Auth::check() && $user->hasPermissionTo($this->name);
     }
 
     public function render(): View
