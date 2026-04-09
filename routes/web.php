@@ -19,11 +19,11 @@ Route::middleware('auth')->group(function () {
     // 無角色提示頁（不受 permission middleware 保護）
     Route::get('/no-role', fn () => view('no-role'))->name('no-role');
 
+    Route::get('/test-db', [PostController::class, 'test']);
+
     // 需要權限檢查的 routes — middleware 自動推斷權限
     Route::middleware('permission')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-
-        Route::get('/test-db', [PostController::class, 'test']);
 
         // 角色管理
         Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Attributes\RequiresPermission;
 use App\Http\Requests\RoleRequest;
 use App\Models\Role;
 use App\Services\RoleService;
@@ -10,6 +11,7 @@ class RoleController extends Controller
 {
     public function __construct(private RoleService $roleService) {}
 
+    #[RequiresPermission('Role.index')]
     public function index()
     {
         $data = $this->roleService->getIndexData();
@@ -17,6 +19,7 @@ class RoleController extends Controller
         return view('admin.roles.index', $data);
     }
 
+    #[RequiresPermission('Role.create')]
     public function create()
     {
         $data = $this->roleService->getCreateData();
@@ -24,6 +27,7 @@ class RoleController extends Controller
         return view('admin.roles.create', $data);
     }
 
+    #[RequiresPermission('Role.create')]
     public function store(RoleRequest $request)
     {
         $this->roleService->createRole(
@@ -34,6 +38,7 @@ class RoleController extends Controller
         return redirect()->route('roles.index')->with('success', '角色已建立');
     }
 
+    #[RequiresPermission('Role.update')]
     public function edit(Role $role)
     {
         $data = $this->roleService->getEditData($role);
@@ -41,6 +46,7 @@ class RoleController extends Controller
         return view('admin.roles.edit', $data);
     }
 
+    #[RequiresPermission('Role.update')]
     public function update(RoleRequest $request, Role $role)
     {
         $this->roleService->updateRole(
@@ -52,6 +58,7 @@ class RoleController extends Controller
         return redirect()->route('roles.index')->with('success', '角色已更新');
     }
 
+    #[RequiresPermission('Role.delete')]
     public function destroy(Role $role)
     {
         if (! $this->roleService->deleteRole($role)) {

@@ -10,7 +10,9 @@
 
 **設計原則**：
 - 權限檢查全部集中在 Middleware，不使用 Gate::before
-- Middleware **自動從 Controller 推斷權限名稱**，不需手動指定
+- 所有 controller method 統一使用 `#[RequiresPermission]` 宣告所需權限，讓權限定義集中在 method 上
+- Middleware 優先讀取 attribute，fallback 為自動推導（開發安全網）
+- 移除 `$methodMap`，CRUD aliases（`store→create`、`edit→update`、`destroy→delete`）改由 attribute 明確宣告
 - 使用者只有**單一角色**
 - 沒有權限時**導向角色的預設頁面**，而非回 403
 
@@ -63,22 +65,17 @@
 ### Step 2: Models
 - **新建** `app/Models/Permission.php`
   - 關聯: `roles()`
-  - boot 時自動組合 `name = "{$module}.{$action}"`
   - scope: `scopeForModule($query, $module)`
 - **新建** `app/Models/Role.php`
   - 關聯: `permissions()`, `users()`
-  - 方法: `hasPermission(string $name): bool`
   - 欄位: `default_route` — 對應 `permissions.name`，編輯角色權限時自動加入此權限
 
 ### Step 3: HasPermissions Trait
 - **新建** `app/Models/Traits/HasPermissions.php`
   - `role(): BelongsTo`（單一角色，透過 `users.role_id`）
   - `hasPermissionTo(string $name): bool` — 從 session 快取讀取權限清單檢查
-  - `hasRole(string $name): bool`
-  - `assignRole(string|Role $role): void` — 更新 `role_id`，同時清除 session 權限快取
   - `getDefaultRoute(): ?string` — 取得角色的 default_route（permissions.name 格式）
   - `loadPermissionsToSession(): void` — 從 DB 載入權限清單寫入 session
-  - `clearPermissionCache(): void` — 清除 session 中的權限快取
 
 ### Step 4: Migration（修改 users 表）
 - 執行 `php artisan make:migration add_role_id_to_users_table --no-interaction`
@@ -94,37 +91,40 @@
 - Session 內儲存 key: `permissions`，值為權限名稱陣列（如 `['Dashboard.index', 'Post.index', ...]`）
 - **權限變更時機**：角色或權限異動後，使用者需重新登入才會生效
 
-### Step 6: Middleware（權限檢查的唯一入口，自動推斷權限）
+### Step 6: Middleware（權限檢查的唯一入口）
+- **新建** `app/Attributes/RequiresPermission.php`
+  - PHP 8 Attribute，宣告 controller method 所需的權限字串
+  ```php
+  #[\Attribute(\Attribute::TARGET_METHOD)]
+  final class RequiresPermission
+  {
+      public function __construct(public readonly string $permission) {}
+  }
+  ```
 - **新建** `app/Http/Middleware/CheckPermission.php`
-- **核心邏輯**：從 route 的 Controller 自動推斷權限名稱
-  - `DashboardController@index` → `Dashboard.index`
-  - `PostController@create` → `Post.create`
-  - 規則：Controller 名稱去掉 `Controller` 後綴 = module，method 名稱 = action
+- **核心邏輯**：優先讀取 `#[RequiresPermission]` attribute，fallback 為自動推導
   ```php
   public function handle(Request $request, Closure $next): Response
   {
       $user = $request->user();
 
-      // 從 route 的 controller 和 method 推斷權限名稱
       $action = $request->route()->getAction();
       if (isset($action['controller'])) {
           [$controller, $method] = explode('@', $action['controller']);
           $className = class_basename($controller);
           $module = str_replace('Controller', '', $className);
-          $permissionName = "{$module}.{$method}";
+          $permissionName = $this->resolvePermission($controller, $method, $module);
       } else {
-          abort(403, 'Unauthorized action.'); // 非 controller route（closure）預設拒絕
+          abort(403, 'Unauthorized action.');
       }
 
-      // 無角色 → 導向無角色提示頁
       if (! $user->role_id) {
           return redirect()->route('no-role');
       }
 
       if (! $user->hasPermissionTo($permissionName)) {
-          $defaultPermission = $user->getDefaultRoute(); // 回傳 permissions.name，如 'Dashboard.index'
+          $defaultPermission = $user->getDefaultRoute();
 
-          // 避免重複導向迴圈
           if ($defaultPermission && $defaultPermission !== $permissionName) {
               return redirect()->route($this->permissionToRoute($defaultPermission));
           }
@@ -134,9 +134,23 @@
 
       return $next($request);
   }
+
+  private function resolvePermission(string $controller, string $method, string $module): string
+  {
+      try {
+          $reflectionMethod = new \ReflectionMethod($controller, $method);
+          $attributes = $reflectionMethod->getAttributes(RequiresPermission::class);
+          if (! empty($attributes)) {
+              return $attributes[0]->newInstance()->permission;
+          }
+      } catch (\ReflectionException) {
+          // fallback 自動推導
+      }
+
+      return "{$module}.{$method}";
+  }
   ```
-- `permissionToRoute(string $permissionName): string` — 將 permission name 轉為 route name
-  - `Dashboard.index` → route name 透過反查 route 表，找到對應 `DashboardController@index` 的 route name
+- `permissionToRoute(string $permissionName): string` — 將 permission name 轉為 route name（使用相同的 `resolvePermission()` 邏輯建立反查 cache）
 - **修改** `bootstrap/app.php`
   - 在 `withMiddleware` 內加入 alias: `'permission' => CheckPermission::class`
 
@@ -169,10 +183,22 @@
   - 宣告式 `$modules` 陣列定義所有模組與動作：
     ```php
     private array $modules = [
-        'Dashboard' => ['index', 'detail'],
-        'Post'      => ['index', 'create', 'update', 'delete'],
-        'User'      => ['index', 'create', 'update', 'delete'],
-        'Role'      => ['index', 'create', 'update', 'delete'],
+        'Dashboard' => [
+            'label' => '儀表板',
+            'actions' => ['index' => '首頁', 'detail' => '詳細頁'],
+        ],
+        'Post' => [
+            'label' => '文章',
+            'actions' => ['index' => '列表', 'create' => '新增', 'update' => '編輯', 'delete' => '刪除'],
+        ],
+        'User' => [
+            'label' => '使用者',
+            'actions' => ['index' => '列表', 'create' => '新增', 'update' => '編輯', 'delete' => '刪除'],
+        ],
+        'Role' => [
+            'label' => '角色',
+            'actions' => ['index' => '列表', 'create' => '新增', 'update' => '編輯', 'delete' => '刪除'],
+        ],
     ];
     ```
   - 建立 `Admin` 角色（全部權限，default_route: `Dashboard.index`）
@@ -187,11 +213,27 @@
 
 ### Step 9: 角色管理頁面（CRUD）
 - **新建** `app/Http/Controllers/RoleController.php`
-  - `index` — 角色列表，顯示每個角色的名稱、權限數量、使用者數量
-  - `create` — 新增角色表單，可選擇權限（以模組分組顯示 checkbox）
-  - `store` — 儲存新角色，驗證 `default_route` 對應的權限已被勾選，自動加入 `default_route` 權限
-  - `update` — 更新角色名稱、權限、`default_route`，自動加入 `default_route` 權限
-  - `delete` — 刪除角色前檢查是否仍有使用者使用該角色
+  - 所有 method 加上 `#[RequiresPermission]`
+  - `create` 和 `store` 同屬 `Role.create`；`edit` 和 `update` 同屬 `Role.update`
+  ```php
+  #[RequiresPermission('Role.index')]
+  public function index() { ... }
+
+  #[RequiresPermission('Role.create')]
+  public function create() { ... }
+
+  #[RequiresPermission('Role.create')]
+  public function store(RoleRequest $request) { ... }
+
+  #[RequiresPermission('Role.update')]
+  public function edit(Role $role) { ... }
+
+  #[RequiresPermission('Role.update')]
+  public function update(RoleRequest $request, Role $role) { ... }
+
+  #[RequiresPermission('Role.delete')]
+  public function destroy(Role $role) { ... }
+  ```
 - **新建** `app/Http/Requests/RoleRequest.php`
   - 驗證 `name` 必填、unique（排除自身）
   - 驗證 `default_route` 必填、存在於 permissions 表
@@ -202,7 +244,7 @@
 
 ### Step 10: Route 整合
 - **修改** `routes/web.php`
-- `permission` middleware 掛在 group 上，不需要每條 route 手動指定權限：
+- `permission` middleware 掛在 group 上；開發用 route 放在 `auth` group 但 `permission` group 外：
   ```php
   Route::middleware('auth')->group(function () {
       Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
@@ -210,7 +252,10 @@
       // 無角色提示頁（不受 permission middleware 保護）
       Route::get('/no-role', fn () => view('no-role'))->name('no-role');
 
-      // 需要權限檢查的 routes — middleware 自動推斷權限
+      // 開發用 route（只需登入，不需權限）
+      Route::get('/test-db', [PostController::class, 'test']);
+
+      // 需要權限檢查的 routes
       Route::middleware('permission')->group(function () {
           Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -220,13 +265,10 @@
           Route::post('/roles', [RoleController::class, 'store'])->name('roles.store');
           Route::get('/roles/{role}/edit', [RoleController::class, 'edit'])->name('roles.edit');
           Route::put('/roles/{role}', [RoleController::class, 'update'])->name('roles.update');
-          Route::delete('/roles/{role}', [RoleController::class, 'delete'])->name('roles.delete');
-
-          // 未來新增的 routes 自動受權限保護
+          Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy');
       });
   });
   ```
-- `logout` 和 `no-role` 放在 `permission` group 外面，所有登入使用者都能存取
 
 ### Step 11: Blade 整合
 - **修改** `resources/views/layouts/admin.blade.php`
@@ -252,7 +294,8 @@
   - Admin 角色 → 200
   - Viewer 角色 → 僅 index 可存取，其他被 redirect
   - 預設頁面也無權限 → 403
-  - 自動推斷：DashboardController@index → 檢查 Dashboard.index
+  - `#[RequiresPermission]` 推斷：`DashboardController@index` → 檢查 `Dashboard.index`
+  - `create` 和 `store` 同屬 `Role.create`，有此權限皆可存取
   - Closure route 在 permission group 內 → 403
   - 角色 CRUD：新增、編輯、刪除角色正常運作
   - 編輯角色時 `default_route` 權限自動加入
@@ -273,7 +316,7 @@ Closure route? → abort(403)
     ↓
 無角色（role_id = null）? → redirect 至 no-role 提示頁
     ↓
-自動推斷：DashboardController@index → "Dashboard.index"
+讀取 #[RequiresPermission('Dashboard.index')]（fallback: 自動推導）
     ↓
 $user->hasPermissionTo('Dashboard.index')           ← HasPermissions Trait
     ↓                                                  (從 session 快取讀取，不查 DB)
@@ -293,15 +336,16 @@ Blade 側邊欄：
 
 ## 檔案清單
 
-### 新建（16 個）
+### 新建（17 個）
 | 檔案 | 用途 |
 |------|------|
 | `database/migrations/2026_04_08_xxxxxx_create_permission_tables.php` | permissions、roles、role_has_permissions 資料表 |
 | `database/migrations/2026_04_08_xxxxxx_add_role_id_to_users_table.php` | users 表新增 role_id FK |
+| `app/Attributes/RequiresPermission.php` | PHP 8 Attribute，宣告 controller method 所需權限 |
 | `app/Models/Permission.php` | Permission Model |
 | `app/Models/Role.php` | Role Model |
 | `app/Models/Traits/HasPermissions.php` | User 權限 Trait |
-| `app/Http/Middleware/CheckPermission.php` | 權限檢查 Middleware（自動推斷 + 無角色導向 + 導向預設頁面） |
+| `app/Http/Middleware/CheckPermission.php` | 權限檢查 Middleware（attribute 優先 + fallback 自動推導） |
 | `app/Http/Controllers/RoleController.php` | 角色管理 CRUD Controller |
 | `app/Http/Requests/RoleRequest.php` | 角色表單驗證（含 default_route 權限檢查） |
 | `app/View/Components/Permission.php` | Blade Component（UI 層權限控制） |
@@ -319,7 +363,7 @@ Blade 側邊欄：
 | `app/Models/User.php` | 加入 `use HasPermissions` |
 | `app/Http/Controllers/LoginController.php` | 登入成功後呼叫 `loadPermissionsToSession()` |
 | `bootstrap/app.php` | 註冊 `permission` middleware alias |
-| `routes/web.php` | auth group 內加 permission group + no-role route |
+| `routes/web.php` | auth group 內加 permission group + no-role route；開發用 route 移出 permission group |
 | `resources/views/layouts/admin.blade.php` | 側邊欄用 `<x-permission>` 包裹 |
 
 ### 不變更
@@ -330,11 +374,13 @@ Blade 側邊欄：
 
 ---
 
-## 未來擴充方式
+## 新增 Action 的 SOP
 
-新增模組只需兩步：
-1. 在 `PermissionSeeder` 的 `$modules` 陣列加入新模組 → 跑 seed
-2. 新 route 放進 `permission` middleware group 即可，middleware 自動推斷權限
+新增自定義 action（如 `postRoleInfo`）只需四步：
+1. 在 `PermissionSeeder::$modules` 對應 module 的 `actions` 中加入新 action（若是新獨立權限）
+2. Controller method 加上 `#[RequiresPermission('Module.action')]`
+3. `routes/web.php` 加入對應 route（放在 `permission` middleware group 內）
+4. 執行 `php artisan db:seed --class=PermissionSeeder`
 
 ---
 

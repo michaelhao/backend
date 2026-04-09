@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Attributes\RequiresPermission;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -9,13 +10,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 class CheckPermission
 {
-    /** @var array<string, string> */
-    private array $methodMap = [
-        'store' => 'create',
-        'edit' => 'update',
-        'destroy' => 'delete',
-    ];
-
     /** @var array<string, string> */
     private static array $permissionRouteCache = [];
 
@@ -28,8 +22,7 @@ class CheckPermission
             [$controller, $method] = explode('@', $action['controller']);
             $className = class_basename($controller);
             $module = str_replace('Controller', '', $className);
-            $mappedMethod = $this->methodMap[$method] ?? $method;
-            $permissionName = "{$module}.{$mappedMethod}";
+            $permissionName = $this->resolvePermission($controller, $method, $module);
         } else {
             abort(403, 'Unauthorized action.');
         }
@@ -49,6 +42,21 @@ class CheckPermission
         }
 
         return $next($request);
+    }
+
+    private function resolvePermission(string $controller, string $method, string $module): string
+    {
+        try {
+            $reflectionMethod = new \ReflectionMethod($controller, $method);
+            $attributes = $reflectionMethod->getAttributes(RequiresPermission::class);
+            if (! empty($attributes)) {
+                return $attributes[0]->newInstance()->permission;
+            }
+        } catch (\ReflectionException) {
+            // 無法反射時 fallback 自動推導
+        }
+
+        return "{$module}.{$method}";
     }
 
     private function permissionToRoute(string $permissionName): string
@@ -72,9 +80,10 @@ class CheckPermission
                 [$controller, $method] = explode('@', $routeAction['controller']);
                 $className = class_basename($controller);
                 $module = str_replace('Controller', '', $className);
-                $mappedMethod = $this->methodMap[$method] ?? $method;
-                $key = "{$module}.{$mappedMethod}";
-                self::$permissionRouteCache[$key] = $route->getName();
+                $key = $this->resolvePermission($controller, $method, $module);
+                if (! isset(self::$permissionRouteCache[$key])) {
+                    self::$permissionRouteCache[$key] = $route->getName();
+                }
             }
         }
     }
