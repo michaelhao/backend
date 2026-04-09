@@ -1,11 +1,45 @@
 # Claude Code 設定
 
-## Git Commit 規則
+## Git Commit rules
 
-- Co-Authored-By 使用以下資訊：
+- Co-Authored-By using the following information：
   ```
   Co-Authored-By: michaelhao <pk111100@gmail.com>
   ```
+## Migrate rules
+
+- Replace timestamps with created_at and updated_at.
+- Use created_at and updated_at instead of timestamps.
+- Set the format to datetime
+
+## Layered Architecture Standards
+
+- Model Layer:
+
+Responsibilities: Define Table Schemas, Relationships, Casts, Scopes, and Accessors/Mutators only.
+
+Prohibitions: Must not contain complex query logic or business operations.
+
+- Repository Layer:
+
+Responsibilities: Encapsulate all Eloquent (ORM) queries.
+
+Naming Convention: Use verb-prefixes, such as getById(), getActiveUsers(), or createWithProfile().
+
+Goal: Decouple the database implementation from the Service layer, ensuring the Service layer remains agnostic of underlying data sources.
+
+- Service Layer:
+
+Responsibilities: Handle Business Logic. This includes payment gateway integration, permission checks, orchestrating multiple Repositories, and triggering notifications.
+
+Principles: Service methods should return DTOs (Data Transfer Objects) or processed data, rather than raw Request objects.
+
+
+- Controller Layer:
+
+Responsibilities: Strictly limited to Request Validation, invoking Services, and returning Responses (Inertia, JSON, or Views).
+
+Goal: Maintain "Skinny Controllers" by keeping the lines of code as concise as possible.
 
 ===
 

@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="session-lifetime" content="{{ config('session.lifetime') * 60 }}">
     <title>@yield('page-title', 'Dashboard') - {{ config('app.name', 'Laravel') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -18,19 +19,32 @@
 
             {{-- 導覽連結 --}}
             <nav class="flex-1 px-4 py-6 space-y-1">
-                <a href="{{ route('dashboard') }}"
-                   class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
-                          {{ request()->routeIs('dashboard') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-                    Dashboard
-                </a>
-                <a href="#"
-                   class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
-                    Posts
-                </a>
-                <a href="#"
-                   class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
-                    Users
-                </a>
+                <x-permission name="Dashboard.index">
+                    <a href="{{ route('dashboard') }}"
+                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
+                              {{ request()->routeIs('dashboard') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                        儀表板
+                    </a>
+                </x-permission>
+                <x-permission name="Post.index">
+                    <a href="#"
+                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
+                        文章管理
+                    </a>
+                </x-permission>
+                <x-permission name="User.index">
+                    <a href="#"
+                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
+                        使用者管理
+                    </a>
+                </x-permission>
+                <x-permission name="Role.index">
+                    <a href="{{ route('roles.index') }}"
+                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
+                              {{ request()->routeIs('roles.*') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                        角色管理
+                    </a>
+                </x-permission>
             </nav>
         </aside>
 
@@ -41,6 +55,7 @@
                 <h1 class="text-lg font-semibold text-gray-800">@yield('page-title', 'Dashboard')</h1>
 
                 <div class="flex items-center gap-4">
+                    <span id="session-timer" class="text-sm text-gray-400 font-mono" title="Session 剩餘時間"></span>
                     <span class="text-sm text-gray-600">{{ Auth::user()->name }}</span>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
@@ -58,5 +73,38 @@
             </main>
         </div>
     </div>
+    <script>
+        (function () {
+            var lifetime = parseInt(document.querySelector('meta[name="session-lifetime"]').content, 10);
+            var timerEl = document.getElementById('session-timer');
+            var remaining = lifetime;
+
+            function pad(n) { return String(n).padStart(2, '0'); }
+
+            function updateDisplay() {
+                var h = Math.floor(remaining / 3600);
+                var m = Math.floor((remaining % 3600) / 60);
+                var s = remaining % 60;
+                timerEl.textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
+
+                if (remaining <= 300) {
+                    timerEl.classList.remove('text-gray-400');
+                    timerEl.classList.add('text-red-500');
+                }
+            }
+
+            updateDisplay();
+
+            setInterval(function () {
+                remaining--;
+                if (remaining <= 0) {
+                    window.location.href = '/login';
+                    return;
+                }
+                updateDisplay();
+            }, 1000);
+        })();
+    </script>
+    @stack('scripts')
 </body>
 </html>

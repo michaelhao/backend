@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Services\AuthService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class LoginController extends Controller
 {
+    public function __construct(private AuthService $authService) {}
+
     public function showLoginForm()
     {
         return view('auth.login');
@@ -20,8 +22,9 @@ class LoginController extends Controller
             'password' => ['required'],
         ]);
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
-            $request->session()->regenerate();
+        if ($this->authService->attempt($credentials, $request->boolean('remember'))) {
+            $this->authService->loginSession();
+
             return redirect()->intended('/');
         }
 
@@ -30,11 +33,10 @@ class LoginController extends Controller
         ])->onlyInput('email');
     }
 
-    public function logout(Request $request)
+    public function logout()
     {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        $this->authService->logout();
+
         return redirect()->route('login');
     }
 }
