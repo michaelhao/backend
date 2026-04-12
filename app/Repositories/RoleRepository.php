@@ -47,4 +47,9 @@ class RoleRepository
     {
         return Role::where('name', $name)->firstOrFail();
     }
+
+    public function getAll(): Collection
+    {
+        return Role::all();
+    }
 }

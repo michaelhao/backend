@@ -33,8 +33,9 @@
                     </a>
                 </x-permission>
                 <x-permission name="User.index">
-                    <a href="#"
-                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
+                    <a href="{{ route('users.index') }}"
+                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
+                              {{ request()->routeIs('users.*') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
                         使用者管理
                     </a>
                 </x-permission>
