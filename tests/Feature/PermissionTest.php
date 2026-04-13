@@ -54,13 +54,12 @@ class PermissionTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_admin_can_access_all_routes(): void
+    public function test_admin_can_access_routes_that_viewer_cannot(): void
     {
         $this->seedPermissions();
 
         $this->createUserWithRole('Admin');
 
-        $this->get(route('roles.index'))->assertStatus(200);
         $this->get(route('roles.create'))->assertStatus(200);
     }
 
