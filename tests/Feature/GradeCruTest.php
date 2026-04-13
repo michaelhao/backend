@@ -10,7 +10,7 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class GradeCrudTest extends TestCase
+class GradeCruTest extends TestCase
 {
     use RefreshDatabase;
 
