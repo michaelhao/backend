@@ -46,6 +46,13 @@
                         角色管理
                     </a>
                 </x-permission>
+                <x-permission name="Grade.index">
+                    <a href="{{ route('grades.index') }}"
+                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
+                              {{ request()->routeIs('grades.*') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                        版本管理
+                    </a>
+                </x-permission>
             </nav>
         </aside>
 

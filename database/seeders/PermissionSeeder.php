@@ -46,6 +46,14 @@ class PermissionSeeder extends Seeder
                 'delete' => '刪除',
             ],
         ],
+        'Grade' => [
+            'label' => '版本',
+            'actions' => [
+                'index'  => '列表',
+                'create' => '新增',
+                'update' => '編輯',
+            ],
+        ],
     ];
 
     public function run(): void
