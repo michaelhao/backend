@@ -110,6 +110,25 @@ Goal: Maintain "Skinny Controllers" by keeping the lines of code as concise as p
 
 ===
 
+## SOLID & Clean Architecture Principles
+
+To maintain a maintainable and scalable codebase, follow these specific implementations of SOLID and Clean Architecture:
+
+- **S (Single Responsibility):** - A class should have one reason to change. 
+    - If a Service is handling both "Data Processing" and "Third-party API Communication", split it.
+- **O (Open/Closed):** - Use Interfaces (Contracts) for external integrations (e.g., Payment, Storage) to allow swapping implementations without touching business logic.
+- **L (Liskov Substitution):** - Ensure subclasses or interface implementations do not break the application's behavior when swapped.
+- **I (Interface Segregation):** - Prefer small, specific interfaces over large, "fat" ones.
+- **D (Dependency Inversion):** - **High-level modules (Services) must not depend on low-level modules (Eloquent Models/External SDKs).**
+    - Always type-hint Interfaces in constructors, not concrete implementations.
+
+### Dependency Flow & Boundaries
+- **Inner Circle (Entities/Business Logic):** Service Layer. Should have zero knowledge of HTTP requests or Database specificities.
+- **Outer Circle (Infrastructure/Delivery):** Controllers, Repositories, Migrations, and Third-party SDKs.
+- **Rule:** Dependencies must only point **inwards**. Services should interact with Repositories via Interfaces.
+
+===
+
 <laravel-boost-guidelines>
 === foundation rules ===
 
