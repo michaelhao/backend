@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\ShopController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -50,5 +51,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+        // 商店管理
+        Route::get('/shops', [ShopController::class, 'index'])->name('shops.index');
+        Route::get('/shops/{shop}/edit', [ShopController::class, 'edit'])->name('shops.edit');
+        Route::put('/shops/{shop}', [ShopController::class, 'update'])->name('shops.update');
+        Route::post('/shops/{shop}/certify', [ShopController::class, 'certify'])->name('shops.certify');
     });
 });

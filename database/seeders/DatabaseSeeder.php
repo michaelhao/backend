@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(PermissionSeeder::class);
         $this->call(GradeSeeder::class);
+        $this->call(ShopSeeder::class);
 
         $adminRole = Role::where('name', 'Admin')->firstOrFail();
 

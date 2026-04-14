@@ -53,6 +53,13 @@
                         版本管理
                     </a>
                 </x-permission>
+                <x-permission name="Shop.index">
+                    <a href="{{ route('shops.index') }}"
+                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
+                              {{ request()->routeIs('shops.*') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                        商店管理
+                    </a>
+                </x-permission>
             </nav>
         </aside>
 
