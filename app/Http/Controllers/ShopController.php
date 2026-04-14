@@ -19,14 +19,24 @@ class ShopController extends Controller
     }
 
     #[RequiresPermission('Shop.update')]
-    public function edit(Shop $shop)
+    public function edit($id)
     {
+        $shop = Shop::find($id);
+        if (!$shop) {
+            return redirect()->route('shops.index')->with('error', '找不到該商店');
+        }
+
         return view('admin.shops.edit', $this->shopService->getEditData($shop));
     }
 
     #[RequiresPermission('Shop.update')]
-    public function update(ShopUpdateRequest $request, Shop $shop)
+    public function update(ShopUpdateRequest $request, $id)
     {
+        $shop = Shop::find($id);
+        if (!$shop) {
+            return redirect()->route('shops.index')->with('error', '找不到該商店');
+        }
+
         $shopData  = $request->only(['name', 'email', 'grade_id', 'status']);
         $adminData = $request->input('admin');
 
@@ -36,8 +46,13 @@ class ShopController extends Controller
     }
 
     #[RequiresPermission('Shop.update')]
-    public function certify(Request $request, Shop $shop)
+    public function certify(Request $request, $id)
     {
+        $shop = Shop::find($id);
+        if (!$shop) {
+            return redirect()->route('shops.index')->with('error', '找不到該商店');
+        }
+
         $request->validate([
             'business_number' => ['required', 'string', 'regex:/^\d{8}$/'],
         ]);
