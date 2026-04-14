@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(PermissionSeeder::class);
+        $this->call(GradeSeeder::class);
 
         $adminRole = Role::where('name', 'Admin')->firstOrFail();
 

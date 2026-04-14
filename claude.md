@@ -1,5 +1,10 @@
 # Claude Code 設定
 
+## Environment
+
+- In local development, PHP runs inside Docker. Do not attempt to run `php` or `composer` commands directly on the host. Use `docker exec` or `docker compose exec` to run PHP/artisan commands.
+- Git credentials and `gh` CLI may not be configured. Do not attempt `git push` or `gh pr create` without confirming availability first.
+
 ## Coding Behavior Guidelines
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
@@ -102,6 +107,25 @@ Principles: Service methods should return DTOs (Data Transfer Objects) or proces
 Responsibilities: Strictly limited to Request Validation, invoking Services, and returning Responses (Inertia, JSON, or Views).
 
 Goal: Maintain "Skinny Controllers" by keeping the lines of code as concise as possible.
+
+===
+
+## SOLID & Clean Architecture Principles
+
+To maintain a maintainable and scalable codebase, follow these specific implementations of SOLID and Clean Architecture:
+
+- **S (Single Responsibility):** - A class should have one reason to change. 
+    - If a Service is handling both "Data Processing" and "Third-party API Communication", split it.
+- **O (Open/Closed):** - Use Interfaces (Contracts) for external integrations (e.g., Payment, Storage) to allow swapping implementations without touching business logic.
+- **L (Liskov Substitution):** - Ensure subclasses or interface implementations do not break the application's behavior when swapped.
+- **I (Interface Segregation):** - Prefer small, specific interfaces over large, "fat" ones.
+- **D (Dependency Inversion):** - **High-level modules (Services) must not depend on low-level modules (Eloquent Models/External SDKs).**
+    - Always type-hint Interfaces in constructors, not concrete implementations.
+
+### Dependency Flow & Boundaries
+- **Inner Circle (Entities/Business Logic):** Service Layer. Should have zero knowledge of HTTP requests or Database specificities.
+- **Outer Circle (Infrastructure/Delivery):** Controllers, Repositories, Migrations, and Third-party SDKs.
+- **Rule:** Dependencies must only point **inwards**. Services should interact with Repositories via Interfaces.
 
 ===
 
