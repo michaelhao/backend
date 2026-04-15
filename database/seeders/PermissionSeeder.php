@@ -54,6 +54,13 @@ class PermissionSeeder extends Seeder
                 'update' => '編輯',
             ],
         ],
+        'Shop' => [
+            'label' => '商店',
+            'actions' => [
+                'index'  => '列表',
+                'update' => '編輯',
+            ],
+        ],
     ];
 
     public function run(): void

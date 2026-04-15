@@ -38,16 +38,26 @@ class UserController extends Controller
     }
 
     #[RequiresPermission('User.update')]
-    public function edit(User $user)
+    public function edit(int $id)
     {
+        $user = User::find($id);
+        if (!$user) {
+            return redirect()->route('users.index')->with('error', '找不到該使用者');
+        }
+
         $data = $this->userService->getEditData($user);
 
         return view('admin.users.edit', $data);
     }
 
     #[RequiresPermission('User.update')]
-    public function update(UserRequest $request, User $user)
+    public function update(UserRequest $request, int $id)
     {
+        $user = User::find($id);
+        if (!$user) {
+            return redirect()->route('users.index')->with('error', '找不到該使用者');
+        }
+
         $this->userService->updateUser(
             $user,
             $request->safe()->only(['name', 'email', 'password', 'role_id']),
@@ -57,8 +67,13 @@ class UserController extends Controller
     }
 
     #[RequiresPermission('User.delete')]
-    public function destroy(User $user)
+    public function destroy(int $id)
     {
+        $user = User::find($id);
+        if (!$user) {
+            return redirect()->route('users.index')->with('error', '找不到該使用者');
+        }
+
         if ($user->id === auth()->id()) {
             return redirect()->route('users.index')->with('error', '無法刪除自己的帳號');
         }

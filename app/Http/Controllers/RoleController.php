@@ -39,16 +39,26 @@ class RoleController extends Controller
     }
 
     #[RequiresPermission('Role.update')]
-    public function edit(Role $role)
+    public function edit(int $id)
     {
+        $role = Role::find($id);
+        if (!$role) {
+            return redirect()->route('roles.index')->with('error', '找不到該角色');
+        }
+
         $data = $this->roleService->getEditData($role);
 
         return view('admin.roles.edit', $data);
     }
 
     #[RequiresPermission('Role.update')]
-    public function update(RoleRequest $request, Role $role)
+    public function update(RoleRequest $request, int $id)
     {
+        $role = Role::find($id);
+        if (!$role) {
+            return redirect()->route('roles.index')->with('error', '找不到該角色');
+        }
+
         $this->roleService->updateRole(
             $role,
             $request->safe()->only(['name', 'description', 'default_route']),
@@ -59,8 +69,13 @@ class RoleController extends Controller
     }
 
     #[RequiresPermission('Role.delete')]
-    public function destroy(Role $role)
+    public function destroy(int $id)
     {
+        $role = Role::find($id);
+        if (!$role) {
+            return redirect()->route('roles.index')->with('error', '找不到該角色');
+        }
+
         if (! $this->roleService->deleteRole($role)) {
             return redirect()->route('roles.index')->with('error', '此角色仍有使用者，無法刪除');
         }
