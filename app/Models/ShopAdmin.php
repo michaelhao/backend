@@ -17,7 +17,7 @@ class ShopAdmin extends Model
     protected function casts(): array
     {
         return [
-            'email'    => 'encrypted',
+            'email' => 'encrypted',
             'password' => 'hashed',
         ];
     }

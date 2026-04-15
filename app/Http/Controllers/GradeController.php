@@ -39,7 +39,7 @@ class GradeController extends Controller
     public function edit(int $id)
     {
         $grade = Grade::find($id);
-        if (!$grade) {
+        if (! $grade) {
             return redirect()->route('grades.index')->with('error', '找不到該方案');
         }
 
@@ -52,7 +52,7 @@ class GradeController extends Controller
     public function update(GradeRequest $request, int $id)
     {
         $grade = Grade::find($id);
-        if (!$grade) {
+        if (! $grade) {
             return redirect()->route('grades.index')->with('error', '找不到該方案');
         }
 
@@ -68,7 +68,7 @@ class GradeController extends Controller
     public function toggleStatus(int $id)
     {
         $grade = Grade::find($id);
-        if (!$grade) {
+        if (! $grade) {
             return redirect()->route('grades.index')->with('error', '找不到該方案');
         }
 

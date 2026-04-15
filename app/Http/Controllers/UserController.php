@@ -41,7 +41,7 @@ class UserController extends Controller
     public function edit(int $id)
     {
         $user = User::find($id);
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('users.index')->with('error', '找不到該使用者');
         }
 
@@ -54,7 +54,7 @@ class UserController extends Controller
     public function update(UserRequest $request, int $id)
     {
         $user = User::find($id);
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('users.index')->with('error', '找不到該使用者');
         }
 
@@ -70,7 +70,7 @@ class UserController extends Controller
     public function destroy(int $id)
     {
         $user = User::find($id);
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('users.index')->with('error', '找不到該使用者');
         }
 

@@ -16,9 +16,9 @@ class GradeFactory extends Factory
     public function definition(): array
     {
         return [
-            'code'   => 'grade_' . fake()->unique()->lexify('???'),
-            'name'   => '版本' . fake()->unique()->lexify('???'),
-            'price'  => fake()->numberBetween(2, 99999),
+            'code' => 'grade_'.fake()->unique()->lexify('???'),
+            'name' => '版本'.fake()->unique()->lexify('???'),
+            'price' => fake()->numberBetween(2, 99999),
             'status' => GradeStatus::Active,
         ];
     }

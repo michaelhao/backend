@@ -42,7 +42,7 @@ class RoleController extends Controller
     public function edit(int $id)
     {
         $role = Role::find($id);
-        if (!$role) {
+        if (! $role) {
             return redirect()->route('roles.index')->with('error', '找不到該角色');
         }
 
@@ -55,7 +55,7 @@ class RoleController extends Controller
     public function update(RoleRequest $request, int $id)
     {
         $role = Role::find($id);
-        if (!$role) {
+        if (! $role) {
             return redirect()->route('roles.index')->with('error', '找不到該角色');
         }
 
@@ -72,7 +72,7 @@ class RoleController extends Controller
     public function destroy(int $id)
     {
         $role = Role::find($id);
-        if (!$role) {
+        if (! $role) {
             return redirect()->route('roles.index')->with('error', '找不到該角色');
         }
 

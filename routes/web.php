@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AddonController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GradeController;
@@ -57,5 +58,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/shops/{id}/edit', [ShopController::class, 'edit'])->name('shops.edit');
         Route::put('/shops/{id}', [ShopController::class, 'update'])->name('shops.update');
         Route::post('/shops/{id}/certify', [ShopController::class, 'certify'])->name('shops.certify');
+
+        // 附加功能管理
+        Route::get('/addons', [AddonController::class, 'index'])->name('addons.index');
+        Route::get('/addons/create', [AddonController::class, 'create'])->name('addons.create');
+        Route::post('/addons', [AddonController::class, 'store'])->name('addons.store');
+        Route::get('/addons/{id}/edit', [AddonController::class, 'edit'])->name('addons.edit');
+        Route::put('/addons/{id}', [AddonController::class, 'update'])->name('addons.update');
+        Route::delete('/addons/{id}', [AddonController::class, 'destroy'])->name('addons.destroy');
     });
 });

@@ -2,21 +2,22 @@
 
 namespace Database\Factories;
 
+use App\Models\ShopAdmin;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\ShopAdmin>
+ * @extends Factory<ShopAdmin>
  */
 class ShopAdminFactory extends Factory
 {
     public function definition(): array
     {
         return [
-            'name'            => mb_substr(fake()->name(), 0, 20),
-            'email'           => fake()->unique()->safeEmail(),
-            'password'        => 'password',
+            'name' => mb_substr(fake()->name(), 0, 20),
+            'email' => fake()->unique()->safeEmail(),
+            'password' => 'password',
             'business_number' => null,
-            'company_name'    => null,
+            'company_name' => null,
         ];
     }
 }

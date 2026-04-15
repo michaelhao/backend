@@ -8,8 +8,10 @@ use App\Models\Role;
 use App\Models\Shop;
 use App\Models\ShopAdmin;
 use App\Models\User;
+use App\Support\Mask;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -75,7 +77,7 @@ class ShopRuTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('測試商店');
         // masked email should be visible in the display span
-        $response->assertSee(\App\Support\Mask::email('admin@example.com'));
+        $response->assertSee(Mask::email('admin@example.com'));
     }
 
     public function test_viewer_cannot_access_shop_edit(): void
@@ -96,15 +98,15 @@ class ShopRuTest extends TestCase
         $this->seedPermissions();
         $this->createUserWithRole('Admin');
         $grade = Grade::factory()->create();
-        $shop  = $this->createShopWithAdmin();
+        $shop = $this->createShopWithAdmin();
 
         $response = $this->put(route('shops.update', $shop), [
-            'name'     => '更新商店名稱',
-            'email'    => 'updated@shop.com',
+            'name' => '更新商店名稱',
+            'email' => 'updated@shop.com',
             'grade_id' => $grade->id,
-            'status'   => ShopStatus::Active->value,
-            'admin'    => [
-                'name'  => '新管理員',
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => '新管理員',
                 'email' => 'newadmin@shop.com',
             ],
         ]);
@@ -113,13 +115,13 @@ class ShopRuTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('shops', [
-            'id'    => $shop->id,
-            'name'  => '更新商店名稱',
+            'id' => $shop->id,
+            'name' => '更新商店名稱',
             'email' => 'updated@shop.com',
         ]);
         $this->assertDatabaseHas('shops_admin', [
             'shop_id' => $shop->id,
-            'name'    => '新管理員',
+            'name' => '新管理員',
         ]);
         $this->assertSame('newadmin@shop.com', $shop->admin->fresh()->email);
     }
@@ -131,12 +133,12 @@ class ShopRuTest extends TestCase
         $shop = $this->createShopWithAdmin(['email' => 'same@shop.com']);
 
         $response = $this->put(route('shops.update', $shop), [
-            'name'     => $shop->name,
-            'email'    => 'same@shop.com',
+            'name' => $shop->name,
+            'email' => 'same@shop.com',
             'grade_id' => $shop->grade_id,
-            'status'   => ShopStatus::Active->value,
-            'admin'    => [
-                'name'  => $shop->admin->name,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => $shop->admin->name,
                 'email' => $shop->admin->email,
             ],
         ]);
@@ -152,12 +154,12 @@ class ShopRuTest extends TestCase
         $shop = $this->createShopWithAdmin([], ['email' => 'sameadmin@shop.com']);
 
         $response = $this->put(route('shops.update', $shop), [
-            'name'     => $shop->name,
-            'email'    => $shop->email,
+            'name' => $shop->name,
+            'email' => $shop->email,
             'grade_id' => $shop->grade_id,
-            'status'   => ShopStatus::Active->value,
-            'admin'    => [
-                'name'  => $shop->admin->name,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => $shop->admin->name,
                 'email' => 'sameadmin@shop.com',
             ],
         ]);
@@ -174,12 +176,12 @@ class ShopRuTest extends TestCase
         $shop = $this->createShopWithAdmin();
 
         $response = $this->put(route('shops.update', $shop), [
-            'name'     => $shop->name,
-            'email'    => 'taken@shop.com',
+            'name' => $shop->name,
+            'email' => 'taken@shop.com',
             'grade_id' => $shop->grade_id,
-            'status'   => ShopStatus::Active->value,
-            'admin'    => [
-                'name'  => $shop->admin->name,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => $shop->admin->name,
                 'email' => $shop->admin->email,
             ],
         ]);
@@ -192,15 +194,15 @@ class ShopRuTest extends TestCase
         $this->seedPermissions();
         $this->createUserWithRole('Admin');
         $other = $this->createShopWithAdmin([], ['email' => 'takenAdmin@shop.com']);
-        $shop  = $this->createShopWithAdmin();
+        $shop = $this->createShopWithAdmin();
 
         $response = $this->put(route('shops.update', $shop), [
-            'name'     => $shop->name,
-            'email'    => $shop->email,
+            'name' => $shop->name,
+            'email' => $shop->email,
             'grade_id' => $shop->grade_id,
-            'status'   => ShopStatus::Active->value,
-            'admin'    => [
-                'name'  => $shop->admin->name,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => $shop->admin->name,
                 'email' => 'takenAdmin@shop.com',
             ],
         ]);
@@ -215,12 +217,12 @@ class ShopRuTest extends TestCase
         $shop = $this->createShopWithAdmin();
 
         $response = $this->put(route('shops.update', $shop), [
-            'name'     => $shop->name,
-            'email'    => $shop->email,
+            'name' => $shop->name,
+            'email' => $shop->email,
             'grade_id' => $shop->grade_id,
-            'status'   => 99,
-            'admin'    => [
-                'name'  => $shop->admin->name,
+            'status' => 99,
+            'admin' => [
+                'name' => $shop->admin->name,
                 'email' => $shop->admin->email,
             ],
         ]);
@@ -235,12 +237,12 @@ class ShopRuTest extends TestCase
         $shop = $this->createShopWithAdmin();
 
         $response = $this->put(route('shops.update', $shop), [
-            'name'     => $shop->name,
-            'email'    => $shop->email,
+            'name' => $shop->name,
+            'email' => $shop->email,
             'grade_id' => 99999,
-            'status'   => ShopStatus::Active->value,
-            'admin'    => [
-                'name'  => $shop->admin->name,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => $shop->admin->name,
                 'email' => $shop->admin->email,
             ],
         ]);
@@ -255,23 +257,23 @@ class ShopRuTest extends TestCase
         $shop = $this->createShopWithAdmin();
 
         $response = $this->put(route('shops.update', $shop), [
-            'name'     => $shop->name,
-            'email'    => $shop->email,
+            'name' => $shop->name,
+            'email' => $shop->email,
             'grade_id' => $shop->grade_id,
-            'status'   => ShopStatus::Active->value,
-            'admin'    => [
-                'name'            => $shop->admin->name,
-                'email'           => $shop->admin->email,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => $shop->admin->name,
+                'email' => $shop->admin->email,
                 'business_number' => '12345678',
-                'company_name'    => '測試股份有限公司',
+                'company_name' => '測試股份有限公司',
             ],
         ]);
 
         $response->assertRedirect(route('shops.index'));
         $this->assertDatabaseHas('shops_admin', [
-            'shop_id'         => $shop->id,
+            'shop_id' => $shop->id,
             'business_number' => '12345678',
-            'company_name'    => '測試股份有限公司',
+            'company_name' => '測試股份有限公司',
         ]);
     }
 
@@ -349,7 +351,7 @@ class ShopRuTest extends TestCase
 
         Http::fake([
             '*' => function () {
-                throw new \Illuminate\Http\Client\ConnectionException('timeout');
+                throw new ConnectionException('timeout');
             },
         ]);
 
