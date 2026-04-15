@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Attributes\RequiresPermission;
+use App\Http\Requests\ShopCertifyRequest;
 use App\Http\Requests\ShopUpdateRequest;
 use App\Models\Shop;
 use App\Services\ShopService;
@@ -46,16 +47,12 @@ class ShopController extends Controller
     }
 
     #[RequiresPermission('Shop.update')]
-    public function certify(Request $request, $id)
+    public function certify(ShopCertifyRequest $request, $id)
     {
         $shop = Shop::find($id);
         if (!$shop) {
             return redirect()->route('shops.index')->with('error', '找不到該商店');
         }
-
-        $request->validate([
-            'business_number' => ['required', 'string', 'regex:/^\d{8}$/'],
-        ]);
 
         $result = $this->shopService->verifyCertification($request->business_number);
 

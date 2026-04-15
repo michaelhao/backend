@@ -51,8 +51,8 @@ class ShopService
 
     public function updateShop(Shop $shop, array $shopData, array $adminData): void
     {
-        $conflict = ShopAdmin::all()
-            ->reject(fn ($a) => $a->id === $shop->admin->id)
+        $conflict = ShopAdmin::where('id', '!=', $shop->admin->id)
+            ->get()
             ->first(fn ($a) => $a->email === $adminData['email']);
 
         if ($conflict) {
