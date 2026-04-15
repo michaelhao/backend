@@ -110,7 +110,7 @@
                         {{-- masked display (read-only, shown by default) --}}
                         <span id="admin-email-masked"
                               class="flex-1 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 font-mono">
-                            {{ maskEmail(old('admin.email', $shop->admin?->email ?? '')) }}
+                            {{ \App\Support\Mask::email(old('admin.email', $shop->admin?->email ?? '')) }}
                         </span>
                         {{-- editable input (hidden by default) --}}
                         <input id="admin-email-input" type="email" name="admin[email]"
@@ -143,7 +143,7 @@
                     </label>
                     <div>
                         <input type="text" id="business-number-display"
-                               value="{{ $shop->admin?->business_number ? maskString($shop->admin->business_number) : '' }}"
+                               value="{{ $shop->admin?->business_number ? \App\Support\Mask::string($shop->admin->business_number) : '' }}"
                                readonly placeholder="尚未認證"
                                class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 font-mono">
                         <input type="hidden" id="business-number-hidden" name="admin[business_number]"

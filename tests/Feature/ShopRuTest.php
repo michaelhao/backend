@@ -75,7 +75,7 @@ class ShopRuTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('測試商店');
         // masked email should be visible in the display span
-        $response->assertSee(maskEmail('admin@example.com'));
+        $response->assertSee(\App\Support\Mask::email('admin@example.com'));
     }
 
     public function test_viewer_cannot_access_shop_edit(): void
