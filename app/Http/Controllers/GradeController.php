@@ -36,7 +36,7 @@ class GradeController extends Controller
     }
 
     #[RequiresPermission('Grade.update')]
-    public function edit($id)
+    public function edit(int $id)
     {
         $grade = Grade::find($id);
         if (!$grade) {
@@ -49,7 +49,7 @@ class GradeController extends Controller
     }
 
     #[RequiresPermission('Grade.update')]
-    public function update(GradeRequest $request, $id)
+    public function update(GradeRequest $request, int $id)
     {
         $grade = Grade::find($id);
         if (!$grade) {
@@ -65,7 +65,7 @@ class GradeController extends Controller
     }
 
     #[RequiresPermission('Grade.update')]
-    public function toggleStatus($id)
+    public function toggleStatus(int $id)
     {
         $grade = Grade::find($id);
         if (!$grade) {

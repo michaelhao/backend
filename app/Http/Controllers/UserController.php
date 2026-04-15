@@ -38,7 +38,7 @@ class UserController extends Controller
     }
 
     #[RequiresPermission('User.update')]
-    public function edit($id)
+    public function edit(int $id)
     {
         $user = User::find($id);
         if (!$user) {
@@ -51,7 +51,7 @@ class UserController extends Controller
     }
 
     #[RequiresPermission('User.update')]
-    public function update(UserRequest $request, $id)
+    public function update(UserRequest $request, int $id)
     {
         $user = User::find($id);
         if (!$user) {
@@ -67,7 +67,7 @@ class UserController extends Controller
     }
 
     #[RequiresPermission('User.delete')]
-    public function destroy($id)
+    public function destroy(int $id)
     {
         $user = User::find($id);
         if (!$user) {

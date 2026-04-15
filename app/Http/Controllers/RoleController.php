@@ -39,7 +39,7 @@ class RoleController extends Controller
     }
 
     #[RequiresPermission('Role.update')]
-    public function edit($id)
+    public function edit(int $id)
     {
         $role = Role::find($id);
         if (!$role) {
@@ -52,7 +52,7 @@ class RoleController extends Controller
     }
 
     #[RequiresPermission('Role.update')]
-    public function update(RoleRequest $request, $id)
+    public function update(RoleRequest $request, int $id)
     {
         $role = Role::find($id);
         if (!$role) {
@@ -69,7 +69,7 @@ class RoleController extends Controller
     }
 
     #[RequiresPermission('Role.delete')]
-    public function destroy($id)
+    public function destroy(int $id)
     {
         $role = Role::find($id);
         if (!$role) {

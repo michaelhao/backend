@@ -20,7 +20,7 @@ class ShopController extends Controller
     }
 
     #[RequiresPermission('Shop.update')]
-    public function edit($id)
+    public function edit(int $id)
     {
         $shop = Shop::find($id);
         if (!$shop) {
@@ -31,7 +31,7 @@ class ShopController extends Controller
     }
 
     #[RequiresPermission('Shop.update')]
-    public function update(ShopUpdateRequest $request, $id)
+    public function update(ShopUpdateRequest $request, int $id)
     {
         $shop = Shop::find($id);
         if (!$shop) {
@@ -47,7 +47,7 @@ class ShopController extends Controller
     }
 
     #[RequiresPermission('Shop.update')]
-    public function certify(ShopCertifyRequest $request, $id)
+    public function certify(ShopCertifyRequest $request, int $id)
     {
         $shop = Shop::find($id);
         if (!$shop) {
