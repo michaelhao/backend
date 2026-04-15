@@ -12,7 +12,7 @@ class ShopAdminFactory extends Factory
     public function definition(): array
     {
         return [
-            'name'            => fake()->name(),
+            'name'            => mb_substr(fake()->name(), 0, 20),
             'email'           => fake()->unique()->safeEmail(),
             'password'        => 'password',
             'business_number' => null,
