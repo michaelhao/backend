@@ -140,9 +140,21 @@ Transaction:
         SyncShopAddonsForGrade(Grade B),
         SyncShopAddonsForGrade(Grade C),
     ])
+    ->name('Addon grade sync')           // 顯示於 job_batches.name
     ->then(fn() => addon.syncing = 0)   // 全部成功
     ->catch(fn() => addon.syncing = 0)  // 失敗也解除，避免永久卡住
     ->dispatch()
+```
+
+**Queue 名稱**：`SyncShopAddonsForGrade` 使用獨立 queue `addons`，不混入 `default`。
+```bash
+php artisan queue:work --queue=addons
+```
+
+**job_batches 清理**：批次執行完畢後資料不會自動刪除，需排程定期清理：
+```php
+// routes/console.php
+Schedule::command('queue:prune-batches --hours=48')->daily();
 ```
 
 **Addon 頁面顯示**（不需跨頁至 Grade 頁確認）：
@@ -157,8 +169,11 @@ Transaction:
 ### 5. 圖片處理規範
 * **允許格式**：僅接受 `jpg`、`png`。
 * **命名規則**：上傳圖片時，檔名強制改寫為 `{addon_id}-img-{timestamp}.{ext}`，副檔名保留原始格式（jpg 存 jpg、png 存 png）。
+* **儲存位置**：`Storage::disk('public')` → 實際路徑 `storage/app/public/addons/{filename}`。
 * **單圖邏輯**：每個 Addon 僅對應一筆 `addons_image` 紀錄。
 * **更新順序**：先存新圖，成功後再刪舊圖（避免存檔失敗造成無圖狀態）。
+* **URL 生成**：Blade 使用 `asset('storage/' . $image_url)`，不使用 `Storage::disk('public')->url()`。後者會硬編碼 `APP_URL`，在 Docker 環境中可能與瀏覽器存取的 host 不符導致破圖。
+* **Symlink**：部署後需執行 `php artisan storage:link`，確保 `public/storage` → `storage/app/public`。
 
 ---
 
