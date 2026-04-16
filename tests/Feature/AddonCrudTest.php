@@ -324,8 +324,8 @@ class AddonCrudTest extends TestCase
 
         $response = $this->delete(route('addons.destroy', $addon));
 
-        $response->assertRedirect(route('addons.index'));
-        $response->assertSessionHas('success');
+        $response->assertOk();
+        $response->assertJson(['message' => '附加功能已刪除']);
         $addon->refresh();
         $this->assertEquals(AddonStatus::Deleted, $addon->status);
     }

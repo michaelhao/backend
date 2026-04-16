@@ -56,8 +56,8 @@ feat/addon-system
 | **source** | tinyint | 1: Grade (等級預設), 2: Purchased (手動加購) |
 | status | tinyint | 0: 停用, 1: 啟用 |
 | **expired_at** | **datetime** | 過期時間 (nullable)，精確到 23:59:59 |
-| created_at | datetime | |
-| updated_at | datetime | |
+| created_at | datetime | NOT NULL，寫入時必定帶值 |
+| updated_at | datetime | nullable |
 
 > - UNIQUE(`shop_id`, `addon_id`)
 > - INDEX(`shop_id`, `source`) — 高頻查詢組合
@@ -110,13 +110,22 @@ feat/addon-system
 **主表 (addons)：**
 刪除時執行軟刪除，將 status 更新為 -1，用於保留名稱與價格的歷史紀錄。
 
-**關係表 (grades_addons & shops_addons)：**
+**關係表 (grades_addons, shops_addons, addons_image)：**
 當 Addon 被標記為 -1，或手動解除關聯時，直接物理刪除 (DELETE) 對應的關係紀錄。
 商店端的 source = 2 紀錄若因 Addon 刪除而需要移除，同樣直接 DELETE。
+`addons_image` 的資料列也在同一 Transaction 內物理刪除。
+
+**圖片檔案清理：**
+刪除前先讀取 `addons_image.image_url`，Transaction commit 後透過 `DB::afterCommit` 呼叫 `Storage::disk('public')->delete()` 刪除實際檔案。
 
 **刪除事務的原子性**
 ```
-當 addons.status 更新為 -1 時，必須確保與 grades_addons 和 shops_addons 的 DELETE 動作在同一個 Database Transaction 內完成。
+當 addons.status 更新為 -1 時，必須確保：
+  1. grades_addons DELETE
+  2. shops_addons DELETE
+  3. addons_image DELETE
+均在同一個 Database Transaction 內完成。
+圖片檔案的 Storage 刪除於 afterCommit 執行，不在 Transaction 範圍內。
 ```
 
 ### 4. 效能與非同步同步機制
@@ -126,6 +135,13 @@ feat/addon-system
 **策略**：
 - **Queue**：同步邏輯不在 Web Request 中執行，丟入 Background Job。
 - **批次處理**：使用 `upsert` 進行批次寫入，避免迴圈內執行 SQL。
+
+**共用同步邏輯（`ShopAddonSyncService`）**：
+per-shop diff-and-apply 邏輯統一封裝在 `App\Services\ShopAddonSyncService::syncForShop(int $shopId, array $sNew)`，由以下兩個路徑呼叫：
+- `SyncShopAddonsForGrade::handle()`（Queue Job）：Grade-Addon 關聯變動時，針對每家商店呼叫。
+- `ShopService::syncShopAddonsOnGradeChange()`：商店直接變更 grade_id 時，針對該單一商店呼叫。
+
+每次 `syncForShop()` 呼叫都會包裹在獨立的 `DB::transaction()` 中，確保單家商店的同步原子性，Job 重試不會造成部分更新。
 
 **同步狀態追蹤（Laravel Job Batching）**：
 
@@ -141,8 +157,8 @@ Transaction:
         SyncShopAddonsForGrade(Grade C),
     ])
     ->name('Addon grade sync')           // 顯示於 job_batches.name
-    ->then(fn() => addon.syncing = 0)   // 全部成功
-    ->catch(fn() => addon.syncing = 0)  // 失敗也解除，避免永久卡住
+    ->then(fn() => addon.syncing = 0)                    // 全部成功
+    ->catch(fn() => Log::error(...) + addon.syncing = 0) // 失敗記錄 Log 後解除，避免永久卡住
     ->dispatch()
 ```
 
@@ -169,7 +185,7 @@ Schedule::command('queue:prune-batches --hours=48')->daily();
 ### 5. 圖片處理規範
 * **允許格式**：僅接受 `jpg`、`png`。
 * **命名規則**：上傳圖片時，檔名強制改寫為 `{addon_id}-img-{timestamp}.{ext}`，副檔名保留原始格式（jpg 存 jpg、png 存 png）。
-* **儲存位置**：`Storage::disk('public')` → 實際路徑 `storage/app/public/addons/{filename}`。
+* **儲存位置**：`Storage::disk('public')` → 實際路徑 `storage/app/public/addons/{filename}`。使用 `Storage::disk('public')->putFileAs('addons', $image, $filename)` 串流寫入。
 * **單圖邏輯**：每個 Addon 僅對應一筆 `addons_image` 紀錄。
 * **更新順序**：先存新圖，成功後再刪舊圖（避免存檔失敗造成無圖狀態）。
 * **URL 生成**：Blade 使用 `asset('storage/' . $image_url)`，不使用 `Storage::disk('public')->url()`。後者會硬編碼 `APP_URL`，在 Docker 環境中可能與瀏覽器存取的 host 不符導致破圖。

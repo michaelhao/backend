@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('unit', 10)->nullable();
             $table->tinyInteger('status')->default(1);
             $table->tinyInteger('syncing')->default(0);
+            $table->index('status');
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();
         });

@@ -16,6 +16,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class AddonService
@@ -140,18 +141,23 @@ class AddonService
 
     public function deleteAddon(Addon $addon): void
     {
+        $imageUrl = $addon->image?->image_url;
+
         DB::transaction(fn () => $this->addonRepository->softDelete($addon));
+
+        if ($imageUrl) {
+            DB::afterCommit(fn () => Storage::disk('public')->delete($imageUrl));
+        }
     }
 
     private function storeImage(UploadedFile $image, int $addonId): string
     {
-        $ext = $image->getClientOriginalExtension();
-        $filename = "{$addonId}-img-".now()->timestamp.".{$ext}";
-        $path = "addons/{$filename}";
+        $ext      = $image->getClientOriginalExtension();
+        $filename = "{$addonId}-img-" . now()->timestamp . ".{$ext}";
 
-        Storage::disk('public')->put($path, file_get_contents($image->getRealPath()));
+        Storage::disk('public')->putFileAs('addons', $image, $filename);
 
-        return $path;
+        return "addons/{$filename}";
     }
 
     private function dispatchGradeSyncBatch(Addon $addon, array $gradeIds): void
@@ -166,6 +172,11 @@ class AddonService
                 Addon::where('id', $addonId)->update(['syncing' => AddonSyncing::Done->value]);
             })
             ->catch(function (Batch $batch, \Throwable $e) use ($addonId) {
+                Log::error('Addon grade sync batch failed', [
+                    'addon_id' => $addonId,
+                    'batch_id' => $batch->id,
+                    'error'    => $e->getMessage(),
+                ]);
                 Addon::where('id', $addonId)->update(['syncing' => AddonSyncing::Done->value]);
             })
             ->dispatch();

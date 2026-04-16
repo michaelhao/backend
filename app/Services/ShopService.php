@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use App\Enums\ShopAddonSource;
-use App\Enums\ShopAddonStatus;
 use App\Enums\ShopStatus;
 use App\Models\Grade;
 use App\Models\Shop;
@@ -18,7 +16,10 @@ use Illuminate\Validation\ValidationException;
 
 class ShopService
 {
-    public function __construct(private ShopRepository $shopRepository) {}
+    public function __construct(
+        private ShopRepository $shopRepository,
+        private ShopAddonSyncService $shopAddonSync,
+    ) {}
 
     /**
      * @return array{shops: LengthAwarePaginator, filters: array, perPage: int, grades: Collection}
@@ -80,69 +81,12 @@ class ShopService
 
     private function syncShopAddonsOnGradeChange(int $shopId, int $newGradeId): void
     {
-        $now = now()->format('Y-m-d H:i:s');
-        $eod = now()->setTime(23, 59, 59)->format('Y-m-d H:i:s');
-
-        $sOld = DB::table('shops_addons')
-            ->where('shop_id', $shopId)
-            ->where('source', ShopAddonSource::Grade->value)
-            ->pluck('addon_id')
-            ->all();
-
         $sNew = DB::table('grades_addons')
             ->where('grade_id', $newGradeId)
             ->pluck('addon_id')
             ->all();
 
-        $toRemove = array_values(array_diff($sOld, $sNew));
-        $toAdd = array_values(array_diff($sNew, $sOld));
-
-        if (! empty($toRemove)) {
-            DB::table('shops_addons')
-                ->where('shop_id', $shopId)
-                ->whereIn('addon_id', $toRemove)
-                ->where('source', ShopAddonSource::Grade->value)
-                ->update([
-                    'source' => ShopAddonSource::Purchased->value,
-                    'expired_at' => $eod,
-                    'updated_at' => $now,
-                ]);
-        }
-
-        if (! empty($toAdd)) {
-            $existingPurchased = DB::table('shops_addons')
-                ->where('shop_id', $shopId)
-                ->whereIn('addon_id', $toAdd)
-                ->where('source', ShopAddonSource::Purchased->value)
-                ->pluck('addon_id')
-                ->all();
-
-            if (! empty($existingPurchased)) {
-                DB::table('shops_addons')
-                    ->where('shop_id', $shopId)
-                    ->whereIn('addon_id', $existingPurchased)
-                    ->update([
-                        'source' => ShopAddonSource::Grade->value,
-                        'expired_at' => null,
-                        'updated_at' => $now,
-                    ]);
-            }
-
-            $pureNewIds = array_values(array_diff($toAdd, $existingPurchased));
-            if (! empty($pureNewIds)) {
-                DB::table('shops_addons')->insertOrIgnore(
-                    array_map(fn ($addonId) => [
-                        'shop_id' => $shopId,
-                        'addon_id' => $addonId,
-                        'source' => ShopAddonSource::Grade->value,
-                        'status' => ShopAddonStatus::Enabled->value,
-                        'expired_at' => null,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ], $pureNewIds)
-                );
-            }
-        }
+        $this->shopAddonSync->syncForShop($shopId, $sNew);
     }
 
     /**

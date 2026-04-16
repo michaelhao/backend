@@ -2,7 +2,7 @@
 
 ## Environment
 
-- In local development, PHP runs inside Docker. Do not attempt to run `php` or `composer` commands directly on the host. Use `docker compose exec backend <cmd>` (service name) or `docker exec wsl-backend <cmd>` (container name) to run PHP/artisan/composer commands.
+- In local development, PHP runs inside Docker. Do not attempt to run `php` or `composer` commands directly on the host. Use `docker compose exec wsl-backend <cmd>` (service name) or `docker exec wsl-backend <cmd>` (container name) to run PHP/artisan/composer commands.
 - Git credentials and `gh` CLI may not be configured. Do not attempt `git push` or `gh pr create` without confirming availability first.
 
 ## Coding Behavior Guidelines

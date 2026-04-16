@@ -60,6 +60,7 @@ class AddonRepository
         $addon->update(['status' => AddonStatus::Deleted]);
         DB::table('grades_addons')->where('addon_id', $addon->id)->delete();
         DB::table('shops_addons')->where('addon_id', $addon->id)->delete();
+        DB::table('addons_image')->where('addon_id', $addon->id)->delete();
     }
 
     public function upsertImage(Addon $addon, string $imageUrl): void

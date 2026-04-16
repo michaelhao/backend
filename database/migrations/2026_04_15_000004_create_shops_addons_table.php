@@ -18,7 +18,7 @@ return new class extends Migration
             $table->unique(['shop_id', 'addon_id']);
             $table->index(['shop_id', 'source']);
             $table->index('addon_id');
-            $table->dateTime('created_at')->nullable();
+            $table->dateTime('created_at');
             $table->dateTime('updated_at')->nullable();
         });
     }
