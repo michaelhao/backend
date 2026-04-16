@@ -7,6 +7,7 @@ use App\Enums\AddonStatus;
 use App\Http\Requests\AddonRequest;
 use App\Models\Addon;
 use App\Services\AddonService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -67,15 +68,15 @@ class AddonController extends Controller
     }
 
     #[RequiresPermission('Addon.delete')]
-    public function destroy(int $id): RedirectResponse
+    public function destroy(int $id): JsonResponse
     {
         $addon = Addon::find($id);
         if (! $addon || $addon->status === AddonStatus::Deleted) {
-            return redirect()->route('addons.index')->with('error', '找不到該附加功能');
+            return response()->json(['message' => '找不到該附加功能'], 422);
         }
 
         $this->addonService->deleteAddon($addon);
 
-        return redirect()->route('addons.index')->with('success', '附加功能已刪除');
+        return response()->json(['message' => '附加功能已刪除']);
     }
 }

@@ -13,13 +13,15 @@
         </x-permission>
     </div>
 
-    @if (session('success'))
-        <div class="mb-4 rounded-lg bg-green-50 p-4 text-sm text-green-700 transition-opacity duration-500 flash-message">{{ session('success') }}</div>
-    @endif
+    <div class="flash-area">
+        @if (session('success'))
+            <div class="mb-4 rounded-lg bg-green-50 p-4 text-sm text-green-700 transition-opacity duration-500 flash-message">{{ session('success') }}</div>
+        @endif
 
-    @if (session('error'))
-        <div class="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700 transition-opacity duration-500 flash-message">{{ session('error') }}</div>
-    @endif
+        @if (session('error'))
+            <div class="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700 transition-opacity duration-500 flash-message">{{ session('error') }}</div>
+        @endif
+    </div>
 
     <div class="bg-white rounded-lg shadow overflow-hidden">
         <table class="w-full text-sm text-left">
@@ -47,12 +49,12 @@
                                    class="text-blue-600 hover:text-blue-800">編輯</a>
                             </x-permission>
                             <x-permission name="Role.delete">
-                                <form method="POST" action="{{ route('roles.destroy', $role) }}" class="inline"
-                                      onsubmit="return confirm('確定要刪除此角色嗎？')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-red-600 hover:text-red-800">刪除</button>
-                                </form>
+                                <button type="button"
+                                        class="delete-btn text-red-600 hover:text-red-800"
+                                        data-url="{{ route('roles.destroy', $role) }}"
+                                        data-name="{{ $role->name }}">
+                                    刪除
+                                </button>
                             </x-permission>
                         </td>
                     </tr>
@@ -61,6 +63,25 @@
         </table>
     </div>
 @endsection
+
+<div id="delete-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-2">確認刪除</h3>
+        <p class="text-sm text-gray-600 mb-6">
+            確定要刪除「<span id="delete-modal-name" class="font-medium text-gray-900"></span>」嗎？此操作無法復原。
+        </p>
+        <div class="flex justify-end gap-3">
+            <button id="delete-modal-cancel"
+                    class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">
+                取消
+            </button>
+            <button id="delete-modal-confirm"
+                    class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors">
+                確認刪除
+            </button>
+        </div>
+    </div>
+</div>
 
 @push('scripts')
 <script>
@@ -71,6 +92,62 @@
                 setTimeout(() => el.remove(), 500);
             }, 5000);
         });
+
+        let deleteTargetUrl = null;
+
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                deleteTargetUrl = this.dataset.url;
+                document.getElementById('delete-modal-name').textContent = this.dataset.name;
+                document.getElementById('delete-modal').classList.remove('hidden');
+            });
+        });
+
+        document.getElementById('delete-modal-cancel').addEventListener('click', () => {
+            document.getElementById('delete-modal').classList.add('hidden');
+            deleteTargetUrl = null;
+        });
+
+        document.getElementById('delete-modal-confirm').addEventListener('click', async function () {
+            if (!deleteTargetUrl) return;
+
+            this.disabled = true;
+            this.textContent = '刪除中...';
+
+            try {
+                await axios.delete(deleteTargetUrl);
+
+                document.querySelector(`[data-url="${deleteTargetUrl}"]`)
+                    .closest('tr')
+                    .remove();
+
+                showFlash('success', '已成功刪除');
+            } catch (err) {
+                const message = err.response?.data?.message ?? '刪除失敗，請稍後再試';
+                showFlash('error', message);
+            } finally {
+                document.getElementById('delete-modal').classList.add('hidden');
+                this.disabled = false;
+                this.textContent = '確認刪除';
+                deleteTargetUrl = null;
+            }
+        });
+
+        function showFlash(type, message) {
+            const colors = {
+                success: 'bg-green-50 text-green-700',
+                error:   'bg-red-50 text-red-700',
+            };
+            const el = document.createElement('div');
+            el.className = `mb-4 rounded-lg p-4 text-sm flash-message ${colors[type]}`;
+            el.textContent = message;
+            document.querySelector('.flash-area').prepend(el);
+            setTimeout(() => {
+                el.style.opacity = '0';
+                el.style.transition = 'opacity 0.5s';
+                setTimeout(() => el.remove(), 500);
+            }, 5000);
+        }
     });
 </script>
 @endpush
