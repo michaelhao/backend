@@ -67,12 +67,6 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ---
 
-## Git Commit rules
-
-- Co-Authored-By using the following information：
-  ```
-  Co-Authored-By: michaelhao <pk111100@gmail.com>
-  ```
 ## Migrate rules
 
 - Replace timestamps with created_at and updated_at.
