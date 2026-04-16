@@ -19,7 +19,7 @@ class SyncShopAddonsForGrade implements ShouldQueue
 
     public function __construct(public readonly Grade $grade)
     {
-        $this->onQueue('addons');
+        $this->onQueue('addon_sync');
     }
 
     public function handle(ShopAddonSyncService $sync): void
