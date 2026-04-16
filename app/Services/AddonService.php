@@ -168,6 +168,7 @@ class AddonService
 
         Bus::batch($jobs)
             ->name('Addon grade sync')
+            ->onQueue('addon_sync')
             ->then(function (Batch $batch) use ($addonId) {
                 Addon::where('id', $addonId)->update(['syncing' => AddonSyncing::Done->value]);
             })

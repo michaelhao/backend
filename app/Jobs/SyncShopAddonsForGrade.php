@@ -17,10 +17,7 @@ class SyncShopAddonsForGrade implements ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public readonly Grade $grade)
-    {
-        $this->onQueue('addon_sync');
-    }
+    public function __construct(public readonly Grade $grade) {}
 
     public function handle(ShopAddonSyncService $sync): void
     {
