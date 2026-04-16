@@ -18,6 +18,9 @@ class AddonRepository
             ->when($filters['keyword'] ?? null, function ($query, $keyword) {
                 $query->where('name', 'like', "%{$keyword}%");
             })
+            ->when($filters['type'] ?? null, fn ($q, $v) => $q->where('type', $v))
+            ->when($filters['status'] ?? null, fn ($q, $v) => $q->where('status', $v))
+            ->when($filters['grade_id'] ?? null, fn ($q, $v) => $q->whereHas('grades', fn ($q2) => $q2->where('grades.id', $v)))
             ->orderBy('id')
             ->paginate($perPage);
     }

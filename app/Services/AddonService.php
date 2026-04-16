@@ -31,12 +31,13 @@ class AddonService
             ? (int) $request->per_page
             : 50;
 
-        $filters = $request->only(['keyword']);
+        $filters = $request->only(['keyword', 'type', 'status', 'grade_id']);
 
         return [
             'addons' => $this->addonRepository->paginate($perPage, $filters),
             'filters' => $filters,
             'perPage' => $perPage,
+            'grades' => Grade::all(),
         ];
     }
 

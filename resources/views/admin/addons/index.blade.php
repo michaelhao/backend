@@ -23,27 +23,73 @@
 
     {{-- 搜尋區塊 --}}
     <form method="GET" action="{{ route('addons.index') }}" class="mb-6 bg-white rounded-lg shadow p-4">
-        <div class="flex items-end gap-4">
-            <div class="flex-1">
-                <label for="keyword" class="block text-xs font-medium text-gray-600 mb-1">關鍵字（功能名稱）</label>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+                <label for="keyword" class="block text-xs font-medium text-gray-600 mb-1">關鍵字（名稱）</label>
                 <input id="keyword" type="text" name="keyword" value="{{ $filters['keyword'] ?? '' }}"
                        placeholder="搜尋功能名稱"
                        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
             </div>
             <div>
-                <label for="per_page" class="block text-xs font-medium text-gray-600 mb-1">每頁</label>
-                <select id="per_page" name="per_page"
-                        class="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
-                    @foreach ([50, 100, 150, 200] as $option)
-                        <option value="{{ $option }}" {{ $perPage == $option ? 'selected' : '' }}>{{ $option }}</option>
+                <label for="type" class="block text-xs font-medium text-gray-600 mb-1">類型</label>
+                <select id="type" name="type"
+                        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+                    <option value="">全部</option>
+                    <option value="1" {{ ($filters['type'] ?? '') === '1' ? 'selected' : '' }}>功能</option>
+                    <option value="2" {{ ($filters['type'] ?? '') === '2' ? 'selected' : '' }}>配額</option>
+                </select>
+            </div>
+            <div>
+                <label for="status" class="block text-xs font-medium text-gray-600 mb-1">狀態</label>
+                <select id="status" name="status"
+                        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+                    <option value="">全部</option>
+                    <option value="1" {{ ($filters['status'] ?? '') === '1' ? 'selected' : '' }}>上架</option>
+                    <option value="0" {{ ($filters['status'] ?? '') === '0' ? 'selected' : '' }}>下架</option>
+                </select>
+            </div>
+            <div>
+                <label for="grade_id" class="block text-xs font-medium text-gray-600 mb-1">所屬版本</label>
+                <select id="grade_id" name="grade_id"
+                        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+                    <option value="">全部</option>
+                    @foreach ($grades as $grade)
+                        <option value="{{ $grade->id }}" {{ ($filters['grade_id'] ?? '') == $grade->id ? 'selected' : '' }}>
+                            {{ $grade->name }}
+                        </option>
                     @endforeach
                 </select>
             </div>
+        </div>
+        <div class="mt-4 flex items-center gap-3">
             <button type="submit"
-                    class="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors">
+                    class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
                 搜尋
             </button>
+            <a href="{{ route('addons.index') }}"
+               class="text-sm text-gray-500 hover:text-gray-700">清除</a>
+
+            {{-- Page size --}}
+            <div class="ml-auto flex items-center gap-2">
+                <label class="text-xs text-gray-600">每頁顯示</label>
+                <select id="per-page-select" name="per_page" form="per-page-form"
+                        class="rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none">
+                    @foreach ([50, 100, 150, 200] as $size)
+                        <option value="{{ $size }}" {{ $perPage === $size ? 'selected' : '' }}>{{ $size }}</option>
+                    @endforeach
+                </select>
+                <span class="text-xs text-gray-600">筆</span>
+            </div>
         </div>
+    </form>
+
+    {{-- Hidden per-page form (submits per_page + existing filters) --}}
+    <form id="per-page-form" method="GET" action="{{ route('addons.index') }}">
+        @foreach ($filters as $key => $value)
+            @if ($value)
+                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+            @endif
+        @endforeach
     </form>
 
     <div class="bg-white rounded-lg shadow overflow-hidden">
@@ -137,6 +183,10 @@
                 el.style.opacity = '0';
                 setTimeout(() => el.remove(), 500);
             }, 5000);
+        });
+
+        document.getElementById('per-page-select').addEventListener('change', function () {
+            document.getElementById('per-page-form').submit();
         });
     });
 </script>
