@@ -73,14 +73,5 @@
 @endsection
 
 @push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        document.querySelectorAll('.flash-message').forEach(el => {
-            setTimeout(() => {
-                el.style.opacity = '0';
-                setTimeout(() => el.remove(), 500);
-            }, 5000);
-        });
-    });
-</script>
+    @vite('resources/js/grades/index.js')
 @endpush

@@ -143,29 +143,5 @@
 </form>
 
 @push('scripts')
-<script>
-    (function () {
-        var input    = document.getElementById('image');
-        var preview  = document.getElementById('image-preview');
-        var holder   = document.getElementById('image-placeholder');
-        var overlay  = document.getElementById('image-overlay');
-        var filename = document.getElementById('image-filename');
-
-        input.addEventListener('change', function () {
-            var file = this.files[0];
-            if (!file) return;
-
-            filename.textContent = file.name;
-
-            var reader = new FileReader();
-            reader.onload = function (e) {
-                preview.src = e.target.result;
-                preview.classList.remove('hidden');
-                holder.classList.add('hidden');
-                overlay.classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
-        });
-    })();
-</script>
+    @vite('resources/js/addons/form.js')
 @endpush
