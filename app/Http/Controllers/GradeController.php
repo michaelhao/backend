@@ -71,18 +71,22 @@ class GradeController extends Controller
     #[RequiresPermission('Grade.update')]
     public function checkWeight(Request $request): JsonResponse
     {
-        $weight    = (int) $request->query('weight');
+        $weight = (int) $request->query('weight');
         $excludeId = $request->query('exclude_id') ? (int) $request->query('exclude_id') : null;
 
+        if ($weight < 1) {
+            return response()->json(['duplicate' => false, 'conflicting_grade' => null, 'grades' => []]);
+        }
+
         $conflict = $this->gradeService->findByWeight($weight, $excludeId);
-        $grades   = $this->gradeService->getAllGrades();
+        $grades = $this->gradeService->getAllGrades();
 
         return response()->json([
-            'duplicate'         => $conflict !== null,
+            'duplicate' => $conflict !== null,
             'conflicting_grade' => $conflict
                 ? ['id' => $conflict->id, 'name' => $conflict->name, 'weight' => $conflict->weight]
                 : null,
-            'grades' => $grades->map(fn($g) => ['id' => $g->id, 'name' => $g->name, 'weight' => $g->weight]),
+            'grades' => $grades->map(fn ($g) => ['id' => $g->id, 'name' => $g->name, 'weight' => $g->weight]),
         ]);
     }
 

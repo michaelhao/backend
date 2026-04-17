@@ -19,6 +19,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!weight) return;
 
+        if (parseInt(weight) < 1) {
+            errorEl.textContent = '版本權重最低為 1';
+            errorEl.classList.remove('hidden');
+            return;
+        }
+
         let data;
         try {
             ({ data } = await axios.get('/grades/check-weight', {
