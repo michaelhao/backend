@@ -197,72 +197,19 @@ Route::get('/grades/check-weight', [GradeController::class, 'checkWeight'])->nam
 
 邏輯說明：
 
-- `DOMContentLoaded` 後綁定 `#weight` 的 `change` 事件
-- `onchange` 且輸入值非空時 → `axios.get('/grades/check-weight', { params: { weight, exclude_id } })`
+- 新增／編輯共用同一個 `form.js`，透過 `input[data-exclude-id]` 是否有值判斷模式
+- `#weight` 的 `change` 事件 → AJAX 檢查重複，並更新顯示區位置預覽
+- `#name` 的 `input` 事件 → 即時同步顯示區的名稱標籤
 
-**重複（duplicate: true）**：
-- `#weight-error` 顯示「請確認版本權重」
-- 在 `#weight-list` 找到衝突 grade 的 `.weight-row[data-id]`，加上 `text-red-600 font-semibold` 標示
-- 移除動態插入的預覽列（`.weight-preview`）
+**重複（duplicate: true）**：顯示錯誤訊息，標紅衝突列
 
 **不重複（duplicate: false）**：
-- 隱藏 `#weight-error`，移除所有衝突標示
-- 移除舊的 `.weight-preview`
-- 根據回傳 grades 陣列找出插入位置（weight 降序，找到第一個比輸入值小的位置之前），插入預覽列：
-  ```html
-  <div class="flex justify-between weight-preview text-blue-600 font-medium">
-      <span>（設定位置）</span><span>{weight}</span>
-  </div>
-  ```
+- 新增頁：插入 `.weight-preview` 預覽列，label 取 `#name.value`（空時顯示「設定位置」）
+- 編輯頁：直接移動 `.weight-row[data-id]` 至正確位置，並更新權重顯示值
 
-**輸入值為空時**：移除預覽列與錯誤訊息，不送出請求。
+**安全性**：預覽列使用 `textContent` 設值（避免 XSS）；axios 請求包裹 try/catch（靜默失敗）
 
-```js
-import axios from 'axios';
-
-document.addEventListener('DOMContentLoaded', () => {
-    const input     = document.getElementById('weight');
-    const errorEl   = document.getElementById('weight-error');
-    const listEl    = document.getElementById('weight-list');
-    if (!input) return;
-
-    input.addEventListener('change', async function () {
-        const weight    = this.value.trim();
-        const excludeId = this.dataset.excludeId || null;
-
-        // 清除舊狀態
-        listEl.querySelectorAll('.weight-row').forEach(r => r.classList.remove('text-red-600', 'font-semibold'));
-        listEl.querySelectorAll('.weight-preview').forEach(r => r.remove());
-        errorEl.classList.add('hidden');
-        errorEl.textContent = '';
-
-        if (!weight) return;
-
-        const { data } = await axios.get('/grades/check-weight', {
-            params: { weight, exclude_id: excludeId || undefined },
-        });
-
-        if (data.duplicate) {
-            errorEl.textContent = '請確認版本權重';
-            errorEl.classList.remove('hidden');
-            const conflictRow = listEl.querySelector(`.weight-row[data-id="${data.conflicting_grade.id}"]`);
-            if (conflictRow) conflictRow.classList.add('text-red-600', 'font-semibold');
-        } else {
-            const preview = document.createElement('div');
-            preview.className = 'flex justify-between weight-preview text-blue-600 font-medium';
-            preview.innerHTML = `<span>（設定位置）</span><span>${weight}</span>`;
-
-            const rows  = [...listEl.querySelectorAll('.weight-row')];
-            const after = rows.find(r => {
-                const siblingGrade = data.grades.find(g => g.id == r.dataset.id);
-                return siblingGrade && siblingGrade.weight < parseInt(weight);
-            });
-
-            after ? listEl.insertBefore(preview, after) : listEl.appendChild(preview);
-        }
-    });
-});
-```
+> 最終實作請見 `resources/js/grades/form.js`
 
 ### Step 12: GradeSeeder
 

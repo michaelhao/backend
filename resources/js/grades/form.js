@@ -19,9 +19,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!weight) return;
 
-        const { data } = await axios.get('/grades/check-weight', {
-            params: { weight, exclude_id: excludeId || undefined },
-        });
+        let data;
+        try {
+            ({ data } = await axios.get('/grades/check-weight', {
+                params: { weight, exclude_id: excludeId || undefined },
+            }));
+        } catch {
+            return;
+        }
 
         if (data.duplicate) {
             errorEl.textContent = '請確認版本權重';
@@ -48,9 +53,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             const nameInput = document.getElementById('name');
             const label     = nameInput && nameInput.value.trim() ? nameInput.value.trim() : '（設定位置）';
-            const preview   = document.createElement('div');
+            const preview    = document.createElement('div');
             preview.className = 'flex justify-between weight-preview text-blue-600 font-medium';
-            preview.innerHTML = `<span>${label}</span><span>${weight}</span>`;
+            const nameSpan   = document.createElement('span');
+            const weightSpan = document.createElement('span');
+            nameSpan.textContent   = label;
+            weightSpan.textContent = weight;
+            preview.append(nameSpan, weightSpan);
             afterRow ? listEl.insertBefore(preview, afterRow) : listEl.appendChild(preview);
         }
     });
