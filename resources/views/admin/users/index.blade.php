@@ -13,13 +13,15 @@
         </x-permission>
     </div>
 
-    @if (session('success'))
-        <div class="mb-4 rounded-lg bg-green-50 p-4 text-sm text-green-700 transition-opacity duration-500 flash-message">{{ session('success') }}</div>
-    @endif
+    <div class="flash-area">
+        @if (session('success'))
+            <div class="mb-4 rounded-lg bg-green-50 p-4 text-sm text-green-700 transition-opacity duration-500 flash-message">{{ session('success') }}</div>
+        @endif
 
-    @if (session('error'))
-        <div class="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700 transition-opacity duration-500 flash-message">{{ session('error') }}</div>
-    @endif
+        @if (session('error'))
+            <div class="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700 transition-opacity duration-500 flash-message">{{ session('error') }}</div>
+        @endif
+    </div>
 
     <div class="bg-white rounded-lg shadow overflow-hidden">
         <table class="w-full text-sm text-left">
@@ -43,12 +45,12 @@
                                    class="text-blue-600 hover:text-blue-800">編輯</a>
                             </x-permission>
                             <x-permission name="User.delete">
-                                <form method="POST" action="{{ route('users.destroy', $user) }}" class="inline"
-                                      onsubmit="return confirm('確定要刪除此使用者嗎？')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-red-600 hover:text-red-800">刪除</button>
-                                </form>
+                                <button type="button"
+                                        class="delete-btn text-red-600 hover:text-red-800"
+                                        data-url="{{ route('users.destroy', $user) }}"
+                                        data-name="{{ $user->name }}">
+                                    刪除
+                                </button>
                             </x-permission>
                         </td>
                     </tr>
@@ -58,15 +60,25 @@
     </div>
 @endsection
 
+<div id="delete-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-2">確認刪除</h3>
+        <p class="text-sm text-gray-600 mb-6">
+            確定要刪除「<span id="delete-modal-name" class="font-medium text-gray-900"></span>」嗎？此操作無法復原。
+        </p>
+        <div class="flex justify-end gap-3">
+            <button id="delete-modal-cancel"
+                    class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">
+                取消
+            </button>
+            <button id="delete-modal-confirm"
+                    class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors">
+                確認刪除
+            </button>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        document.querySelectorAll('.flash-message').forEach(el => {
-            setTimeout(() => {
-                el.style.opacity = '0';
-                setTimeout(() => el.remove(), 500);
-            }, 5000);
-        });
-    });
-</script>
+    @vite('resources/js/users/index.js')
 @endpush

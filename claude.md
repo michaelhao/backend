@@ -2,7 +2,7 @@
 
 ## Environment
 
-- In local development, PHP runs inside Docker. Do not attempt to run `php` or `composer` commands directly on the host. Use `docker compose exec backend <cmd>` (service name) or `docker exec wsl-backend <cmd>` (container name) to run PHP/artisan/composer commands.
+- In local development, PHP runs inside Docker. Do not attempt to run `php` or `composer` commands directly on the host. Use `docker compose exec wsl-backend <cmd>` (service name) or `docker exec wsl-backend <cmd>` (container name) to run PHP/artisan/composer commands.
 - Git credentials and `gh` CLI may not be configured. Do not attempt `git push` or `gh pr create` without confirming availability first.
 
 ## Coding Behavior Guidelines
@@ -67,12 +67,6 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ---
 
-## Git Commit rules
-
-- Co-Authored-By using the following information：
-  ```
-  Co-Authored-By: michaelhao <pk111100@gmail.com>
-  ```
 ## Migrate rules
 
 - Replace timestamps with created_at and updated_at.

@@ -6,6 +6,7 @@ use App\Attributes\RequiresPermission;
 use App\Http\Requests\RoleRequest;
 use App\Models\Role;
 use App\Services\RoleService;
+use Illuminate\Http\JsonResponse;
 
 class RoleController extends Controller
 {
@@ -42,7 +43,7 @@ class RoleController extends Controller
     public function edit(int $id)
     {
         $role = Role::find($id);
-        if (!$role) {
+        if (! $role) {
             return redirect()->route('roles.index')->with('error', '找不到該角色');
         }
 
@@ -55,7 +56,7 @@ class RoleController extends Controller
     public function update(RoleRequest $request, int $id)
     {
         $role = Role::find($id);
-        if (!$role) {
+        if (! $role) {
             return redirect()->route('roles.index')->with('error', '找不到該角色');
         }
 
@@ -69,17 +70,17 @@ class RoleController extends Controller
     }
 
     #[RequiresPermission('Role.delete')]
-    public function destroy(int $id)
+    public function destroy(int $id): JsonResponse
     {
         $role = Role::find($id);
-        if (!$role) {
-            return redirect()->route('roles.index')->with('error', '找不到該角色');
+        if (! $role) {
+            return response()->json(['message' => '找不到該角色'], 422);
         }
 
         if (! $this->roleService->deleteRole($role)) {
-            return redirect()->route('roles.index')->with('error', '此角色仍有使用者，無法刪除');
+            return response()->json(['message' => '此角色仍有使用者，無法刪除'], 422);
         }
 
-        return redirect()->route('roles.index')->with('success', '角色已刪除');
+        return response()->json(['message' => '角色已刪除']);
     }
 }

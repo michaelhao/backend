@@ -49,7 +49,7 @@ class PermissionSeeder extends Seeder
         'Grade' => [
             'label' => '版本',
             'actions' => [
-                'index'  => '列表',
+                'index' => '列表',
                 'create' => '新增',
                 'update' => '編輯',
             ],
@@ -57,8 +57,17 @@ class PermissionSeeder extends Seeder
         'Shop' => [
             'label' => '商店',
             'actions' => [
-                'index'  => '列表',
+                'index' => '列表',
                 'update' => '編輯',
+            ],
+        ],
+        'Addon' => [
+            'label' => '附加功能',
+            'actions' => [
+                'index' => '列表',
+                'create' => '新增',
+                'update' => '編輯',
+                'delete' => '刪除',
             ],
         ],
     ];

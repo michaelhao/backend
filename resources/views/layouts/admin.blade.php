@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="session-lifetime" content="{{ config('session.lifetime') * 60 }}">
     <title>@yield('page-title', 'Dashboard') - {{ config('app.name', 'Laravel') }}</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/layouts/admin.js'])
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="flex min-h-screen">
@@ -60,6 +60,13 @@
                         商店管理
                     </a>
                 </x-permission>
+                <x-permission name="Addon.index">
+                    <a href="{{ route('addons.index') }}"
+                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
+                              {{ request()->routeIs('addons.*') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                        加購功能管理
+                    </a>
+                </x-permission>
             </nav>
         </aside>
 
@@ -88,38 +95,6 @@
             </main>
         </div>
     </div>
-    <script>
-        (function () {
-            var lifetime = parseInt(document.querySelector('meta[name="session-lifetime"]').content, 10);
-            var timerEl = document.getElementById('session-timer');
-            var remaining = lifetime;
-
-            function pad(n) { return String(n).padStart(2, '0'); }
-
-            function updateDisplay() {
-                var h = Math.floor(remaining / 3600);
-                var m = Math.floor((remaining % 3600) / 60);
-                var s = remaining % 60;
-                timerEl.textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
-
-                if (remaining <= 300) {
-                    timerEl.classList.remove('text-gray-400');
-                    timerEl.classList.add('text-red-500');
-                }
-            }
-
-            updateDisplay();
-
-            setInterval(function () {
-                remaining--;
-                if (remaining <= 0) {
-                    window.location.href = '/login';
-                    return;
-                }
-                updateDisplay();
-            }, 1000);
-        })();
-    </script>
     @stack('scripts')
 </body>
 </html>

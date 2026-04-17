@@ -6,18 +6,20 @@ use App\Enums\ShopStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Shop extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'email', 'grade_id', 'status'];
+    protected $fillable = ['name', 'email', 'grade_id', 'status', 'expired_at'];
 
     protected function casts(): array
     {
         return [
             'status' => ShopStatus::class,
+            'expired_at' => 'date',
         ];
     }
 
@@ -29,5 +31,10 @@ class Shop extends Model
     public function admin(): HasOne
     {
         return $this->hasOne(ShopAdmin::class);
+    }
+
+    public function addons(): HasMany
+    {
+        return $this->hasMany(ShopAddon::class);
     }
 }

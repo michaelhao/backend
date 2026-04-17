@@ -47,17 +47,17 @@ class GradeCruTest extends TestCase
         $this->createUserWithRole('Admin');
 
         $response = $this->post(route('grades.store'), [
-            'code'   => 'grade_test',
-            'name'   => '測試版本',
-            'price'  => 5000,
+            'code' => 'grade_test',
+            'name' => '測試版本',
+            'price' => 5000,
             'status' => 1,
         ]);
 
         $response->assertRedirect(route('grades.index'));
         $response->assertSessionHas('success');
         $this->assertDatabaseHas('grades', [
-            'code'  => 'grade_test',
-            'name'  => '測試版本',
+            'code' => 'grade_test',
+            'name' => '測試版本',
             'price' => 5000,
         ]);
     }
@@ -69,9 +69,9 @@ class GradeCruTest extends TestCase
         $grade = Grade::factory()->create();
 
         $response = $this->put(route('grades.update', $grade), [
-            'code'   => 'grade_updated',
-            'name'   => '更新版本',
-            'price'  => 8888,
+            'code' => 'grade_updated',
+            'name' => '更新版本',
+            'price' => 8888,
             'status' => 0,
         ]);
 
@@ -89,8 +89,8 @@ class GradeCruTest extends TestCase
         $this->seedPermissions();
         $this->createUserWithRole('Admin');
         $grade = Grade::factory()->create([
-            'code'  => 'grade_show',
-            'name'  => '顯示版本',
+            'code' => 'grade_show',
+            'name' => '顯示版本',
             'price' => 3000,
         ]);
 
@@ -109,9 +109,9 @@ class GradeCruTest extends TestCase
         $grade = Grade::factory()->create(['code' => 'mycode', 'name' => 'myname']);
 
         $response = $this->put(route('grades.update', $grade), [
-            'code'   => 'mycode',
-            'name'   => 'myname',
-            'price'  => 9999,
+            'code' => 'mycode',
+            'name' => 'myname',
+            'price' => 9999,
             'status' => 1,
         ]);
 
@@ -126,9 +126,9 @@ class GradeCruTest extends TestCase
         Grade::factory()->create(['code' => 'dupe_code']);
 
         $response = $this->post(route('grades.store'), [
-            'code'   => 'dupe_code',
-            'name'   => '不同名稱',
-            'price'  => 2000,
+            'code' => 'dupe_code',
+            'name' => '不同名稱',
+            'price' => 2000,
             'status' => 1,
         ]);
 
@@ -142,9 +142,9 @@ class GradeCruTest extends TestCase
         Grade::factory()->create(['name' => '重複名稱']);
 
         $response = $this->post(route('grades.store'), [
-            'code'   => 'uniquecode',
-            'name'   => '重複名稱',
-            'price'  => 2000,
+            'code' => 'uniquecode',
+            'name' => '重複名稱',
+            'price' => 2000,
             'status' => 1,
         ]);
 
@@ -157,9 +157,9 @@ class GradeCruTest extends TestCase
         $this->createUserWithRole('Admin');
 
         $response = $this->post(route('grades.store'), [
-            'code'   => 'grade!@#',
-            'name'   => '合法名稱',
-            'price'  => 2000,
+            'code' => 'grade!@#',
+            'name' => '合法名稱',
+            'price' => 2000,
             'status' => 1,
         ]);
 
@@ -172,9 +172,9 @@ class GradeCruTest extends TestCase
         $this->createUserWithRole('Admin');
 
         $response = $this->post(route('grades.store'), [
-            'code'   => 'validcode',
-            'name'   => '非法!@#名稱',
-            'price'  => 2000,
+            'code' => 'validcode',
+            'name' => '非法!@#名稱',
+            'price' => 2000,
             'status' => 1,
         ]);
 
@@ -187,9 +187,9 @@ class GradeCruTest extends TestCase
         $this->createUserWithRole('Admin');
 
         $response = $this->post(route('grades.store'), [
-            'code'   => 'grade_low',
-            'name'   => '低價版本',
-            'price'  => 1,
+            'code' => 'grade_low',
+            'name' => '低價版本',
+            'price' => 1,
             'status' => 1,
         ]);
 
@@ -202,9 +202,9 @@ class GradeCruTest extends TestCase
         $this->createUserWithRole('Admin');
 
         $response = $this->post(route('grades.store'), [
-            'code'   => 'grade_bad',
-            'name'   => '壞狀態版本',
-            'price'  => 2000,
+            'code' => 'grade_bad',
+            'name' => '壞狀態版本',
+            'price' => 2000,
             'status' => 99,
         ]);
 

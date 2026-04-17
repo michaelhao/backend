@@ -40,18 +40,17 @@
                         <td class="px-6 py-4 text-gray-500">{{ number_format($grade->price) }}</td>
                         <td class="px-6 py-4">
                             @if(auth()->user()->hasPermissionTo('Grade.update'))
-                                <form method="POST" action="{{ route('grades.toggle', $grade) }}" class="inline">
-                                    @csrf
-                                    @method('PATCH')
-                                    <button type="submit"
-                                            class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none
-                                                   {{ $grade->status === \App\Enums\GradeStatus::Active ? 'bg-green-500' : 'bg-gray-300' }}"
-                                            title="{{ $grade->status === \App\Enums\GradeStatus::Active ? '點擊關閉' : '點擊啟用' }}">
-                                        <span class="inline-block w-4 h-4 transform bg-white rounded-full shadow transition-transform
-                                                     {{ $grade->status === \App\Enums\GradeStatus::Active ? 'translate-x-6' : 'translate-x-1' }}">
-                                        </span>
-                                    </button>
-                                </form>
+                                <button type="button"
+                                        class="toggle-btn relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none
+                                               {{ $grade->status === \App\Enums\GradeStatus::Active ? 'bg-green-500' : 'bg-gray-300' }}"
+                                        data-url="{{ route('grades.toggle', $grade) }}"
+                                        data-name="{{ $grade->name }}"
+                                        data-active="{{ $grade->status === \App\Enums\GradeStatus::Active ? '1' : '0' }}"
+                                        title="{{ $grade->status === \App\Enums\GradeStatus::Active ? '點擊關閉' : '點擊啟用' }}">
+                                    <span class="inline-block w-4 h-4 transform bg-white rounded-full shadow transition-transform
+                                                 {{ $grade->status === \App\Enums\GradeStatus::Active ? 'translate-x-6' : 'translate-x-1' }}">
+                                    </span>
+                                </button>
                             @else
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                                              {{ $grade->status === \App\Enums\GradeStatus::Active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600' }}">
@@ -70,17 +69,20 @@
             </tbody>
         </table>
     </div>
+    <div id="toggle-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">確認狀態切換</h3>
+            <p class="text-sm text-gray-600 mb-6">
+                確定要<span id="toggle-modal-action" class="font-medium text-gray-900"></span>「<span id="toggle-modal-name" class="font-medium text-gray-900"></span>」嗎？
+            </p>
+            <div class="flex justify-end gap-3">
+                <button id="toggle-modal-cancel" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">取消</button>
+                <button id="toggle-modal-confirm" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors">確認</button>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        document.querySelectorAll('.flash-message').forEach(el => {
-            setTimeout(() => {
-                el.style.opacity = '0';
-                setTimeout(() => el.remove(), 500);
-            }, 5000);
-        });
-    });
-</script>
+    @vite('resources/js/grades/index.js')
 @endpush

@@ -9,7 +9,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 class ShopRepository
 {
     /**
-     * @param array{keyword?: string, grade_id?: string, business_number?: string, is_certified?: string} $filters
+     * @param  array{keyword?: string, grade_id?: string, business_number?: string, is_certified?: string}  $filters
      */
     public function paginate(int $perPage, array $filters): LengthAwarePaginator
     {

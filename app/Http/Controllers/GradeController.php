@@ -6,6 +6,7 @@ use App\Attributes\RequiresPermission;
 use App\Http\Requests\GradeRequest;
 use App\Models\Grade;
 use App\Services\GradeService;
+use Illuminate\Http\JsonResponse;
 
 class GradeController extends Controller
 {
@@ -39,7 +40,7 @@ class GradeController extends Controller
     public function edit(int $id)
     {
         $grade = Grade::find($id);
-        if (!$grade) {
+        if (! $grade) {
             return redirect()->route('grades.index')->with('error', '找不到該方案');
         }
 
@@ -52,7 +53,7 @@ class GradeController extends Controller
     public function update(GradeRequest $request, int $id)
     {
         $grade = Grade::find($id);
-        if (!$grade) {
+        if (! $grade) {
             return redirect()->route('grades.index')->with('error', '找不到該方案');
         }
 
@@ -65,15 +66,15 @@ class GradeController extends Controller
     }
 
     #[RequiresPermission('Grade.update')]
-    public function toggleStatus(int $id)
+    public function toggleStatus(int $id): JsonResponse
     {
         $grade = Grade::find($id);
-        if (!$grade) {
-            return redirect()->route('grades.index')->with('error', '找不到該方案');
+        if (! $grade) {
+            return response()->json(['message' => '找不到該版本'], 422);
         }
 
         $this->gradeService->toggleStatus($grade);
 
-        return redirect()->route('grades.index')->with('success', '版本狀態已更新');
+        return response()->json(['message' => '版本狀態已更新']);
     }
 }

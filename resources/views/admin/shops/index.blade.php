@@ -172,41 +172,5 @@
 @endsection
 
 @push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Flash message auto-dismiss
-        document.querySelectorAll('.flash-message').forEach(el => {
-            setTimeout(() => {
-                el.style.opacity = '0';
-                setTimeout(() => el.remove(), 500);
-            }, 5000);
-        });
-
-        // Per-page select submit
-        document.getElementById('per-page-select').addEventListener('change', function () {
-            document.getElementById('per-page-form').submit();
-        });
-
-        // Cert badge modal
-        const modal = document.getElementById('cert-modal');
-        const modalBusinessNumber = document.getElementById('modal-business-number');
-        const modalCompanyName = document.getElementById('modal-company-name');
-
-        document.querySelectorAll('.cert-badge').forEach(badge => {
-            badge.addEventListener('click', function () {
-                modalBusinessNumber.textContent = this.dataset.businessNumber;
-                modalCompanyName.textContent = this.dataset.companyName || '-';
-                modal.classList.remove('hidden');
-            });
-        });
-
-        document.getElementById('cert-modal-close').addEventListener('click', () => {
-            modal.classList.add('hidden');
-        });
-
-        modal.addEventListener('click', function (e) {
-            if (e.target === modal) modal.classList.add('hidden');
-        });
-    });
-</script>
+    @vite('resources/js/shops/index.js')
 @endpush

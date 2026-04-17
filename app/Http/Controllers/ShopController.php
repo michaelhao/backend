@@ -23,7 +23,7 @@ class ShopController extends Controller
     public function edit(int $id)
     {
         $shop = Shop::find($id);
-        if (!$shop) {
+        if (! $shop) {
             return redirect()->route('shops.index')->with('error', '找不到該商店');
         }
 
@@ -34,11 +34,11 @@ class ShopController extends Controller
     public function update(ShopUpdateRequest $request, int $id)
     {
         $shop = Shop::find($id);
-        if (!$shop) {
+        if (! $shop) {
             return redirect()->route('shops.index')->with('error', '找不到該商店');
         }
 
-        $shopData  = $request->only(['name', 'email', 'grade_id', 'status']);
+        $shopData = $request->only(['name', 'email', 'grade_id', 'status']);
         $adminData = $request->input('admin');
 
         $this->shopService->updateShop($shop, $shopData, $adminData);
@@ -50,7 +50,7 @@ class ShopController extends Controller
     public function certify(ShopCertifyRequest $request, int $id)
     {
         $shop = Shop::find($id);
-        if (!$shop) {
+        if (! $shop) {
             return redirect()->route('shops.index')->with('error', '找不到該商店');
         }
 

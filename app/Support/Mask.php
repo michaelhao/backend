@@ -32,6 +32,6 @@ class Mask
             return static::string($email);
         }
 
-        return static::string(substr($email, 0, $atPos)) . substr($email, $atPos);
+        return static::string(substr($email, 0, $atPos)).substr($email, $atPos);
     }
 }

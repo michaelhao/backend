@@ -6,6 +6,7 @@ use App\Attributes\RequiresPermission;
 use App\Http\Requests\UserRequest;
 use App\Models\User;
 use App\Services\UserService;
+use Illuminate\Http\JsonResponse;
 
 class UserController extends Controller
 {
@@ -41,7 +42,7 @@ class UserController extends Controller
     public function edit(int $id)
     {
         $user = User::find($id);
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('users.index')->with('error', '找不到該使用者');
         }
 
@@ -54,7 +55,7 @@ class UserController extends Controller
     public function update(UserRequest $request, int $id)
     {
         $user = User::find($id);
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('users.index')->with('error', '找不到該使用者');
         }
 
@@ -67,19 +68,19 @@ class UserController extends Controller
     }
 
     #[RequiresPermission('User.delete')]
-    public function destroy(int $id)
+    public function destroy(int $id): JsonResponse
     {
         $user = User::find($id);
-        if (!$user) {
-            return redirect()->route('users.index')->with('error', '找不到該使用者');
+        if (! $user) {
+            return response()->json(['message' => '找不到該使用者'], 422);
         }
 
         if ($user->id === auth()->id()) {
-            return redirect()->route('users.index')->with('error', '無法刪除自己的帳號');
+            return response()->json(['message' => '無法刪除自己的帳號'], 422);
         }
 
         $this->userService->deleteUser($user);
 
-        return redirect()->route('users.index')->with('success', '使用者已刪除');
+        return response()->json(['message' => '使用者已刪除']);
     }
 }

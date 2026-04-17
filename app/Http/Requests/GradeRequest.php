@@ -20,21 +20,21 @@ class GradeRequest extends FormRequest
         $gradeId = $this->route('grade')?->id;
 
         return [
-            'code'   => [
+            'code' => [
                 'required',
                 'string',
                 'max:30',
                 'regex:/^[\x{4e00}-\x{9fa5}a-zA-Z0-9_]+$/u',
                 Rule::unique('grades', 'code')->ignore($gradeId),
             ],
-            'name'   => [
+            'name' => [
                 'required',
                 'string',
                 'max:30',
                 'regex:/^[\x{4e00}-\x{9fa5}a-zA-Z0-9_]+$/u',
                 Rule::unique('grades', 'name')->ignore($gradeId),
             ],
-            'price'  => ['required', 'integer', 'min:2'],
+            'price' => ['required', 'integer', 'min:2'],
             'status' => ['required', new Enum(GradeStatus::class)],
         ];
     }

@@ -20,14 +20,14 @@ class ShopUpdateRequest extends FormRequest
         $shop = Shop::find($this->route('id'));
 
         return [
-            'name'                  => ['required', 'string', 'max:50'],
-            'email'                 => ['required', 'email', Rule::unique('shops', 'email')->ignore($shop->id)],
-            'grade_id'              => ['required', 'integer', Rule::exists('grades', 'id')],
-            'status'                => ['required', new Enum(ShopStatus::class)],
-            'admin.name'            => ['required', 'string', 'max:20'],
-            'admin.email'           => ['required', 'email'],
+            'name' => ['required', 'string', 'max:50'],
+            'email' => ['required', 'email', Rule::unique('shops', 'email')->ignore($shop->id)],
+            'grade_id' => ['required', 'integer', Rule::exists('grades', 'id')],
+            'status' => ['required', new Enum(ShopStatus::class)],
+            'admin.name' => ['required', 'string', 'max:20'],
+            'admin.email' => ['required', 'email'],
             'admin.business_number' => ['nullable', 'string', 'regex:/^\d{8}$/'],
-            'admin.company_name'    => ['nullable', 'string'],
+            'admin.company_name' => ['nullable', 'string'],
         ];
     }
 }
