@@ -47,9 +47,10 @@ class GradeCruTest extends TestCase
         $this->createUserWithRole('Admin');
 
         $response = $this->post(route('grades.store'), [
-            'code' => 'grade_test',
-            'name' => '測試版本',
-            'price' => 5000,
+            'code'   => 'grade_test',
+            'name'   => '測試版本',
+            'price'  => 5000,
+            'weight' => 50,
             'status' => 1,
         ]);
 
@@ -69,9 +70,10 @@ class GradeCruTest extends TestCase
         $grade = Grade::factory()->create();
 
         $response = $this->put(route('grades.update', $grade), [
-            'code' => 'grade_updated',
-            'name' => '更新版本',
-            'price' => 8888,
+            'code'   => 'grade_updated',
+            'name'   => '更新版本',
+            'price'  => 8888,
+            'weight' => $grade->weight,
             'status' => 0,
         ]);
 
@@ -109,9 +111,10 @@ class GradeCruTest extends TestCase
         $grade = Grade::factory()->create(['code' => 'mycode', 'name' => 'myname']);
 
         $response = $this->put(route('grades.update', $grade), [
-            'code' => 'mycode',
-            'name' => 'myname',
-            'price' => 9999,
+            'code'   => 'mycode',
+            'name'   => 'myname',
+            'price'  => 9999,
+            'weight' => $grade->weight,
             'status' => 1,
         ]);
 
@@ -219,8 +222,7 @@ class GradeCruTest extends TestCase
 
         $response = $this->patch(route('grades.toggle', $grade));
 
-        $response->assertRedirect(route('grades.index'));
-        $response->assertSessionHas('success');
+        $response->assertOk();
         $grade->refresh();
         $this->assertEquals(GradeStatus::Inactive, $grade->status);
     }
@@ -233,7 +235,7 @@ class GradeCruTest extends TestCase
 
         $response = $this->patch(route('grades.toggle', $grade));
 
-        $response->assertRedirect(route('grades.index'));
+        $response->assertOk();
         $grade->refresh();
         $this->assertEquals(GradeStatus::Active, $grade->status);
     }

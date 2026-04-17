@@ -27,6 +27,7 @@
                 <tr>
                     <th class="px-6 py-3">代碼</th>
                     <th class="px-6 py-3">名稱</th>
+                    <th class="px-6 py-3">權重</th>
                     <th class="px-6 py-3">價格</th>
                     <th class="px-6 py-3">狀態</th>
                     <th class="px-6 py-3">操作</th>
@@ -37,6 +38,7 @@
                     <tr class="hover:bg-gray-50">
                         <td class="px-6 py-4 font-mono text-gray-600">{{ $grade->code }}</td>
                         <td class="px-6 py-4 font-medium text-gray-900">{{ $grade->name }}</td>
+                        <td class="px-6 py-4 text-gray-500">{{ $grade->weight }}</td>
                         <td class="px-6 py-4 text-gray-500">{{ number_format($grade->price) }}</td>
                         <td class="px-6 py-4">
                             @if(auth()->user()->hasPermissionTo('Grade.update'))

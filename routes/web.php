@@ -39,6 +39,7 @@ Route::middleware('auth')->group(function () {
 
         // 等級管理
         Route::get('/grades', [GradeController::class, 'index'])->name('grades.index');
+        Route::get('/grades/check-weight', [GradeController::class, 'checkWeight'])->name('grades.check-weight');
         Route::get('/grades/create', [GradeController::class, 'create'])->name('grades.create');
         Route::post('/grades', [GradeController::class, 'store'])->name('grades.store');
         Route::get('/grades/{id}/edit', [GradeController::class, 'edit'])->name('grades.edit');

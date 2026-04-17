@@ -16,6 +16,7 @@ export default defineConfig({
                 'resources/js/shops/index.js',
                 'resources/js/shops/edit.js',
                 'resources/js/grades/index.js',
+                'resources/js/grades/form.js',
                 'resources/js/components/searchable-select.js',
             ],
             refresh: true,
