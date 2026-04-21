@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AddonController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\BillController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\PostController;
@@ -59,6 +60,16 @@ Route::middleware('auth')->group(function () {
         Route::get('/shops/{id}/edit', [ShopController::class, 'edit'])->name('shops.edit');
         Route::put('/shops/{id}', [ShopController::class, 'update'])->name('shops.update');
         Route::post('/shops/{id}/certify', [ShopController::class, 'certify'])->name('shops.certify');
+
+        // 帳務管理
+        Route::get('/bills', [BillController::class, 'index'])->name('bills.index');
+        Route::get('/bills/shop-search', [BillController::class, 'shopSearch'])->name('bills.shop-search');
+        Route::get('/bills/shop-info', [BillController::class, 'shopInfo'])->name('bills.shop-info');
+        Route::get('/bills/calculate', [BillController::class, 'calculate'])->name('bills.calculate');
+        Route::get('/bills/create', [BillController::class, 'create'])->name('bills.create');
+        Route::post('/bills', [BillController::class, 'store'])->name('bills.store');
+        Route::post('/bills/{id}/pay', [BillController::class, 'pay'])->name('bills.pay');
+        Route::post('/bills/{id}/writeoff', [BillController::class, 'writeoff'])->name('bills.writeoff');
 
         // 附加功能管理
         Route::get('/addons', [AddonController::class, 'index'])->name('addons.index');

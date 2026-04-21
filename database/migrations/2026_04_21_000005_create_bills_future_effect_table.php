@@ -1,0 +1,31 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('bills_future_effect', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('bill_id');
+            $table->unsignedBigInteger('bill_detail_id');
+            $table->date('execute_at');
+            $table->date('finished_at')->nullable();
+            $table->dateTime('created_at')->nullable();
+            $table->dateTime('updated_at')->nullable();
+
+            $table->foreign('bill_id')->references('id')->on('bills');
+            $table->foreign('bill_detail_id')->references('id')->on('bills_details');
+
+            $table->index(['execute_at', 'finished_at']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('bills_future_effect');
+    }
+};

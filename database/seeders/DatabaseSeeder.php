@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
         $this->call(GradeSeeder::class);
         $this->call(ShopSeeder::class);
         $this->call(AddonSeeder::class);
+        $this->call(BillDiscountSeeder::class);
 
         $adminRole = Role::where('name', 'Admin')->firstOrFail();
 

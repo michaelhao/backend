@@ -18,6 +18,8 @@ export default defineConfig({
                 'resources/js/grades/index.js',
                 'resources/js/grades/form.js',
                 'resources/js/components/searchable-select.js',
+                'resources/js/bills/index.js',
+                'resources/js/bills/create.js',
             ],
             refresh: true,
         }),

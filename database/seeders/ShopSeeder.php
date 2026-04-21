@@ -6,12 +6,15 @@ use App\Enums\ShopStatus;
 use App\Models\Grade;
 use App\Models\Shop;
 use App\Models\ShopAdmin;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class ShopSeeder extends Seeder
 {
     public function run(): void
     {
+        $salesUser = User::first();
+
         $shops = [
             [
                 'shop' => [
@@ -77,8 +80,9 @@ class ShopSeeder extends Seeder
                 [
                     'name' => $data['shop']['name'],
                     'grade_id' => $grade->id,
+                    'sales_id' => $salesUser?->id,
                     'status' => $data['shop']['status'],
-                    'expired_at' => now()->addMonth()->toDateString(),
+                    'expired_at' => now()->addMonth()->endOfDay()->format('Y-m-d H:i:s'),
                 ],
             );
 
