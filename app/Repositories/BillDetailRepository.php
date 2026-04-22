@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class BillDetailRepository
 {
-    public function createMany(Bill $bill, array $details): Collection
+    public function createBillDetails(Bill $bill, array $details): Collection
     {
         $created = new Collection();
         foreach ($details as $detail) {

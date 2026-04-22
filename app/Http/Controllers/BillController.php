@@ -55,13 +55,13 @@ class BillController extends Controller
     #[RequiresPermission('Bill.index')]
     public function shopSearch(Request $request): JsonResponse
     {
-        $keyword = $request->query('keyword', '');
+        $keyword = trim($request->query('keyword', ''));
 
-        if (strlen(trim($keyword)) === 0) {
-            return response()->json(['shops' => []]);
+        if ($keyword === '') {
+            return response()->json(['message' => '關鍵字必填'], 422);
         }
 
-        $shops = $this->billService->shopSearch(trim($keyword));
+        $shops = $this->billService->shopSearch($keyword);
 
         return response()->json([
             'shops' => $shops->map(fn ($s) => [
@@ -76,33 +76,31 @@ class BillController extends Controller
     #[RequiresPermission('Bill.index')]
     public function shopInfo(Request $request): JsonResponse
     {
-        $shopId = (int) $request->query('shop_id');
+        $request->validate([
+            'shop_id' => ['required', 'integer'],
+        ]);
 
-        try {
-            $data = $this->billService->shopInfo($shopId);
+        $data = $this->billService->shopInfo((int) $request->query('shop_id'));
 
-            return response()->json([
-                'shop' => [
-                    'id' => $data['shop']->id,
-                    'name' => $data['shop']->name,
-                    'grade' => $data['shop']->grade?->name,
-                    'grade_id' => $data['shop']->grade_id,
-                    'grade_price' => $data['shop']->grade?->price,
-                    'grade_weight' => $data['shop']->grade?->weight,
-                    'status' => $data['shop']->status->name,
-                    'expired_at' => $data['shop']->expired_at?->format('Y-m-d H:i:s'),
-                ],
-                'pending_bill_count' => $data['pending_bill_count'],
-                'grades' => $data['grades'],
-                'addons' => $data['addons'],
-                'shop_addons' => $data['shop_addons']->map(fn ($sa) => [
-                    'addon_id' => $sa->addon_id,
-                    'expired_at' => $sa->expired_at?->format('Y-m-d'),
-                ]),
-            ]);
-        } catch (\InvalidArgumentException $e) {
-            return response()->json(['error' => $e->getMessage()], 422);
-        }
+        return response()->json([
+            'shop' => [
+                'id' => $data['shop']->id,
+                'name' => $data['shop']->name,
+                'grade' => $data['shop']->grade?->name,
+                'grade_id' => $data['shop']->grade_id,
+                'grade_price' => $data['shop']->grade?->price,
+                'grade_weight' => $data['shop']->grade?->weight,
+                'status' => $data['shop']->status->name,
+                'expired_at' => $data['shop']->expired_at?->format('Y-m-d H:i:s'),
+            ],
+            'pending_bill_count' => $data['pending_bill_count'],
+            'grades' => $data['grades'],
+            'addons' => $data['addons'],
+            'shop_addons' => $data['shop_addons']->map(fn ($sa) => [
+                'addon_id' => $sa->addon_id,
+                'expired_at' => $sa->expired_at?->format('Y-m-d'),
+            ]),
+        ]);
     }
 
     #[RequiresPermission('Bill.create')]
@@ -139,7 +137,7 @@ class BillController extends Controller
             BillPaymentStatus::Invalid->value  => ['label' => '已失效', 'class' => 'bg-gray-100 text-gray-500'],
         ];
 
-        $s = $statusLabels[$bill->payment_status->value] ?? ['label' => '未知', 'class' => 'bg-gray-100 text-gray-500'];
+        $statusDisplay = $statusLabels[$bill->payment_status->value] ?? ['label' => '未知', 'class' => 'bg-gray-100 text-gray-500'];
         $typeLabels = $this->typeLabels();
 
         return response()->json([
@@ -149,8 +147,8 @@ class BillController extends Controller
                 'shop_name'      => $bill->shop->name,
                 'creator_name'   => $bill->creator?->name ?? '—',
                 'payment_status' => $bill->payment_status->value,
-                'status_label'   => $s['label'],
-                'status_class'   => $s['class'],
+                'status_label'   => $statusDisplay['label'],
+                'status_class'   => $statusDisplay['class'],
                 'total_grade'    => $bill->total_grade,
                 'total_addons'   => $bill->total_addons,
                 'discount_amount' => $bill->discount_amount,

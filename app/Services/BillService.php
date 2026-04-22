@@ -12,6 +12,7 @@ use App\Models\Shop;
 use App\Models\User;
 use App\Repositories\BillDetailRepository;
 use App\Repositories\BillRepository;
+use App\Repositories\UserRepository;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -24,6 +25,7 @@ class BillService
         private BillRepository $billRepository,
         private BillDetailRepository $billDetailRepository,
         private BillCalculationService $calc,
+        private UserRepository $userRepository,
     ) {}
 
     /**
@@ -35,7 +37,7 @@ class BillService
         return [
             'bills' => $this->billRepository->paginate(20, $filters),
             'filters' => $filters,
-            'salesUsers' => User::orderBy('name')->get(['id', 'name']),
+            'salesUsers' => $this->userRepository->getOrderedByName(),
         ];
     }
 
@@ -61,18 +63,17 @@ class BillService
      *
      * @return array{shop: Shop, pending_bill_count: int}
      *
-     * @throws \InvalidArgumentException
      */
     public function shopInfo(int $shopId): array
     {
         $shop = Shop::with(['grade', 'sales'])->find($shopId);
 
         if (! $shop) {
-            throw new \InvalidArgumentException('商店不存在');
+            abort(422, '商店不存在');
         }
 
         if (! $shop->sales_id) {
-            throw new \InvalidArgumentException('此商店尚未設定負責業務，無法建立帳單');
+            abort(422, '此商店尚未設定負責業務，無法建立帳單');
         }
 
         return [
@@ -145,10 +146,10 @@ class BillService
             $discountAmount = isset($data['discount_amount']) ? (int) $data['discount_amount'] : null;
             $discountName = $data['discount_name'] ?? null;
 
-            $this->billDetailRepository->createMany($bill, $details);
+            $this->billDetailRepository->createBillDetails($bill, $details);
 
             if ($discountAmount && $discountName) {
-                $this->billDetailRepository->createMany($bill, [[
+                $this->billDetailRepository->createBillDetails($bill, [[
                     'type' => BillDetailType::Discount->value,
                     'quantity' => 1,
                     'unit_price' => $discountAmount,

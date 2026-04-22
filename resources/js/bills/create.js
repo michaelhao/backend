@@ -105,7 +105,7 @@ confirmBtn.addEventListener('click', async () => {
     } catch (err) {
         hide('step-2');
         show('step-1');
-        alert(err.response?.data?.error || '無法載入商店資訊');
+        alert(err.response?.data?.message || '無法載入商店資訊');
     }
 });
 

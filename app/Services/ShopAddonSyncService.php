@@ -11,22 +11,22 @@ class ShopAddonSyncService
     /**
      * Sync shops_addons (source=Grade) for a single shop against a new addon set.
      *
-     * @param  int[]  $sNew  Addon IDs the shop should hold via its grade.
+     * @param  int[]  $newAddonIds  Addon IDs the shop should hold via its grade.
      */
-    public function syncForShop(int $shopId, array $sNew): void
+    public function syncForShop(int $shopId, array $newAddonIds): void
     {
-        DB::transaction(function () use ($shopId, $sNew) {
+        DB::transaction(function () use ($shopId, $newAddonIds) {
             $now = now()->format('Y-m-d H:i:s');
             $eod = now()->setTime(23, 59, 59)->format('Y-m-d H:i:s');
 
-            $sOld = DB::table('shops_addons')
+            $currentAddonIds = DB::table('shops_addons')
                 ->where('shop_id', $shopId)
                 ->where('source', ShopAddonSource::Grade->value)
                 ->pluck('addon_id')
                 ->all();
 
-            $toRemove = array_values(array_diff($sOld, $sNew));
-            $toAdd    = array_values(array_diff($sNew, $sOld));
+            $toRemove = array_values(array_diff($currentAddonIds, $newAddonIds));
+            $toAdd    = array_values(array_diff($newAddonIds, $currentAddonIds));
 
             if (! empty($toRemove)) {
                 DB::table('shops_addons')
@@ -61,7 +61,7 @@ class ShopAddonSyncService
 
                 $pureNewIds = array_values(array_diff($toAdd, $existingPurchased));
                 if (! empty($pureNewIds)) {
-                    DB::table('shops_addons')->insertOrIgnore(
+                    DB::table('shops_addons')->insert(
                         array_map(fn ($addonId) => [
                             'shop_id'    => $shopId,
                             'addon_id'   => $addonId,

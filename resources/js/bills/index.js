@@ -33,11 +33,14 @@ document.querySelectorAll('.detail-btn').forEach(btn => {
         detailModalTbody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-gray-400 text-sm">載入中…</td></tr>';
         detailModalTotals.innerHTML = '';
         detailModalVoidSection.classList.add('hidden');
+        document.getElementById('detail-export-btn').style.display = 'none';
         detailModal.classList.remove('hidden');
 
         try {
             const res = await axios.get(`/bills/${activeBillId}/detail`);
             const { bill, details } = res.data;
+
+            document.getElementById('detail-export-btn').style.display = bill.payment_status === 1 ? 'inline-flex' : 'none';
 
             detailModalMeta.innerHTML = `
                 <div><span class="text-gray-400">商店</span>：${bill.shop_name}</div>

@@ -15,17 +15,19 @@ class BillCalculationService
      */
     public function calculateExpiredAt(Carbon $startAt, int $totalMonths): Carbon
     {
+        $date = $startAt->copy();
+
         if ($totalMonths === 0) {
-            return $startAt->copy()->endOfMonth()->setTime(23, 59, 59);
+            return $date->endOfMonth()->setTime(23, 59, 59);
         }
 
         if ($startAt->day === 1) {
             // Month 1 is the start month itself
-            return $startAt->copy()->addMonths($totalMonths)->subDay()->setTime(23, 59, 59);
+            return $date->addMonths($totalMonths)->subDay()->setTime(23, 59, 59);
         }
 
         // Partial month + totalMonths full months
-        return $startAt->copy()->addMonths($totalMonths)->endOfMonth()->setTime(23, 59, 59);
+        return $date->addMonths($totalMonths)->endOfMonth()->setTime(23, 59, 59);
     }
 
     /**

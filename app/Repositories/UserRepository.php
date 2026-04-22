@@ -12,6 +12,11 @@ class UserRepository
         return User::with('role')->latest()->get();
     }
 
+    public function getOrderedByName(): Collection
+    {
+        return User::orderBy('name')->get(['id', 'name']);
+    }
+
     public function create(array $data): User
     {
         return User::create($data);
