@@ -6,6 +6,7 @@ use App\Enums\BillDetailType;
 use App\Enums\BillPaymentStatus;
 use App\Models\Addon;
 use App\Models\Bill;
+use App\Models\BillDiscount;
 use App\Models\BillStatusLog;
 use App\Models\Grade;
 use App\Models\Shop;
@@ -118,7 +119,7 @@ class BillService
     public function createBill(array $data, User $creator): Bill
     {
         return DB::transaction(function () use ($data, $creator) {
-            $shop = Shop::findOrFail($data['shop_id']);
+            $shop = Shop::with('grade')->findOrFail($data['shop_id']);
 
             $billNo = $this->generateBillNo();
 
@@ -142,19 +143,26 @@ class BillService
                 'operator_id' => $creator->id,
             ]);
 
-            $details = $data['details'] ?? [];
+            $details = $this->sanitizeDetails($shop, $data['details'] ?? []);
             $discountAmount = isset($data['discount_amount']) ? (int) $data['discount_amount'] : null;
-            $discountName = $data['discount_name'] ?? null;
+            $discountId = isset($data['discount_id']) ? (int) $data['discount_id'] : null;
 
             $this->billDetailRepository->createBillDetails($bill, $details);
 
-            if ($discountAmount && $discountName) {
+            if ($discountAmount && $discountId) {
+                $subtotal = collect($details)->sum('total_price');
+                if ($discountAmount > $subtotal) {
+                    throw ValidationException::withMessages(['discount_amount' => '折抵金額不得大於小計']);
+                }
+
+                $discount = BillDiscount::findOrFail($discountId);
+
                 $this->billDetailRepository->createBillDetails($bill, [[
                     'type' => BillDetailType::Discount->value,
                     'quantity' => 1,
                     'unit_price' => $discountAmount,
                     'total_price' => $discountAmount,
-                    'name' => $discountName,
+                    'name' => $discount->name,
                     'start_at' => now(),
                     'expired_at' => now(),
                     'total_months' => 0,
@@ -218,6 +226,53 @@ class BillService
                 ]);
             }
         });
+    }
+
+    /**
+     * Recompute unit_price / total_price / expired_at server-side.
+     * Client-supplied totals are not trusted; only identifiers and scheduling inputs are kept.
+     */
+    private function sanitizeDetails(Shop $shop, array $details): array
+    {
+        $currentGradePrice = $shop->grade?->price ?? 0;
+
+        return array_map(function (array $d) use ($currentGradePrice) {
+            $type = (int) $d['type'];
+            $startAt = Carbon::parse($d['start_at']);
+            $totalMonths = (int) $d['total_months'];
+
+            if ($type === BillDetailType::Addons->value) {
+                $addon = Addon::findOrFail($d['addon_id']);
+                $unitPrice = (int) $addon->price;
+                $totalPrice = $this->calc->calculateDetailTotal($unitPrice, $startAt, $totalMonths);
+            } elseif ($type === BillDetailType::UpgradeFeeDiff->value) {
+                $grade = Grade::findOrFail($d['grade_id']);
+                $unitPrice = (int) $grade->price;
+                $totalPrice = $this->calc->calculateUpgradeDiff($unitPrice, $currentGradePrice, $startAt, $totalMonths);
+            } else {
+                $grade = Grade::findOrFail($d['grade_id']);
+                $unitPrice = (int) $grade->price;
+                $totalPrice = $this->calc->calculateDetailTotal($unitPrice, $startAt, $totalMonths);
+            }
+
+            $expiredAt = $this->calc->calculateExpiredAt($startAt, $totalMonths);
+
+            return [
+                'type' => $type,
+                'grade_id' => $d['grade_id'] ?? null,
+                'addon_id' => $d['addon_id'] ?? null,
+                'payment_type' => $d['payment_type'] ?? null,
+                'quantity' => (int) $d['quantity'],
+                'unit_price' => $unitPrice,
+                'total_price' => $totalPrice,
+                'name' => $d['name'],
+                'start_at' => $startAt,
+                'expired_at' => $expiredAt,
+                'total_months' => $totalMonths,
+                'memo' => $d['memo'] ?? null,
+                'is_effective' => 1,
+            ];
+        }, $details);
     }
 
     private function recalculateBillTotals(Bill $bill, ?int $discountAmount): void

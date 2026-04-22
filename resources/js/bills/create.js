@@ -606,9 +606,9 @@ function buildFormInputs(details) {
     });
 
     const discAmount = parseInt(discountAmountEl.value) || 0;
-    const discName   = discountTypeEl.selectedOptions[0]?.dataset?.name ?? '';
+    const discId     = discountTypeEl.value;
     document.getElementById('form-discount-amount').value = discAmount > 0 ? discAmount : '';
-    document.getElementById('form-discount-name').value   = discAmount > 0 ? discName : '';
+    document.getElementById('form-discount-id').value     = discAmount > 0 ? discId : '';
 }
 
 // Validate on submit

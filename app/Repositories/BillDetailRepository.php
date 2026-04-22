@@ -40,6 +40,7 @@ class BillDetailRepository
     {
         DB::table('bills_details')
             ->whereIn('id', $ids)
+            ->where('is_effective', 1)
             ->update([
                 'is_effective' => 0,
                 'canceled_at' => now()->format('Y-m-d H:i:s'),

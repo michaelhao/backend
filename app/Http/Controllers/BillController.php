@@ -45,7 +45,7 @@ class BillController extends Controller
     public function store(StoreBillRequest $request)
     {
         $bill = $this->billService->createBill(
-            $request->safe()->only(['shop_id', 'details', 'discount_amount', 'discount_name', 'payment_method']),
+            $request->safe()->only(['shop_id', 'details', 'discount_amount', 'discount_id', 'payment_method']),
             $request->user(),
         );
 
