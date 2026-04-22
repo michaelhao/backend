@@ -28,9 +28,6 @@ return new class extends Migration
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();
 
-            $table->foreign('bill_id')->references('id')->on('bills');
-            $table->foreign('canceled_by')->references('id')->on('users');
-
             $table->index('bill_id');
         });
     }

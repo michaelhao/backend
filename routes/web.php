@@ -68,6 +68,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/bills/calculate', [BillController::class, 'calculate'])->name('bills.calculate');
         Route::get('/bills/create', [BillController::class, 'create'])->name('bills.create');
         Route::post('/bills', [BillController::class, 'store'])->name('bills.store');
+        Route::get('/bills/{id}/detail', [BillController::class, 'detail'])->name('bills.detail');
+        Route::get('/bills/{id}/quotation', [BillController::class, 'quotation'])->name('bills.quotation');
+        Route::patch('/bills/{id}', [BillController::class, 'update'])->name('bills.update');
         Route::post('/bills/{id}/pay', [BillController::class, 'pay'])->name('bills.pay');
         Route::post('/bills/{id}/writeoff', [BillController::class, 'writeoff'])->name('bills.writeoff');
 

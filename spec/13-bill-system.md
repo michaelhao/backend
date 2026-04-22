@@ -24,7 +24,7 @@
 | total_grade     | int unsigned  | 版本項目總金額                                                    |
 | total_addons    | int unsigned  | 加購功能總金額                                                    |
 | discount_amount | int unsigned  | 折抵金額，nullable                                                |
-| payment_status  | tinyint       | 1: pending 待審核, 2: unpaid 未付款, 3: paid 已付款, 4: invalid 已失效 |
+| payment_status  | tinyint       | 1: pending 待審核, 2: unpaid 待付款, 3: paid 已付款, 4: invalid 已失效 |
 | payment_method  | tinyint       | 付款方式，nullable（付款前為 null）：1: 信用卡, 2: 轉帳, 3: 現金 |
 | paid_at         | datetime      | 實際付款時間，nullable（付款後寫入，財務對帳用）                  |
 | invoice_no      | varchar(100)  | 發票號碼，nullable                                                |
@@ -272,13 +272,16 @@ Hi！{登入者姓名}
 | 值 | label |
 |----|-------|
 | 0  | 月底  |
-| 1  | 1 個月 |
-| ... | ... |
+| 1–5 | N 個月 |
 | 6  | 6 個月（半年） |
+| 7–11 | N 個月 |
 | 12 | 12 個月（年繳） |
+| 13–23 | N 個月 |
 | 24 | 24 個月（2 年繳） |
+| 25–35 | N 個月 |
 | 36 | 36 個月（3 年繳） |
 
+- 選項涵蓋 1–36 個月全部，特殊月數加標籤
 - 開始日為當月 1 號時，不顯示「0 = 月底」選項
 - 開始日為當月最後一天時，不顯示「0 = 月底」選項
 - 最大 36
@@ -345,6 +348,116 @@ Hi！{登入者姓名}
 
 ----
 
+## 帳單列表（`GET /bills`）
+
+### 搜尋條件
+
+| 欄位 | 類型 | 說明 |
+|------|------|------|
+| no | text | 帳單編號，模糊搜尋 |
+| shop_sales_id | select | 負責業務，選項從 users 撈取；留空 = 全部 |
+| payment_method | select | 付款方式：1: 信用卡, 2: 轉帳, 3: 現金；留空 = 全部 |
+| payment_status | select | 狀態：1: pending, 2: unpaid, 3: paid, 4: invalid；留空 = 全部 |
+
+搜尋列在表格上方，GET 參數傳遞，支援分頁保留條件。
+
+### 列表欄位
+
+| 欄位 | 說明 |
+|------|------|
+| 帳單編號（no） | 點擊開啟「帳單明細 Modal」 |
+| 商店名稱 | |
+| 負責業務 | shop_sales_id → user.name |
+| 總金額（total） | |
+| 付款方式 | |
+| 狀態 badge | pending / unpaid / paid / invalid |
+| 建立時間 | |
+| 操作 | 銷帳按鈕（pending / unpaid 才顯示）、編輯帳務按鈕（常駐顯示） |
+
+----
+
+## 帳單明細 Modal
+
+點擊帳單編號後，AJAX `GET /bills/{id}/detail` 取得資料，開啟 modal 顯示帳單明細。
+
+### Modal 內容
+
+```
+帳單編號：{bill.no}
+商店：{shop.name}
+建立人：{creator.name}
+狀態：{payment_status badge}
+────────────────────────────────────────────
+ 項目名稱  類型  總價  起始日  到期日
+ ...（逐筆有效 bills_details，is_effective = 1）
+────────────────────────────────────────────
+小計：{total_grade + total_addons}
+折抵：{discount_amount}
+總金額：{total}
+
+── 作廢項目（僅有作廢項目時才顯示此區塊）────────
+ 項目名稱  類型  總價  起始日  到期日
+ ...（is_effective = 0，名稱以刪除線標示，文字灰色）
+```
+
+後端 `GET /bills/{id}/detail` 回傳 JSON，包含 bill 基本資訊與 bills_details 列表（含有效與作廢）。
+
+Modal 底部有「匯出報價單」按鈕，點擊觸發 `GET /bills/{id}/quotation` 下載 PDF。
+
+----
+
+## 匯出報價單
+
+`GET /bills/{id}/quotation` — 需登入、具備 `Bill.index` 權限。
+
+回傳 PDF 附件下載，檔名格式：`{Y-m-d}_{shops.name}_{bills.id}_報價單.pdf`
+
+### PDF 內容
+
+```
+報價單
+
+帳單編號：{bill.no}
+商店：{bill.shop.name}
+日期：{今日日期}
+────────────────────────────────────────────
+ 項目名稱  類型  起始日  到期日  總價
+ ...（僅 is_effective = 1 的項目；折抵類型不顯示起始/到期日）
+────────────────────────────────────────────
+                        小計  NT$xxx
+                        折抵  NT$xxx   ← 僅 discount_amount > 0 時顯示
+                      總金額  NT$xxx
+```
+
+- 作廢項目（is_effective = 0）不匯出
+- 折抵金額欄位不加負號（標題已表達含義）
+- 使用 `barryvdh/laravel-dompdf` 產生，字型採 WQY MicroHei（storage/fonts/wqy-microhei.ttf）
+
+----
+
+## 編輯帳務 Modal
+
+點擊「編輯帳務」按鈕，開啟 modal，AJAX `PATCH /bills/{id}` 儲存。
+
+### Modal 內容
+
+```
+付款狀態  [select: pending / unpaid / paid / invalid]
+付款日期  [date picker，nullable]
+發票號碼  [text input，nullable]
+          [取消]  [儲存]
+```
+
+### 後端處理（`PATCH /bills/{id}`）
+
+1. 更新 `bills.payment_status`、`bills.paid_at`、`bills.invoice_no`
+2. 寫入 `bills_status_logs`（若 payment_status 有變更）
+3. **若 payment_status 由非 paid 變更為 paid(3)**：觸發付款安裝流程（同「帳務付款」章節）
+
+> 付款安裝流程仍使用 `Cache::lock("bill_pay_{$bill->id}", 10)` 防止重複執行。
+
+----
+
 ## 銷帳（帳務項目作廢）
 
 **僅限 payment_status = pending(1) 或 unpaid(2) 的帳單可執行銷帳。已付款（paid）項目需走退款流程。**
@@ -354,8 +467,8 @@ Hi！{登入者姓名}
 ```
 {bill.no}
 ─────────────────────────────────────────
-[☑] 項目名稱  數量  單價  總價  到期日
-[☑] 項目名稱  數量  單價  總價  到期日
+[☐] 項目名稱  類型  總價  起始日  到期日  狀態
+[☐] 項目名稱  類型  總價  起始日  到期日  狀態
 ─────────────────────────────────────────
 [取消]  [進行銷帳]
 ```
@@ -375,12 +488,12 @@ AJAX `POST /bills/{id}/writeoff`，送出勾選的 `detail_ids`。
 
 ## 帳務付款
 
-`POST /bills/{id}/pay`
+付款透過「編輯帳務 Modal」將 payment_status 設為 paid(3) 觸發，不再提供獨立的 pay 端點。
 
 後端先取得 `Cache::lock("bill_pay_{$bill->id}", 10)`，取不到鎖則回傳 429，防止重複付款。
 
 後端處理：
-1. `bills.payment_status` → 3（paid）
+1. `bills.payment_status` → 3（paid）、寫入 `bills.paid_at`（若有填寫）
 2. 寫入 `bills_status_logs`
 3. 逐一處理 `bills_details`（is_effective=1，type≠4）：
    - `start_at` 日期 = 今日 → 立即安裝

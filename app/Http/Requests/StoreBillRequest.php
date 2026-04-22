@@ -27,6 +27,7 @@ class StoreBillRequest extends FormRequest
             'details.*.expired_at' => ['required', 'date', 'after:details.*.start_at'],
             'details.*.total_months' => ['required', 'integer', 'min:0', 'max:36'],
             'details.*.memo' => ['nullable', 'string', 'max:255'],
+            'payment_method' => ['required', 'integer', 'in:1,2,3'],
             'discount_amount' => ['nullable', 'integer', 'min:0'],
             'discount_name' => ['nullable', 'string', 'max:100', 'required_with:discount_amount'],
         ];

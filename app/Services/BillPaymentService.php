@@ -55,20 +55,64 @@ class BillPaymentService
                     'operator_id' => $operator->id,
                 ]);
 
-                $today = today()->toDateString();
-
-                foreach ($bill->details()->where('is_effective', 1)->where('type', '!=', BillDetailType::Discount->value)->get() as $detail) {
-                    $detailDate = $detail->start_at->toDateString();
-
-                    if ($detailDate === $today) {
-                        $this->installDetail($detail);
-                    } else {
-                        $this->futureEffectRepository->createFromDetail($detail);
-                    }
-                }
+                $this->installBillDetails($bill);
             });
         } finally {
             $lock->release();
+        }
+    }
+
+    /**
+     * Update bill fields (payment_status, paid_at, invoice_no).
+     * If status transitions to Paid, triggers the install flow with distributed lock.
+     *
+     * @throws \Symfony\Component\HttpKernel\Exception\HttpException  429 if lock unavailable
+     */
+    public function update(Bill $bill, array $data, User $operator): void
+    {
+        $newStatus = isset($data['payment_status']) ? BillPaymentStatus::from((int) $data['payment_status']) : null;
+        $transitionToPaid = $newStatus === BillPaymentStatus::Paid && $bill->payment_status !== BillPaymentStatus::Paid;
+
+        $lock = null;
+        if ($transitionToPaid) {
+            $lock = Cache::lock("bill_pay_{$bill->id}", 10);
+            if (! $lock->get()) {
+                abort(429, '付款處理中，請勿重複操作');
+            }
+        }
+
+        try {
+            DB::transaction(function () use ($bill, $data, $operator, $newStatus, $transitionToPaid) {
+                $fromStatus = $bill->payment_status;
+
+                $updates = [];
+                if ($newStatus !== null) {
+                    $updates['payment_status'] = $newStatus;
+                }
+                if (array_key_exists('paid_at', $data)) {
+                    $updates['paid_at'] = $data['paid_at'];
+                }
+                if (array_key_exists('invoice_no', $data)) {
+                    $updates['invoice_no'] = $data['invoice_no'];
+                }
+
+                $bill->update($updates);
+
+                if ($newStatus !== null && $newStatus !== $fromStatus) {
+                    BillStatusLog::create([
+                        'bill_id'     => $bill->id,
+                        'from_status' => $fromStatus->value,
+                        'to_status'   => $newStatus->value,
+                        'operator_id' => $operator->id,
+                    ]);
+                }
+
+                if ($transitionToPaid) {
+                    $this->installBillDetails($bill);
+                }
+            });
+        } finally {
+            $lock?->release();
         }
     }
 
@@ -96,9 +140,21 @@ class BillPaymentService
         });
     }
 
+    private function installBillDetails(Bill $bill): void
+    {
+        $today = today()->toDateString();
+
+        foreach ($bill->details()->where('is_effective', 1)->where('type', '!=', BillDetailType::Discount->value)->get() as $detail) {
+            if ($detail->start_at->toDateString() === $today) {
+                $this->installDetail($detail);
+            } else {
+                $this->futureEffectRepository->createFromDetail($detail);
+            }
+        }
+    }
+
     private function installGradeDetail(Shop $shop, BillDetail $detail): void
     {
-        $grade = \App\Models\Grade::findOrFail($detail->bill->shop->grade_id);
         $newGrade = \App\Models\Grade::where('name', $detail->name)->first();
 
         if (! $newGrade) {

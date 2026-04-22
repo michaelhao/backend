@@ -17,9 +17,6 @@ return new class extends Migration
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();
 
-            $table->foreign('bill_id')->references('id')->on('bills');
-            $table->foreign('bill_detail_id')->references('id')->on('bills_details');
-
             $table->index(['execute_at', 'finished_at']);
         });
     }

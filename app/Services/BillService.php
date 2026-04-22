@@ -6,7 +6,6 @@ use App\Enums\BillDetailType;
 use App\Enums\BillPaymentStatus;
 use App\Models\Addon;
 use App\Models\Bill;
-use App\Models\BillDiscount;
 use App\Models\BillStatusLog;
 use App\Models\Grade;
 use App\Models\Shop;
@@ -15,6 +14,8 @@ use App\Repositories\BillDetailRepository;
 use App\Repositories\BillRepository;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -27,12 +28,16 @@ class BillService
     ) {}
 
     /**
-     * @return array{bills: Collection}
+     * @return array{bills: LengthAwarePaginator, filters: array}
      */
-    public function getIndexData(): array
+    public function getIndexData(Request $request): array
     {
+        $filters = $request->only(['no', 'payment_method', 'payment_status', 'sales_id']);
+
         return [
-            'bills' => $this->billRepository->getAll(),
+            'bills' => $this->billRepository->paginate(20, $filters),
+            'filters' => $filters,
+            'salesUsers' => User::orderBy('name')->get(['id', 'name']),
         ];
     }
 
@@ -46,8 +51,7 @@ class BillService
                 if (is_numeric($keyword)) {
                     $q->where('id', (int) $keyword);
                 } else {
-                    $q->where('code', $keyword)
-                        ->orWhere('name', 'like', "%{$keyword}%");
+                    $q->where('name', 'like', "%{$keyword}%");
                 }
             })
             ->limit(10)
@@ -128,6 +132,7 @@ class BillService
                 'total_grade' => 0,
                 'total_addons' => 0,
                 'discount_amount' => null,
+                'payment_method' => $data['payment_method'] ?? null,
                 'payment_status' => BillPaymentStatus::Pending,
             ]);
 
@@ -170,7 +175,7 @@ class BillService
     public function writeoff(Bill $bill, array $detailIds, User $operator): void
     {
         if (! in_array($bill->payment_status, [BillPaymentStatus::Pending, BillPaymentStatus::Unpaid])) {
-            throw ValidationException::withMessages(['bill' => '只有待審核或未付款的帳單可以銷帳']);
+            throw ValidationException::withMessages(['bill' => '只有待審核或待付款的帳單可以銷帳']);
         }
 
         DB::transaction(function () use ($bill, $detailIds, $operator) {

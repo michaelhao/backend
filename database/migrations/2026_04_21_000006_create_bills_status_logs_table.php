@@ -17,9 +17,6 @@ return new class extends Migration
             $table->string('reason', 255)->nullable();
             $table->dateTime('created_at')->nullable();
 
-            $table->foreign('bill_id')->references('id')->on('bills');
-            $table->foreign('operator_id')->references('id')->on('users');
-
             $table->index('bill_id');
         });
     }

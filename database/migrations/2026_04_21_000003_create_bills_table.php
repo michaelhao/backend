@@ -25,9 +25,6 @@ return new class extends Migration
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();
 
-            $table->foreign('creator_id')->references('id')->on('users');
-            $table->foreign('shop_id')->references('id')->on('shops');
-            $table->foreign('shop_sales_id')->references('id')->on('users');
         });
     }
 

@@ -200,11 +200,20 @@
                 </div>
             </div>
 
+            {{-- 付款方式 --}}
+            <div id="payment-method-block" class="hidden bg-white rounded-lg shadow p-6">
+                <h3 class="text-base font-semibold text-gray-800 mb-4">付款方式</h3>
+                <select id="payment-method-select" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                    <option value="2">匯款轉帳</option>
+                </select>
+            </div>
+
             {{-- 送出 --}}
             <div id="submit-block" class="hidden">
                 <form id="bill-form" method="POST" action="{{ route('bills.store') }}">
                     @csrf
                     <input type="hidden" id="form-shop-id" name="shop_id">
+                    <input type="hidden" id="form-payment-method" name="payment_method">
                     <div id="form-details-container"></div>
                     <input type="hidden" id="form-discount-amount" name="discount_amount">
                     <input type="hidden" id="form-discount-name" name="discount_name">

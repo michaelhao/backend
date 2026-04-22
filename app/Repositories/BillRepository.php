@@ -5,12 +5,28 @@ namespace App\Repositories;
 use App\Enums\BillPaymentStatus;
 use App\Models\Bill;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class BillRepository
 {
     public function getAll(): Collection
     {
         return Bill::with(['shop', 'creator'])->latest()->get();
+    }
+
+    /**
+     * @param  array{no?: string, payment_method?: string, payment_status?: string, sales_id?: string}  $filters
+     */
+    public function paginate(int $perPage, array $filters): LengthAwarePaginator
+    {
+        return Bill::query()
+            ->with(['shop', 'shopSales'])
+            ->when($filters['no'] ?? null, fn ($q, $no) => $q->where('no', 'like', "%{$no}%"))
+            ->when($filters['payment_method'] ?? null, fn ($q, $v) => $q->where('payment_method', $v))
+            ->when($filters['payment_status'] ?? null, fn ($q, $v) => $q->where('payment_status', $v))
+            ->when($filters['sales_id'] ?? null, fn ($q, $v) => $q->where('shop_sales_id', $v))
+            ->latest()
+            ->paginate($perPage);
     }
 
     public function findById(int $id): ?Bill

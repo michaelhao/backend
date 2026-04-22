@@ -20,10 +20,14 @@ function monthsOptions(startDate) {
 
     const opts = [];
     if (d && !isFirst && !isLastDay) opts.push({ v: 0, l: '月底' });
-    [1,2,3,4,5,6,12,24,36].forEach(m => {
-        const label = m === 6 ? '6 個月（半年）' : m === 12 ? '12 個月（年繳）' : m === 24 ? '24 個月（2 年繳）' : m === 36 ? '36 個月（3 年繳）' : `${m} 個月`;
+    for (let m = 1; m <= 36; m++) {
+        let label = `${m} 個月`;
+        if (m === 6)  label = '6 個月（半年）';
+        if (m === 12) label = '12 個月（年繳）';
+        if (m === 24) label = '24 個月（2 年繳）';
+        if (m === 36) label = '36 個月（3 年繳）';
         opts.push({ v: m, l: label });
-    });
+    }
     return opts;
 }
 
@@ -68,7 +72,6 @@ async function doSearch(kw) {
                     selectedLabel.textContent = el.dataset.label;
                     selectedInfo.classList.remove('hidden');
                     dropdown.classList.add('hidden');
-                    keywordInput.value = el.dataset.label;
                 });
             });
         }
@@ -328,7 +331,7 @@ function addAddonRow() {
     const gradeAddonIds = ((shopData?.grades ?? []).find(g => g.id === shopData?.shop?.grade_id)?.addons ?? []).map(a => a.id);
 
     const row = document.createElement('div');
-    row.className = 'addon-row grid grid-cols-6 gap-2 items-end';
+    row.className = 'addon-row border border-gray-100 rounded-lg p-3 bg-gray-50';
     row.dataset.rowId = id;
 
     const addonOpts = addons.map(a => {
@@ -337,38 +340,40 @@ function addAddonRow() {
         const sa = (shopData?.shop_addons ?? []).find(x => x.addon_id === a.id);
         let suffix = '';
         if (inGrade) suffix = '（已包含）';
-        else if (isPurchased) suffix = `（已購買，到期 ${sa?.expired_at ?? '?'}）`;
+        else if (isPurchased) suffix = sa?.expired_at ? `（已購買，到期 ${sa.expired_at.substring(0, 10)}）` : '（已購買）';
         return `<option value="${a.id}" data-price="${a.price}" data-name="${a.name}" data-type="${a.type}" data-in-grade="${inGrade ? '1' : '0'}" ${inGrade ? 'disabled' : ''}>${a.name}${suffix}</option>`;
     }).join('');
 
     row.innerHTML = `
-        <div class="col-span-2">
-            <label class="text-xs text-gray-500 mb-1 block">加購項目</label>
-            <select class="addon-select w-full rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-blue-500 outline-none">
-                <option value="">— 選擇 Addon —</option>
-                ${addonOpts}
-            </select>
+        <div class="flex items-end gap-2">
+            <div class="flex-1">
+                <label class="text-xs text-gray-500 mb-1 block">加購項目</label>
+                <select class="addon-select w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                    <option value="">— 選擇 Addon —</option>
+                    ${addonOpts}
+                </select>
+            </div>
+            <button type="button" class="remove-addon-row text-gray-400 hover:text-red-500 text-lg leading-none pb-2">✕</button>
         </div>
-        <div class="addon-qty-col hidden">
-            <label class="text-xs text-gray-500 mb-1 block">數量</label>
-            <input type="number" min="1" value="1" class="addon-qty w-full rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-blue-500 outline-none">
-        </div>
-        <div>
-            <label class="text-xs text-gray-500 mb-1 block">開始日</label>
-            <input type="date" class="addon-start-at w-full rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-blue-500 outline-none" min="${cfg.today}" value="${cfg.today}">
-        </div>
-        <div>
-            <label class="text-xs text-gray-500 mb-1 block">月數</label>
-            <select class="addon-months w-full rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-blue-500 outline-none">
-                <option value="">—</option>
-            </select>
-        </div>
-        <div>
-            <label class="text-xs text-gray-500 mb-1 block">金額</label>
-            <input type="text" readonly class="addon-amount w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-2 text-sm text-gray-700" placeholder="自動">
-        </div>
-        <div class="flex items-end pb-0.5">
-            <button type="button" class="remove-addon-row text-gray-400 hover:text-red-500 text-lg leading-none">✕</button>
+        <div class="grid grid-cols-4 gap-2 mt-2">
+            <div class="addon-qty-col hidden">
+                <label class="text-xs text-gray-500 mb-1 block">數量</label>
+                <input type="number" min="1" value="1" class="addon-qty w-full rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500 mb-1 block">開始日</label>
+                <input type="date" class="addon-start-at w-full rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-blue-500 outline-none" min="${cfg.today}" value="${cfg.today}">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500 mb-1 block">月數</label>
+                <select class="addon-months w-full rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-blue-500 outline-none">
+                    <option value="">—</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500 mb-1 block">金額</label>
+                <input type="text" readonly class="addon-amount w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-2 text-sm text-gray-700" placeholder="自動">
+            </div>
         </div>
     `;
 
@@ -561,9 +566,11 @@ function updateSubmitBlock() {
     const allDetails = getAllDetails();
     const hasItems = allDetails.length > 0;
     if (hasItems) {
+        show('payment-method-block');
         show('submit-block');
         buildFormInputs(allDetails);
     } else {
+        hide('payment-method-block');
         hide('submit-block');
     }
 }
@@ -582,6 +589,7 @@ function buildFormInputs(details) {
     container.innerHTML = '';
 
     document.getElementById('form-shop-id').value = shopData?.shop?.id ?? '';
+    document.getElementById('form-payment-method').value = document.getElementById('payment-method-select')?.value ?? 2;
 
     details.forEach((d, i) => {
         const fields = { type: d.type, payment_type: d.payment_type, quantity: d.quantity, unit_price: d.unit_price, total_price: d.total_price, name: d.name, start_at: d.start_at, expired_at: d.expired_at, total_months: d.total_months };

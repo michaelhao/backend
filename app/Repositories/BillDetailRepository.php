@@ -12,7 +12,7 @@ class BillDetailRepository
 {
     public function createMany(Bill $bill, array $details): Collection
     {
-        $created = collect();
+        $created = new Collection();
         foreach ($details as $detail) {
             $created->push($bill->details()->create($detail));
         }
