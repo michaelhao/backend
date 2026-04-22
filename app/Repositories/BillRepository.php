@@ -4,16 +4,10 @@ namespace App\Repositories;
 
 use App\Enums\BillPaymentStatus;
 use App\Models\Bill;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class BillRepository
 {
-    public function getAll(): Collection
-    {
-        return Bill::with(['shop', 'creator'])->latest()->get();
-    }
-
     /**
      * @param  array{no?: string, payment_method?: string, payment_status?: string, sales_id?: string}  $filters
      */

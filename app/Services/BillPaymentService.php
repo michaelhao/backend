@@ -7,15 +7,17 @@ use App\Enums\BillDetailType;
 use App\Enums\BillPaymentStatus;
 use App\Enums\ShopAddonSource;
 use App\Enums\ShopAddonStatus;
+use App\Models\Addon;
 use App\Models\Bill;
 use App\Models\BillDetail;
 use App\Models\BillStatusLog;
+use App\Models\Grade;
 use App\Models\Shop;
 use App\Models\ShopAddon;
-use App\Models\ShopAddonBalance;
 use App\Models\User;
 use App\Repositories\BillFutureEffectRepository;
 use App\Repositories\BillRepository;
+use App\Repositories\ShopAddonBalanceRepository;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -25,6 +27,7 @@ class BillPaymentService
     public function __construct(
         private BillRepository $billRepository,
         private BillFutureEffectRepository $futureEffectRepository,
+        private ShopAddonBalanceRepository $shopAddonBalanceRepository,
         private ShopAddonSyncService $shopAddonSyncService,
     ) {}
 
@@ -122,7 +125,6 @@ class BillPaymentService
      */
     public function installDetail(BillDetail $detail): void
     {
-        // Idempotency guard
         if ($detail->applied_at !== null) {
             return;
         }
@@ -145,6 +147,9 @@ class BillPaymentService
         $today = today()->toDateString();
 
         foreach ($bill->details()->where('is_effective', 1)->where('type', '!=', BillDetailType::Discount->value)->get() as $detail) {
+            // Pre-load the bill relation to avoid a lazy-load inside installDetail
+            $detail->setRelation('bill', $bill);
+
             if ($detail->start_at->toDateString() === $today) {
                 $this->installDetail($detail);
             } else {
@@ -155,10 +160,16 @@ class BillPaymentService
 
     private function installGradeDetail(Shop $shop, BillDetail $detail): void
     {
-        $newGrade = \App\Models\Grade::where('name', $detail->name)->first();
+        if (! $detail->grade_id) {
+            Log::warning("BillPaymentService: grade_id missing for detail #{$detail->id}");
+
+            return;
+        }
+
+        $newGrade = Grade::find($detail->grade_id);
 
         if (! $newGrade) {
-            Log::warning("BillPaymentService: grade not found for detail #{$detail->id}, name={$detail->name}");
+            Log::warning("BillPaymentService: grade #{$detail->grade_id} not found for detail #{$detail->id}");
 
             return;
         }
@@ -168,17 +179,22 @@ class BillPaymentService
             'expired_at' => $detail->expired_at,
         ]);
 
-        // Sync grade-based addons
         $newAddonIds = $newGrade->addons()->pluck('addons.id')->toArray();
         $this->shopAddonSyncService->syncForShop($shop->id, $newAddonIds);
     }
 
     private function installAddonDetail(Shop $shop, BillDetail $detail): void
     {
-        $addon = \App\Models\Addon::where('name', $detail->name)->first();
+        if (! $detail->addon_id) {
+            Log::warning("BillPaymentService: addon_id missing for detail #{$detail->id}");
+
+            return;
+        }
+
+        $addon = Addon::find($detail->addon_id);
 
         if (! $addon) {
-            Log::warning("BillPaymentService: addon not found for detail #{$detail->id}, name={$detail->name}");
+            Log::warning("BillPaymentService: addon #{$detail->addon_id} not found for detail #{$detail->id}");
 
             return;
         }
@@ -193,12 +209,12 @@ class BillPaymentService
         );
 
         if ($addon->type === AddonType::Quota) {
-            ShopAddonBalance::create([
-                'shop_id' => $shop->id,
-                'addon_id' => $addon->id,
-                'quantity' => $detail->quantity,
-                'expired_at' => $detail->expired_at,
-            ]);
+            $this->shopAddonBalanceRepository->create(
+                $shop->id,
+                $addon->id,
+                $detail->quantity,
+                $detail->expired_at,
+            );
         }
     }
 
@@ -212,7 +228,8 @@ class BillPaymentService
 
         foreach ($effects as $effect) {
             try {
-                $effect->load('detail');
+                // Eager-load detail.bill so installDetail doesn't trigger a lazy load
+                $effect->load('detail.bill');
                 $this->installDetail($effect->detail);
                 $this->futureEffectRepository->markFinished($effect);
             } catch (\Throwable $e) {

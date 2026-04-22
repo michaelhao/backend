@@ -26,7 +26,9 @@ class BillController extends Controller
     #[RequiresPermission('Bill.index')]
     public function index(Request $request)
     {
-        $data = $this->billService->getIndexData($request);
+        $data = $this->billService->getIndexData(
+            $request->only(['no', 'payment_method', 'payment_status', 'sales_id'])
+        );
 
         return view('admin.bills.index', $data);
     }
@@ -43,7 +45,7 @@ class BillController extends Controller
     public function store(StoreBillRequest $request)
     {
         $bill = $this->billService->createBill(
-            $request->safe()->only(['shop_id', 'details', 'discount_amount', 'discount_name']),
+            $request->safe()->only(['shop_id', 'details', 'discount_amount', 'discount_name', 'payment_method']),
             $request->user(),
         );
 
@@ -130,13 +132,6 @@ class BillController extends Controller
             return response()->json(['message' => '帳單不存在'], 404);
         }
 
-        $typeLabels = [
-            BillDetailType::Grades->value         => '版本',
-            BillDetailType::UpgradeFeeDiff->value  => '升級補差額',
-            BillDetailType::Addons->value          => '加購功能',
-            BillDetailType::Discount->value        => '折抵',
-        ];
-
         $statusLabels = [
             BillPaymentStatus::Pending->value  => ['label' => '待審核', 'class' => 'bg-yellow-100 text-yellow-800'],
             BillPaymentStatus::Unpaid->value   => ['label' => '待付款', 'class' => 'bg-orange-100 text-orange-800'],
@@ -145,6 +140,7 @@ class BillController extends Controller
         ];
 
         $s = $statusLabels[$bill->payment_status->value] ?? ['label' => '未知', 'class' => 'bg-gray-100 text-gray-500'];
+        $typeLabels = $this->typeLabels();
 
         return response()->json([
             'bill' => [
@@ -192,7 +188,7 @@ class BillController extends Controller
     }
 
     #[RequiresPermission('Bill.pay')]
-    public function pay(int $id): JsonResponse
+    public function pay(Request $request, int $id): JsonResponse
     {
         $bill = Bill::find($id);
 
@@ -204,7 +200,7 @@ class BillController extends Controller
             return response()->json(['message' => '此帳單狀態無法執行付款'], 422);
         }
 
-        $this->billPaymentService->pay($bill, request()->user());
+        $this->billPaymentService->pay($bill, $request->user());
 
         return response()->json(['message' => '付款成功']);
     }
@@ -212,20 +208,13 @@ class BillController extends Controller
     #[RequiresPermission('Bill.index')]
     public function quotation(int $id)
     {
-        ini_set('memory_limit', '256M');
-
         $bill = Bill::with(['shop', 'details' => fn ($q) => $q->where('is_effective', 1)])->find($id);
 
         if (! $bill) {
             abort(404);
         }
 
-        $typeLabels = [
-            BillDetailType::Grades->value        => '版本',
-            BillDetailType::UpgradeFeeDiff->value => '升級補差額',
-            BillDetailType::Addons->value         => '加購功能',
-            BillDetailType::Discount->value       => '折抵',
-        ];
+        $typeLabels = $this->typeLabels();
 
         $details = $bill->details->map(fn ($d) => [
             'name'        => $d->name,
@@ -260,5 +249,15 @@ class BillController extends Controller
         );
 
         return response()->json(['message' => '銷帳成功']);
+    }
+
+    private function typeLabels(): array
+    {
+        return [
+            BillDetailType::Grades->value        => '版本',
+            BillDetailType::UpgradeFeeDiff->value => '升級補差額',
+            BillDetailType::Addons->value         => '加購功能',
+            BillDetailType::Discount->value       => '折抵',
+        ];
     }
 }

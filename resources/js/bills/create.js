@@ -296,6 +296,7 @@ async function triggerGradeCalculate() {
         // Build grade detail for summary
         gradeDetails = [{
             type: isUpgradeDiff ? 2 : 1,
+            grade_id: parseInt(gradeSelect.value),
             name: selectedOpt.dataset.name,
             unit_price: unitPrice,
             total_price: res.data.total_price,
@@ -456,6 +457,7 @@ async function triggerAddonCalculate(row) {
 
         row._detail = {
             type: 3,
+            addon_id: parseInt(row.querySelector('.addon-select').value),
             name: opt.dataset.name,
             unit_price: parseInt(opt.dataset.price),
             total_price: totalPrice,
@@ -592,7 +594,7 @@ function buildFormInputs(details) {
     document.getElementById('form-payment-method').value = document.getElementById('payment-method-select')?.value ?? 2;
 
     details.forEach((d, i) => {
-        const fields = { type: d.type, payment_type: d.payment_type, quantity: d.quantity, unit_price: d.unit_price, total_price: d.total_price, name: d.name, start_at: d.start_at, expired_at: d.expired_at, total_months: d.total_months };
+        const fields = { type: d.type, grade_id: d.grade_id, addon_id: d.addon_id, payment_type: d.payment_type, quantity: d.quantity, unit_price: d.unit_price, total_price: d.total_price, name: d.name, start_at: d.start_at, expired_at: d.expired_at, total_months: d.total_months };
         Object.entries(fields).forEach(([k, v]) => {
             if (v == null) return;
             const inp = document.createElement('input');

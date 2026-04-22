@@ -14,7 +14,6 @@ use App\Repositories\BillDetailRepository;
 use App\Repositories\BillRepository;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -28,12 +27,11 @@ class BillService
     ) {}
 
     /**
-     * @return array{bills: LengthAwarePaginator, filters: array}
+     * @param  array{no?: string, payment_method?: string, payment_status?: string, sales_id?: string}  $filters
+     * @return array{bills: LengthAwarePaginator, filters: array, salesUsers: Collection}
      */
-    public function getIndexData(Request $request): array
+    public function getIndexData(array $filters): array
     {
-        $filters = $request->only(['no', 'payment_method', 'payment_status', 'sales_id']);
-
         return [
             'bills' => $this->billRepository->paginate(20, $filters),
             'filters' => $filters,

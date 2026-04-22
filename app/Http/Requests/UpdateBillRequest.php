@@ -19,4 +19,19 @@ class UpdateBillRequest extends FormRequest
             'invoice_no'     => ['nullable', 'string', 'max:100'],
         ];
     }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $newStatus = $this->input('payment_status');
+            if ($newStatus === null) {
+                return;
+            }
+            $bill = \App\Models\Bill::find((int) $this->route('id'));
+            if ($bill && $bill->payment_status === \App\Enums\BillPaymentStatus::Paid
+                && (int) $newStatus !== \App\Enums\BillPaymentStatus::Paid->value) {
+                $validator->errors()->add('payment_status', '已付款的帳單無法變更狀態');
+            }
+        });
+    }
 }

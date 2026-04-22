@@ -17,6 +17,8 @@ class BillDetail extends Model
 
     protected $fillable = [
         'bill_id',
+        'grade_id',
+        'addon_id',
         'type',
         'payment_type',
         'quantity',

@@ -17,6 +17,8 @@ class BillDetailFactory extends Factory
 
         return [
             'bill_id' => Bill::factory(),
+            'grade_id' => null,
+            'addon_id' => null,
             'type' => BillDetailType::Grades,
             'payment_type' => 1,
             'quantity' => 1,

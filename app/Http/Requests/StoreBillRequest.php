@@ -18,6 +18,8 @@ class StoreBillRequest extends FormRequest
             'shop_id' => ['required', 'integer', 'exists:shops,id'],
             'details' => ['required', 'array', 'min:1'],
             'details.*.type' => ['required', 'integer', 'in:1,2,3'],
+            'details.*.grade_id' => ['nullable', 'integer', 'exists:grades,id'],
+            'details.*.addon_id' => ['nullable', 'integer', 'exists:addons,id'],
             'details.*.payment_type' => ['nullable', 'integer', 'in:1,2,3'],
             'details.*.quantity' => ['required', 'integer', 'min:1'],
             'details.*.unit_price' => ['required', 'integer'],
