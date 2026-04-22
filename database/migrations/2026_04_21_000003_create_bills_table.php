@@ -11,9 +11,9 @@ return new class extends Migration
         Schema::create('bills', function (Blueprint $table) {
             $table->id();
             $table->string('no', 32)->charset('ascii')->unique();
-            $table->unsignedBigInteger('creator_id');
-            $table->unsignedBigInteger('shop_id');
-            $table->unsignedBigInteger('shop_sales_id');
+            $table->unsignedInteger('creator_id');
+            $table->unsignedInteger('shop_id');
+            $table->unsignedInteger('shop_sales_id');
             $table->unsignedInteger('total')->default(0);
             $table->unsignedInteger('total_grade')->default(0);
             $table->unsignedInteger('total_addons')->default(0);

@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('addons_image', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('addon_id')->constrained('addons');
+            $table->unsignedInteger('addon_id');
             $table->unique('addon_id');
             $table->string('image_url', 255);
             $table->dateTime('created_at')->nullable();

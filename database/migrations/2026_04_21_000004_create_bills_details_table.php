@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('bills_details', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('bill_id');
+            $table->unsignedInteger('bill_id');
             $table->tinyInteger('type');
             $table->tinyInteger('payment_type')->nullable();
             $table->integer('quantity')->default(1);
@@ -22,7 +22,7 @@ return new class extends Migration
             $table->integer('total_months');
             $table->tinyInteger('is_effective')->default(1);
             $table->dateTime('canceled_at')->nullable();
-            $table->unsignedBigInteger('canceled_by')->nullable();
+            $table->unsignedInteger('canceled_by')->nullable();
             $table->dateTime('applied_at')->nullable();
             $table->string('memo', 255)->nullable();
             $table->dateTime('created_at')->nullable();

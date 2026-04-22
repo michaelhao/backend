@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('bills_future_effect', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('bill_id');
-            $table->unsignedBigInteger('bill_detail_id');
+            $table->unsignedInteger('bill_id');
+            $table->unsignedInteger('bill_detail_id');
             $table->date('execute_at');
             $table->date('finished_at')->nullable();
             $table->dateTime('created_at')->nullable();

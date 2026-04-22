@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('shop_addon_balances', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('shop_id')->constrained('shops');
-            $table->foreignId('addon_id')->constrained('addons');
+            $table->unsignedInteger('shop_id');
+            $table->unsignedInteger('addon_id');
             $table->unsignedInteger('quantity');
             $table->dateTime('expired_at');
             $table->index(['shop_id', 'addon_id', 'expired_at']);
