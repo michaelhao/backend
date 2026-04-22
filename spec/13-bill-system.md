@@ -17,9 +17,9 @@
 | --------------- | ------------- | ----------------------------------------------------------------- |
 | id              | int           | Primary Key                                                       |
 | no              | varchar(32)   | 帳單編號，格式：`b{Ymd}{His}{8位亂數}`，例：`b2026042016561200105063`；ascii charset，加 UNIQUE index，程式端碰撞時最多重試 3 次 |
-| creator_id      | int           | FK → users(id)，帳單建立人                                        |
-| shop_id         | int           | FK → shops(id)                                                    |
-| shop_sales_id   | int           | FK → users(id)，商店負責業務（建立時快照）                        |
+| creator_id      | int           | → users(id)，帳單建立人                                           |
+| shop_id         | int           | → shops(id)                                                       |
+| shop_sales_id   | int           | → users(id)，商店負責業務（建立時快照）                           |
 | total           | int unsigned  | 總金額（折抵後）                                                  |
 | total_grade     | int unsigned  | 版本項目總金額                                                    |
 | total_addons    | int unsigned  | 加購功能總金額                                                    |
@@ -36,7 +36,7 @@
 | 欄位名        | 類型          | 說明                                          |
 | ------------- | ------------- | --------------------------------------------- |
 | id            | int           | Primary Key                                   |
-| bill_id       | int           | FK → bills(id)                                |
+| bill_id       | int           | → bills(id)                                   |
 | type          | tinyint       | 1: grades 版本, 2: upgrade_fee_diff 升級補差額, 3: addons 加購功能, 4: discount 折抵 |
 | payment_type  | tinyint       | 1: 月繳, 2: 季繳, 3: 年繳，nullable（type=4 折抵不適用） |
 | quantity      | int           | 數量（addons 使用，版本固定為 1）             |
@@ -48,7 +48,7 @@
 | total_months  | int           | 購買月數（0 = 當月月底；開始日為當月最後一天時不可選 0） |
 | is_effective  | tinyint       | 1: 有效, 0: 作廢（銷帳）                      |
 | canceled_at   | datetime      | 銷帳時間，nullable                            |
-| canceled_by   | int           | FK → users(id)，銷帳操作人，nullable          |
+| canceled_by   | int           | → users(id)，銷帳操作人，nullable             |
 | applied_at    | datetime      | 安裝完成時間，nullable；installDetail 完成後寫入，作為冪等保護 |
 | memo          | varchar(255)  | 備註，nullable                                |
 | created_at    | datetime      |                                               |
@@ -59,8 +59,8 @@
 | 欄位名         | 類型          | 說明                                        |
 | -------------- | ------------- | ------------------------------------------- |
 | id             | int           | Primary Key                                 |
-| bill_id        | int           | FK → bills(id)                              |
-| bill_detail_id | int           | FK → bills_details(id)                      |
+| bill_id        | int           | → bills(id)                                 |
+| bill_detail_id | int           | → bills_details(id)                         |
 | execute_at     | date          | 預定執行日（由 bills_details.start_at 轉 date） |
 | finished_at    | date          | 完成執行日，nullable                        |
 | created_at     | datetime      |                                             |
@@ -90,10 +90,10 @@
 | 欄位名      | 類型          | 說明                                                  |
 | ----------- | ------------- | ----------------------------------------------------- |
 | id          | int           | Primary Key                                           |
-| bill_id     | int           | FK → bills(id)                                        |
+| bill_id     | int           | → bills(id)                                           |
 | from_status | tinyint       | 變更前狀態，nullable（建立時為 null）                 |
 | to_status   | tinyint       | 變更後狀態                                            |
-| operator_id | int           | FK → users(id)，nullable（null = 系統排程自動觸發）   |
+| operator_id | int           | → users(id)，nullable（null = 系統排程自動觸發）      |
 | reason      | varchar(255)  | 備註，nullable                                        |
 | created_at  | datetime      |                                                       |
 
@@ -103,7 +103,7 @@
 
 | 欄位名   | 類型 | 說明                       |
 | -------- | ---- | -------------------------- |
-| sales_id | int  | FK → users(id)，nullable   |
+| sales_id | int  | → users(id)，nullable      |
 
 調整欄位：
 

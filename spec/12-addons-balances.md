@@ -15,8 +15,8 @@
 | 欄位       | 類型     | 說明                      |
 | ---------- | -------- | ------------------------- |
 | id         | int      | Primary Key               |
-| shop_id    | int      | FK → shops(id)            |
-| addon_id   | int      | FK → addons(id)           |
+| shop_id    | int      | → shops(id)               |
+| addon_id   | int      | → addons(id)              |
 | quantity   | int      | 本次購入數量（不允許負數）|
 | expired_at | datetime | 本筆餘額到期日（獨立計算）|
 | created_at | datetime |                           |
@@ -24,7 +24,6 @@
 
 INDEX (shop_id, addon_id, expired_at)
 
-FK: shop_id → shops(id), addon_id → addons(id)  
 不做 cascade delete，保留歷史紀錄
 
 #### 獨立過期範例
