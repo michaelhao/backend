@@ -229,10 +229,18 @@ function populateGradeSelect(op) {
     const currentWeight = shopData?.shop?.grade_weight ?? 0;
     select.innerHTML = '<option value="">— 請選擇版本 —</option>';
 
-    grades.forEach(g => {
-        if (op === 'upgrade' && g.weight <= currentWeight) return;
-        if (op === 'downgrade' && g.weight >= currentWeight) return;
-        if (op === 'renew' && g.weight !== currentWeight) return;
+    const filtered = grades.filter(g => {
+        if (op === 'upgrade') return g.weight > currentWeight;
+        if (op === 'downgrade') return g.weight < currentWeight;
+        if (op === 'renew') return g.weight === currentWeight;
+        return false;
+    });
+
+    if (op === 'upgrade') {
+        filtered.sort((a, b) => b.weight - a.weight);
+    }
+
+    filtered.forEach(g => {
         const opt = document.createElement('option');
         opt.value = g.id;
         opt.dataset.price = g.price;

@@ -94,9 +94,47 @@ document.querySelectorAll('.detail-btn').forEach(btn => {
 detailClose?.addEventListener('click', () => detailModal.classList.add('hidden'));
 detailModal?.addEventListener('click', e => { if (e.target === detailModal) detailModal.classList.add('hidden'); });
 
-document.getElementById('detail-export-btn')?.addEventListener('click', () => {
-    if (activeBillId) {
-        window.open(`/bills/${activeBillId}/quotation`, '_blank');
+const exportModal    = document.getElementById('export-modal');
+const exportModalMsg = document.getElementById('export-modal-msg');
+
+function showExportModal(msg) {
+    exportModalMsg.textContent = msg;
+    exportModal.classList.remove('hidden');
+}
+function hideExportModal() {
+    exportModal.classList.add('hidden');
+}
+
+document.getElementById('detail-export-btn')?.addEventListener('click', async () => {
+    if (!activeBillId) return;
+
+    showExportModal('匯出中…');
+
+    try {
+        const res = await fetch(`/bills/${activeBillId}/quotation`, {
+            headers: { 'X-CSRF-TOKEN': csrfToken },
+        });
+
+        if (!res.ok) throw new Error();
+
+        const disposition = res.headers.get('Content-Disposition') ?? '';
+        const rfc5987 = disposition.match(/filename\*=UTF-8''([^;\n]+)/i);
+        const ascii   = disposition.match(/filename="([^"]+)"/i);
+        const filename = rfc5987 ? decodeURIComponent(rfc5987[1]) : (ascii?.[1] ?? 'quotation.pdf');
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        exportModalMsg.textContent = '匯出完成';
+        setTimeout(hideExportModal, 1500);
+    } catch {
+        hideExportModal();
+        alert('匯出失敗，請稍後再試');
     }
 });
 

@@ -274,6 +274,12 @@
             </div>
         </div>
     </div>
+    {{-- Export Modal --}}
+    <div id="export-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
+        <div class="bg-white rounded-xl shadow-xl px-10 py-8 flex flex-col items-center gap-3 min-w-48">
+            <p id="export-modal-msg" class="text-sm font-medium text-gray-700"></p>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
