@@ -16,7 +16,6 @@ use App\Models\Shop;
 use App\Models\ShopAddon;
 use App\Models\User;
 use App\Repositories\BillFutureEffectRepository;
-use App\Repositories\BillRepository;
 use App\Repositories\ShopAddonBalanceRepository;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -25,45 +24,10 @@ use Illuminate\Support\Facades\Log;
 class BillPaymentService
 {
     public function __construct(
-        private BillRepository $billRepository,
         private BillFutureEffectRepository $futureEffectRepository,
         private ShopAddonBalanceRepository $shopAddonBalanceRepository,
         private ShopAddonSyncService $shopAddonSyncService,
     ) {}
-
-    /**
-     * Process payment for a bill. Uses a distributed lock to prevent duplicate payments.
-     *
-     * @throws \Symfony\Component\HttpKernel\Exception\HttpException  429 if lock unavailable
-     */
-    public function pay(Bill $bill, User $operator): void
-    {
-        $lock = Cache::lock("bill_pay_{$bill->id}", 10);
-
-        if (! $lock->get()) {
-            abort(429, '付款處理中，請勿重複操作');
-        }
-
-        try {
-            DB::transaction(function () use ($bill, $operator) {
-                $fromStatus = $bill->payment_status;
-
-                $this->billRepository->updateStatus($bill, BillPaymentStatus::Paid);
-                $bill->update(['paid_at' => now()]);
-
-                BillStatusLog::create([
-                    'bill_id' => $bill->id,
-                    'from_status' => $fromStatus->value,
-                    'to_status' => BillPaymentStatus::Paid->value,
-                    'operator_id' => $operator->id,
-                ]);
-
-                $this->installBillDetails($bill);
-            });
-        } finally {
-            $lock->release();
-        }
-    }
 
     /**
      * Update bill fields (payment_status, paid_at, invoice_no).

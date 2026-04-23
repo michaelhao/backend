@@ -71,7 +71,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/bills/{id}/detail', [BillController::class, 'detail'])->name('bills.detail');
         Route::get('/bills/{id}/quotation', [BillController::class, 'quotation'])->name('bills.quotation');
         Route::patch('/bills/{id}', [BillController::class, 'update'])->name('bills.update');
-        Route::post('/bills/{id}/pay', [BillController::class, 'pay'])->name('bills.pay');
         Route::post('/bills/{id}/writeoff', [BillController::class, 'writeoff'])->name('bills.writeoff');
 
         // 附加功能管理

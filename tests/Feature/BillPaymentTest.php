@@ -46,36 +46,6 @@ class BillPaymentTest extends TestCase
         return [$shop, $grade];
     }
 
-    public function test_pay_bill_changes_status_to_paid(): void
-    {
-        $this->seedPermissions();
-        $user = $this->createAdminUser();
-        [$shop, $grade] = $this->createShopWithGrade($user);
-
-        $bill = Bill::factory()->create([
-            'shop_id' => $shop->id,
-            'creator_id' => $user->id,
-            'shop_sales_id' => $user->id,
-            'payment_status' => BillPaymentStatus::Pending,
-        ]);
-
-        $detail = BillDetail::factory()->create([
-            'bill_id' => $bill->id,
-            'type' => BillDetailType::Grades,
-            'grade_id' => $grade->id,
-            'name' => $grade->name,
-            'start_at' => today(),
-            'expired_at' => today()->addMonth()->endOfMonth()->setTime(23, 59, 59),
-            'total_months' => 1,
-            'is_effective' => 1,
-        ]);
-
-        $this->postJson(route('bills.pay', $bill->id));
-
-        $this->assertEquals(BillPaymentStatus::Paid, $bill->fresh()->payment_status);
-        $this->assertNotNull(BillDetail::find($detail->id)->applied_at);
-    }
-
     public function test_future_detail_creates_future_effect_record(): void
     {
         $this->seedPermissions();
@@ -101,7 +71,9 @@ class BillPaymentTest extends TestCase
             'is_effective' => 1,
         ]);
 
-        $this->postJson(route('bills.pay', $bill->id));
+        $this->patchJson(route('bills.update', $bill->id), [
+            'payment_status' => BillPaymentStatus::Paid->value,
+        ])->assertOk();
 
         $this->assertDatabaseHas('bills_future_effect', [
             'bill_id' => $bill->id,
@@ -175,22 +147,24 @@ class BillPaymentTest extends TestCase
         $this->assertEquals(BillPaymentStatus::Invalid, $bill->fresh()->payment_status);
     }
 
-    public function test_cannot_pay_already_paid_bill(): void
+    public function test_cannot_transition_invalid_bill_to_paid(): void
     {
         $this->seedPermissions();
         $user = $this->createAdminUser();
-        [$shop, $grade] = $this->createShopWithGrade($user);
+        [$shop] = $this->createShopWithGrade($user);
 
         $bill = Bill::factory()->create([
             'shop_id' => $shop->id,
             'creator_id' => $user->id,
             'shop_sales_id' => $user->id,
-            'payment_status' => BillPaymentStatus::Paid,
-            'paid_at' => now(),
+            'payment_status' => BillPaymentStatus::Invalid,
         ]);
 
-        $this->postJson(route('bills.pay', $bill->id))
-            ->assertStatus(422);
+        $this->patchJson(route('bills.update', $bill->id), [
+            'payment_status' => BillPaymentStatus::Paid->value,
+        ])->assertStatus(422);
+
+        $this->assertEquals(BillPaymentStatus::Invalid, $bill->fresh()->payment_status);
     }
 
     public function test_update_to_paid_installs_details(): void

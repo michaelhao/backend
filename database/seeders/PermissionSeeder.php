@@ -77,7 +77,6 @@ class PermissionSeeder extends Seeder
                 'create'   => '建立',
                 'pay'      => '付款',
                 'writeoff' => '銷帳',
-                'void'     => '作廢',
             ],
         ],
     ];

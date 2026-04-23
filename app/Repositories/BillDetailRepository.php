@@ -33,12 +33,24 @@ class BillDetailRepository
             ->get();
     }
 
+    public function syncDiscountAmount(int $billId, int $newAmount): void
+    {
+        BillDetail::where('bill_id', $billId)
+            ->where('type', BillDetailType::Discount->value)
+            ->where('is_effective', 1)
+            ->update([
+                'unit_price' => $newAmount,
+                'total_price' => $newAmount,
+            ]);
+    }
+
     /**
      * @param  int[]  $ids
      */
-    public function writeoff(array $ids, int $canceledBy): void
+    public function writeoff(int $billId, array $ids, int $canceledBy): void
     {
         DB::table('bills_details')
+            ->where('bill_id', $billId)
             ->whereIn('id', $ids)
             ->where('is_effective', 1)
             ->update([

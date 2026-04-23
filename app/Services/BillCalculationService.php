@@ -69,6 +69,12 @@ class BillCalculationService
      */
     public function calculateUpgradeDiff(int $newPrice, int $currentPrice, Carbon $startAt, int $totalMonths): int
     {
+        // upgrade_fee_diff is only meaningful when new tier is pricier; fall back to the normal
+        // calc so a mistakenly flagged downgrade does not produce negative partial amounts.
+        if ($newPrice <= $currentPrice) {
+            return $this->calculateDetailTotal($newPrice, $startAt, $totalMonths);
+        }
+
         $diffPrice = $newPrice - $currentPrice;
         $daysInMonth = $startAt->daysInMonth;
         $remainingDays = $daysInMonth - $startAt->day + 1;

@@ -133,14 +133,18 @@ let gradeEnabled = false;
 let addonEnabled = false;
 
 function updateToggleBtn(btn, active) {
+    if (!btn.dataset.baseLabel) {
+        btn.dataset.baseLabel = btn.textContent.replace(/[✓]/g, '').trim();
+    }
+    const base = btn.dataset.baseLabel;
     if (active) {
         btn.classList.remove('border-gray-300', 'text-gray-600');
         btn.classList.add('border-blue-500', 'text-blue-600', 'bg-blue-50');
-        btn.innerHTML = btn.textContent.trim().replace(/[✓]/g, '') + ' <span class="text-blue-500">✓</span>';
+        btn.innerHTML = `${base} <span class="text-blue-500">✓</span>`;
     } else {
         btn.classList.add('border-gray-300', 'text-gray-600');
         btn.classList.remove('border-blue-500', 'text-blue-600', 'bg-blue-50');
-        btn.textContent = btn.textContent.replace(' ✓', '').replace(/[✓]/g, '').trim();
+        btn.textContent = base;
     }
 }
 
@@ -445,8 +449,6 @@ async function triggerAddonCalculate(row) {
         updateOrderSummary();
         return;
     }
-
-    const unitPrice = parseInt(opt.dataset.price) * qty;
 
     try {
         const res = await axios.get(cfg.calculateUrl, {

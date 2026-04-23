@@ -9,7 +9,6 @@ use App\Http\Requests\StoreBillRequest;
 use App\Http\Requests\UpdateBillRequest;
 use App\Http\Requests\WriteoffBillRequest;
 use App\Models\Bill;
-use App\Models\BillDiscount;
 use App\Services\BillPaymentService;
 use App\Services\BillService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -36,9 +35,7 @@ class BillController extends Controller
     #[RequiresPermission('Bill.create')]
     public function create()
     {
-        $discounts = BillDiscount::orderBy('id')->get();
-
-        return view('admin.bills.create', compact('discounts'));
+        return view('admin.bills.create', $this->billService->getCreatePageData());
     }
 
     #[RequiresPermission('Bill.create')]
@@ -67,8 +64,7 @@ class BillController extends Controller
             'shops' => $shops->map(fn ($s) => [
                 'id' => $s->id,
                 'name' => $s->name,
-                'code' => $s->code ?? '',
-                'label' => "{$s->id} — {$s->name}" . ($s->code ? "（{$s->code}）" : ''),
+                'label' => "{$s->id} — {$s->name}",
             ]),
         ]);
     }
@@ -185,50 +181,19 @@ class BillController extends Controller
         return response()->json(['message' => '儲存成功']);
     }
 
-    #[RequiresPermission('Bill.pay')]
-    public function pay(Request $request, int $id): JsonResponse
-    {
-        $bill = Bill::find($id);
-
-        if (! $bill) {
-            return response()->json(['message' => '帳單不存在'], 404);
-        }
-
-        if (! in_array($bill->payment_status, [BillPaymentStatus::Pending, BillPaymentStatus::Unpaid])) {
-            return response()->json(['message' => '此帳單狀態無法執行付款'], 422);
-        }
-
-        $this->billPaymentService->pay($bill, $request->user());
-
-        return response()->json(['message' => '付款成功']);
-    }
-
     #[RequiresPermission('Bill.index')]
     public function quotation(int $id)
     {
-        $bill = Bill::with(['shop', 'details' => fn ($q) => $q->where('is_effective', 1)])->find($id);
+        $data = $this->billService->getQuotationData($id, $this->typeLabels());
 
-        if (! $bill) {
+        if ($data === null) {
             abort(404);
         }
 
-        $typeLabels = $this->typeLabels();
-
-        $details = $bill->details->map(fn ($d) => [
-            'name'        => $d->name,
-            'type_label'  => $typeLabels[$d->type->value] ?? '—',
-            'type'        => $d->type->value,
-            'total_price' => $d->total_price,
-            'start_at'    => $d->start_at?->format('Y-m-d'),
-            'expired_at'  => $d->expired_at?->format('Y-m-d'),
-        ]);
-
-        $filename = now()->format('Y-m-d').'_'.$bill->shop->name.'_'.$bill->id.'_報價單.pdf';
-
         return Pdf::loadView('admin.bills.quotation', [
-            'bill'    => $bill,
-            'details' => $details,
-        ])->download($filename);
+            'bill'    => $data['bill'],
+            'details' => $data['details'],
+        ])->download($data['filename']);
     }
 
     #[RequiresPermission('Bill.writeoff')]

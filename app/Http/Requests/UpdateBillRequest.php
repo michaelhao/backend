@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\BillPaymentStatus;
+use App\Models\Bill;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateBillRequest extends FormRequest
@@ -27,10 +29,28 @@ class UpdateBillRequest extends FormRequest
             if ($newStatus === null) {
                 return;
             }
-            $bill = \App\Models\Bill::find((int) $this->route('id'));
-            if ($bill && $bill->payment_status === \App\Enums\BillPaymentStatus::Paid
-                && (int) $newStatus !== \App\Enums\BillPaymentStatus::Paid->value) {
+            $bill = Bill::find((int) $this->route('id'));
+            if (! $bill) {
+                return;
+            }
+
+            $currentStatus = $bill->payment_status;
+            $newStatusEnum = BillPaymentStatus::tryFrom((int) $newStatus);
+
+            if ($currentStatus === BillPaymentStatus::Paid
+                && $newStatusEnum !== BillPaymentStatus::Paid) {
                 $validator->errors()->add('payment_status', '已付款的帳單無法變更狀態');
+
+                return;
+            }
+
+            if ($newStatusEnum === BillPaymentStatus::Paid
+                && ! in_array($currentStatus, [
+                    BillPaymentStatus::Pending,
+                    BillPaymentStatus::Unpaid,
+                    BillPaymentStatus::Paid,
+                ], true)) {
+                $validator->errors()->add('payment_status', '只能從待審核或待付款狀態進行付款');
             }
         });
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\BillDetail;
 use Illuminate\Foundation\Http\FormRequest;
 
 class WriteoffBillRequest extends FormRequest
@@ -25,7 +26,7 @@ class WriteoffBillRequest extends FormRequest
         $validator->after(function ($validator) {
             $billId = (int) $this->route('id');
             $ids = $this->input('detail_ids', []);
-            $matched = \App\Models\BillDetail::whereIn('id', $ids)
+            $matched = BillDetail::whereIn('id', $ids)
                 ->where('bill_id', $billId)
                 ->count();
             if ($matched !== count($ids)) {

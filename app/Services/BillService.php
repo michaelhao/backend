@@ -6,6 +6,7 @@ use App\Enums\BillDetailType;
 use App\Enums\BillPaymentStatus;
 use App\Models\Addon;
 use App\Models\Bill;
+use App\Models\BillDetail;
 use App\Models\BillDiscount;
 use App\Models\BillStatusLog;
 use App\Models\Grade;
@@ -42,12 +43,51 @@ class BillService
         ];
     }
 
+    public function getCreatePageData(): array
+    {
+        return [
+            'discounts' => BillDiscount::orderBy('id')->get(),
+        ];
+    }
+
+    /**
+     * Assemble the data needed to render the quotation PDF.
+     *
+     * @return array{bill: Bill, details: Collection, filename: string}|null
+     */
+    public function getQuotationData(int $id, array $typeLabels): ?array
+    {
+        $bill = Bill::with(['shop', 'details' => fn ($q) => $q->where('is_effective', 1)])->find($id);
+
+        if (! $bill) {
+            return null;
+        }
+
+        $details = $bill->details->map(fn (BillDetail $d) => [
+            'name'        => $d->name,
+            'type_label'  => $typeLabels[$d->type->value] ?? '—',
+            'type'        => $d->type->value,
+            'total_price' => $d->total_price,
+            'start_at'    => $d->start_at?->format('Y-m-d'),
+            'expired_at'  => $d->expired_at?->format('Y-m-d'),
+        ]);
+
+        $safeShopName = preg_replace('/[^\p{L}\p{N}\-_]+/u', '_', $bill->shop->name) ?: 'shop';
+        $filename = now()->format('Y-m-d').'_'.$safeShopName.'_'.$bill->id.'_報價單.pdf';
+
+        return [
+            'bill' => $bill,
+            'details' => $details,
+            'filename' => $filename,
+        ];
+    }
+
     /**
      * AJAX: search shops by id, code, or name keyword (max 10).
      */
     public function shopSearch(string $keyword): Collection
     {
-        return Shop::with('grade')
+        return Shop::query()
             ->where(function ($q) use ($keyword) {
                 if (is_numeric($keyword)) {
                     $q->where('id', (int) $keyword);
@@ -70,11 +110,11 @@ class BillService
         $shop = Shop::with(['grade', 'sales'])->find($shopId);
 
         if (! $shop) {
-            abort(422, '商店不存在');
+            throw ValidationException::withMessages(['shop_id' => '商店不存在']);
         }
 
         if (! $shop->sales_id) {
-            abort(422, '此商店尚未設定負責業務，無法建立帳單');
+            throw ValidationException::withMessages(['shop_id' => '此商店尚未設定負責業務，無法建立帳單']);
         }
 
         return [
@@ -163,9 +203,9 @@ class BillService
                     'unit_price' => $discountAmount,
                     'total_price' => $discountAmount,
                     'name' => $discount->name,
-                    'start_at' => now(),
-                    'expired_at' => now(),
-                    'total_months' => 0,
+                    'start_at' => null,
+                    'expired_at' => null,
+                    'total_months' => null,
                     'is_effective' => 1,
                 ]]);
             }
@@ -186,7 +226,7 @@ class BillService
         }
 
         DB::transaction(function () use ($bill, $detailIds, $operator) {
-            $this->billDetailRepository->writeoff($detailIds, $operator->id);
+            $this->billDetailRepository->writeoff($bill->id, $detailIds, $operator->id);
 
             $bill->refresh();
             $effectiveDetails = $this->billDetailRepository->getEffectiveByBill($bill->id);
@@ -207,6 +247,7 @@ class BillService
 
             if ($discountAmount !== null && $discountAmount > $subtotal) {
                 $discountAmount = $subtotal;
+                $this->billDetailRepository->syncDiscountAmount($bill->id, $discountAmount);
             }
 
             $total = max(0, $subtotal - ($discountAmount ?? 0));
@@ -244,14 +285,17 @@ class BillService
             if ($type === BillDetailType::Addons->value) {
                 $addon = Addon::findOrFail($d['addon_id']);
                 $unitPrice = (int) $addon->price;
+                $name = $addon->name;
                 $totalPrice = $this->calc->calculateDetailTotal($unitPrice, $startAt, $totalMonths);
             } elseif ($type === BillDetailType::UpgradeFeeDiff->value) {
                 $grade = Grade::findOrFail($d['grade_id']);
                 $unitPrice = (int) $grade->price;
+                $name = $grade->name;
                 $totalPrice = $this->calc->calculateUpgradeDiff($unitPrice, $currentGradePrice, $startAt, $totalMonths);
             } else {
                 $grade = Grade::findOrFail($d['grade_id']);
                 $unitPrice = (int) $grade->price;
+                $name = $grade->name;
                 $totalPrice = $this->calc->calculateDetailTotal($unitPrice, $startAt, $totalMonths);
             }
 
@@ -265,7 +309,7 @@ class BillService
                 'quantity' => (int) $d['quantity'],
                 'unit_price' => $unitPrice,
                 'total_price' => $totalPrice,
-                'name' => $d['name'],
+                'name' => $name,
                 'start_at' => $startAt,
                 'expired_at' => $expiredAt,
                 'total_months' => $totalMonths,
@@ -301,9 +345,14 @@ class BillService
      */
     private function generateBillNo(): string
     {
+        $candidates = [];
         for ($i = 0; $i < 3; $i++) {
-            $no = 'b' . now()->format('YmdHis') . str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
-            if (! Bill::where('no', $no)->exists()) {
+            $candidates[] = 'b' . now()->format('YmdHis') . str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
+        }
+
+        $taken = Bill::whereIn('no', $candidates)->pluck('no')->all();
+        foreach ($candidates as $no) {
+            if (! in_array($no, $taken, true)) {
                 return $no;
             }
         }
