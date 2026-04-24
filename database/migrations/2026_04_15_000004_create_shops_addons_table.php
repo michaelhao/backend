@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('shops_addons', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('shop_id')->constrained('shops');
-            $table->foreignId('addon_id')->constrained('addons');
+            $table->unsignedInteger('shop_id');
+            $table->unsignedInteger('addon_id');
             $table->tinyInteger('source');
             $table->tinyInteger('status')->default(1);
             $table->dateTime('expired_at')->nullable();

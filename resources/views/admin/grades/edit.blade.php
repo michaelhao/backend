@@ -13,3 +13,7 @@
         'submitLabel' => '儲存變更',
     ])
 @endsection
+
+@push('scripts')
+    @vite('resources/js/grades/form.js')
+@endpush

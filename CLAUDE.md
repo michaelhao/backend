@@ -1,9 +1,24 @@
 # Claude Code 設定
 
-## Environment
+## Docker Environment
+- All PHP/artisan/composer/test commands MUST run inside the Docker container, NOT on the host.
+- Docker applies only to the local dev environment.
+- Use `docker compose exec backend-api <cmd>` (service name) or `docker exec wsl-backend <cmd>` (container name) for all PHP tooling.
 
-- In local development, PHP runs inside Docker. Do not attempt to run `php` or `composer` commands directly on the host. Use `docker compose exec wsl-backend <cmd>` (service name) or `docker exec wsl-backend <cmd>` (container name) to run PHP/artisan/composer commands.
+## Git & CI
 - Git credentials and `gh` CLI may not be configured. Do not attempt `git push` or `gh pr create` without confirming availability first.
+
+## Language
+- Always respond in the user's language (Chinese). Never switch languages mid-response.
+- Code, file paths, and technical identifiers stay in their original form — these don't count as switching.
+
+## Commit Discipline
+- Verify commit message items match the actual staged diff before committing (no phantom items).
+
+## Workflow
+- When in plan mode and user says '更新 spec' or similar, update the spec file directly — do not write to a separate plan file.
+- Before implementing, confirm the direction of relationships/ownership (e.g., which model 'manages' which) to avoid reversed designs.
+- Do not create additional memory files to patch rules; edit CLAUDE.md directly.
 
 ## Coding Behavior Guidelines
 

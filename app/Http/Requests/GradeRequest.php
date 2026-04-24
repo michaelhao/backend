@@ -17,7 +17,7 @@ class GradeRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        $gradeId = $this->route('grade')?->id;
+        $gradeId = $this->route('id');
 
         return [
             'code' => [
@@ -34,7 +34,8 @@ class GradeRequest extends FormRequest
                 'regex:/^[\x{4e00}-\x{9fa5}a-zA-Z0-9_]+$/u',
                 Rule::unique('grades', 'name')->ignore($gradeId),
             ],
-            'price' => ['required', 'integer', 'min:2'],
+            'price'  => ['required', 'integer', 'min:2'],
+            'weight' => ['required', 'integer', 'min:1', Rule::unique('grades', 'weight')->ignore($gradeId)],
             'status' => ['required', new Enum(GradeStatus::class)],
         ];
     }

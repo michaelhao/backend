@@ -15,7 +15,7 @@ class RoleRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        $roleId = $this->route('role')?->id;
+        $roleId = $this->route('id');
 
         return [
             'name' => ['required', 'string', 'max:100', Rule::unique('roles', 'name')->ignore($roleId)],

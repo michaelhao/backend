@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('name', 50);
             $table->string('email')->unique();
-            $table->foreignId('grade_id')->constrained('grades');
+            $table->unsignedInteger('grade_id');
             $table->tinyInteger('status')->default(1);
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();

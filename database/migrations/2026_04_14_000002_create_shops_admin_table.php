@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('shops_admin', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('shop_id')->constrained('shops')->cascadeOnDelete();
+            $table->unsignedInteger('shop_id');
             $table->string('name', 20);
             $table->string('email')->unique();
             $table->string('password');

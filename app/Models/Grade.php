@@ -11,7 +11,7 @@ class Grade extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['code', 'name', 'price', 'status'];
+    protected $fillable = ['code', 'name', 'price', 'weight', 'status'];
 
     protected function casts(): array
     {

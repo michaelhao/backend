@@ -14,3 +14,7 @@
         'grade'       => null,
     ])
 @endsection
+
+@push('scripts')
+    @vite('resources/js/grades/form.js')
+@endpush

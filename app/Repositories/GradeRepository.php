@@ -10,7 +10,14 @@ class GradeRepository
 {
     public function getAll(): Collection
     {
-        return Grade::latest()->get();
+        return Grade::orderByDesc('weight')->get();
+    }
+
+    public function findByWeight(int $weight, ?int $excludeId): ?Grade
+    {
+        return Grade::where('weight', $weight)
+            ->when($excludeId, fn($q) => $q->where('id', '!=', $excludeId))
+            ->first();
     }
 
     public function create(array $data): Grade

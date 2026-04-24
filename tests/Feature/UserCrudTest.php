@@ -141,8 +141,8 @@ class UserCrudTest extends TestCase
 
         $response = $this->delete(route('users.destroy', $target));
 
-        $response->assertRedirect(route('users.index'));
-        $response->assertSessionHas('success');
+        $response->assertOk();
+        $response->assertExactJson(['message' => '使用者已刪除']);
         $this->assertDatabaseMissing('users', ['id' => $target->id]);
     }
 
@@ -154,8 +154,8 @@ class UserCrudTest extends TestCase
 
         $response = $this->delete(route('users.destroy', $admin));
 
-        $response->assertRedirect(route('users.index'));
-        $response->assertSessionHas('error');
+        $response->assertStatus(422);
+        $response->assertExactJson(['message' => '無法刪除自己的帳號']);
         $this->assertDatabaseHas('users', ['id' => $admin->id]);
     }
 

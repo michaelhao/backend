@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('queue:prune-batches --hours=48')->daily();
+Schedule::command('bills:process-future-effects')->dailyAt('00:05')->withoutOverlapping();

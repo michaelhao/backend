@@ -32,6 +32,30 @@
     </div>
 
     <div>
+        <p class="text-xs font-semibold text-gray-500 mb-2">grades weight</p>
+        <div id="weight-list" class="text-sm text-gray-700 space-y-1 border rounded-lg p-3 bg-gray-50">
+            @foreach ($grades as $g)
+                <div class="flex justify-between weight-row" data-id="{{ $g->id }}">
+                    <span>{{ $g->name }}</span>
+                    <span>{{ $g->weight }}</span>
+                </div>
+            @endforeach
+        </div>
+    </div>
+
+    <div>
+        <label for="weight" class="block text-sm font-medium text-gray-700 mb-1">版本權重</label>
+        <input type="number" name="weight" id="weight"
+               value="{{ old('weight', $grade->weight ?? '') }}"
+               data-exclude-id="{{ $grade->id ?? '' }}"
+               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+        <div id="weight-error" class="mt-1 text-sm text-red-600 hidden"></div>
+        @error('weight')
+            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+        @enderror
+    </div>
+
+    <div>
         <label for="status" class="block text-sm font-medium text-gray-700 mb-1">狀態</label>
         <select name="status" id="status"
                 class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">

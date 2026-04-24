@@ -27,7 +27,7 @@
 | id | PK bigint | |
 | name | varchar(50) | 商店名稱 |
 | email | varchar unique | 商店聯絡信箱 |
-| grade_id | FK → grades | 版本 |
+| grade_id | int unsigned | 版本 |
 | status | tinyint | ShopStatus enum（啟用:1, 關閉:0, 過期:-1, 封存:-2） |
 | created_at | datetime nullable | |
 | updated_at | datetime nullable | |
@@ -37,7 +37,7 @@
 | 欄位 | 型別 | 說明 |
 |------|------|------|
 | id | PK bigint | |
-| shop_id | FK → shops | |
+| shop_id | int unsigned | |
 | name | varchar(20) | 管理員姓名 |
 | email | text | 管理員信箱（`encrypted` cast；可編輯，顯示時解密後遮蔽；唯一性由應用層驗證） |
 | password | varchar(255) | hashed cast |
@@ -73,7 +73,7 @@ Schema::create('shops', function (Blueprint $table) {
     $table->id();
     $table->string('name', 50);
     $table->string('email')->unique();
-    $table->foreignId('grade_id')->constrained('grades');
+    $table->unsignedInteger('grade_id');
     $table->tinyInteger('status')->default(1);
     $table->dateTime('created_at')->nullable();
     $table->dateTime('updated_at')->nullable();
@@ -85,7 +85,7 @@ Schema::create('shops', function (Blueprint $table) {
 ```php
 Schema::create('shops_admin', function (Blueprint $table) {
     $table->id();
-    $table->foreignId('shop_id')->constrained('shops')->cascadeOnDelete();
+    $table->unsignedInteger('shop_id');
     $table->string('name', 20);
     $table->text('email');       // encrypted cast，DB 層不加 unique（加密值不可比對）
     $table->string('password');

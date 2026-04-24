@@ -46,12 +46,12 @@
 | updated_at | datetime | |
 
 ### role_has_permissions（pivot）
-- `role_id` FK → roles
-- `permission_id` FK → permissions
+- `role_id` int → roles
+- `permission_id` int → permissions
 - PK: `(role_id, permission_id)`
 
 ### users 表（修改既有）
-- 新增 `role_id` FK → roles, nullable
+- 新增 `role_id` int → roles, nullable
 - 使用者只有單一角色，直接用欄位表達，不需 pivot 表
 
 ---
@@ -79,7 +79,7 @@
 
 ### Step 4: Migration（修改 users 表）
 - 執行 `php artisan make:migration add_role_id_to_users_table --no-interaction`
-- 新增 `role_id` FK → roles, nullable
+- 新增 `role_id` int → roles, nullable
 
 ### Step 5: 修改 User Model
 - **修改** `app/Models/User.php`
@@ -340,7 +340,7 @@ Blade 側邊欄：
 | 檔案 | 用途 |
 |------|------|
 | `database/migrations/2026_04_08_xxxxxx_create_permission_tables.php` | permissions、roles、role_has_permissions 資料表 |
-| `database/migrations/2026_04_08_xxxxxx_add_role_id_to_users_table.php` | users 表新增 role_id FK |
+| `database/migrations/2026_04_08_xxxxxx_add_role_id_to_users_table.php` | users 表新增 role_id |
 | `app/Attributes/RequiresPermission.php` | PHP 8 Attribute，宣告 controller method 所需權限 |
 | `app/Models/Permission.php` | Permission Model |
 | `app/Models/Role.php` | Role Model |

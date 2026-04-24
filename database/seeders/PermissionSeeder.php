@@ -70,6 +70,15 @@ class PermissionSeeder extends Seeder
                 'delete' => '刪除',
             ],
         ],
+        'Bill' => [
+            'label' => '帳務',
+            'actions' => [
+                'index'    => '列表',
+                'create'   => '建立',
+                'pay'      => '付款',
+                'writeoff' => '銷帳',
+            ],
+        ],
     ];
 
     public function run(): void

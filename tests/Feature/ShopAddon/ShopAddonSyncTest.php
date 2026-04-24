@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\ShopAddon;
 
 use App\Enums\ShopAddonSource;
 use App\Enums\ShopAddonStatus;

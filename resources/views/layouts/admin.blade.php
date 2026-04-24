@@ -67,6 +67,13 @@
                         加購功能管理
                     </a>
                 </x-permission>
+                <x-permission name="Bill.index">
+                    <a href="{{ route('bills.index') }}"
+                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
+                              {{ request()->routeIs('bills.*') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                        帳務管理
+                    </a>
+                </x-permission>
             </nav>
         </aside>
 
