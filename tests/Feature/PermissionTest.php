@@ -197,7 +197,8 @@ class PermissionTest extends TestCase
 
         $response = $this->delete(route('roles.destroy', $role));
 
-        $response->assertRedirect(route('roles.index'));
+        $response->assertOk();
+        $response->assertExactJson(['message' => '角色已刪除']);
         $this->assertDatabaseMissing('roles', ['name' => 'Viewer']);
     }
 
@@ -211,8 +212,8 @@ class PermissionTest extends TestCase
 
         $response = $this->delete(route('roles.destroy', $adminRole));
 
-        $response->assertRedirect(route('roles.index'));
-        $response->assertSessionHas('error');
+        $response->assertStatus(422);
+        $response->assertExactJson(['message' => '此角色仍有使用者，無法刪除']);
         $this->assertDatabaseHas('roles', ['name' => 'Admin']);
     }
 
