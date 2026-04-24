@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Bill;
 
 use App\Enums\BillDetailType;
 use App\Enums\BillPaymentStatus;
@@ -11,6 +11,7 @@ use App\Models\Grade;
 use App\Models\Role;
 use App\Models\Shop;
 use App\Models\User;
+use App\Services\BillPaymentService;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -111,7 +112,7 @@ class BillPaymentTest extends TestCase
 
         $originalExpiredAt = $shop->expired_at->format('Y-m-d H:i:s');
 
-        $service = app(\App\Services\BillPaymentService::class);
+        $service = app(BillPaymentService::class);
         $service->installDetail($detail);
 
         $this->assertEquals($originalExpiredAt, $shop->fresh()->expired_at->format('Y-m-d H:i:s'));
@@ -254,7 +255,7 @@ class BillPaymentTest extends TestCase
             'finished_at' => null,
         ]);
 
-        $service = app(\App\Services\BillPaymentService::class);
+        $service = app(BillPaymentService::class);
         $service->processFutureEffects();
 
         $this->assertNotNull(BillDetail::find($detail->id)->applied_at);

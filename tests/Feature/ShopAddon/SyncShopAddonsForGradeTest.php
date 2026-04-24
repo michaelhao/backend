@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\ShopAddon;
 
 use App\Enums\ShopAddonSource;
 use App\Enums\ShopAddonStatus;
@@ -59,7 +59,7 @@ class SyncShopAddonsForGradeTest extends TestCase
         $this->attachAddonToGrade($grade, $addon);
         // shop has no shops_addons row yet
 
-        (new SyncShopAddonsForGrade($grade))->handle(new ShopAddonSyncService());
+        (new SyncShopAddonsForGrade($grade))->handle(new ShopAddonSyncService);
 
         $this->assertDatabaseHas('shops_addons', [
             'shop_id' => $shop->id,
@@ -77,7 +77,7 @@ class SyncShopAddonsForGradeTest extends TestCase
         // shop has addon as Grade source, but it's no longer in grades_addons
         $this->attachAddonToShop($shop, $addon, ShopAddonSource::Grade->value);
 
-        (new SyncShopAddonsForGrade($grade))->handle(new ShopAddonSyncService());
+        (new SyncShopAddonsForGrade($grade))->handle(new ShopAddonSyncService);
 
         $row = DB::table('shops_addons')
             ->where('shop_id', $shop->id)
@@ -101,7 +101,7 @@ class SyncShopAddonsForGradeTest extends TestCase
         // shop has it as Purchased
         $this->attachAddonToShop($shop, $addon, ShopAddonSource::Purchased->value, now()->addDays(5)->format('Y-m-d H:i:s'));
 
-        (new SyncShopAddonsForGrade($grade))->handle(new ShopAddonSyncService());
+        (new SyncShopAddonsForGrade($grade))->handle(new ShopAddonSyncService);
 
         $row = DB::table('shops_addons')
             ->where('shop_id', $shop->id)
@@ -119,7 +119,7 @@ class SyncShopAddonsForGradeTest extends TestCase
         $this->attachAddonToGrade($grade, $addon);
 
         // no shops under this grade
-        (new SyncShopAddonsForGrade($grade))->handle(new ShopAddonSyncService());
+        (new SyncShopAddonsForGrade($grade))->handle(new ShopAddonSyncService);
 
         $this->assertDatabaseCount('shops_addons', 0);
     }
@@ -134,7 +134,7 @@ class SyncShopAddonsForGradeTest extends TestCase
         $this->attachAddonToGrade($grade, $addonInGrade);
         $this->attachAddonToShop($shop, $addonOwned, ShopAddonSource::Purchased->value, now()->addDays(30)->format('Y-m-d H:i:s'));
 
-        (new SyncShopAddonsForGrade($grade))->handle(new ShopAddonSyncService());
+        (new SyncShopAddonsForGrade($grade))->handle(new ShopAddonSyncService);
 
         $row = DB::table('shops_addons')
             ->where('shop_id', $shop->id)

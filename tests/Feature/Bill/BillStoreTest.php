@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Bill;
 
 use App\Enums\BillDetailType;
 use App\Enums\BillPaymentStatus;

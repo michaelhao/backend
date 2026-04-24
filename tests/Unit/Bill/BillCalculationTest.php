@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Unit\Bill;
 
 use App\Services\BillCalculationService;
 use Carbon\Carbon;
@@ -13,7 +13,7 @@ class BillCalculationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->calc = new BillCalculationService();
+        $this->calc = new BillCalculationService;
     }
 
     // ─── calculateExpiredAt ───────────────────────────────────
