@@ -20,6 +20,7 @@ export default defineConfig({
                 'resources/js/components/searchable-select.js',
                 'resources/js/bills/index.js',
                 'resources/js/bills/create.js',
+                'resources/js/conferences/index.js',
             ],
             refresh: true,
         }),

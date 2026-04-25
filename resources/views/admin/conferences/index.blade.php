@@ -123,3 +123,7 @@
         {{ $conferences->withQueryString()->links() }}
     </div>
 @endsection
+
+@push('scripts')
+    @vite('resources/js/conferences/index.js')
+@endpush

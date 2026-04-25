@@ -57,6 +57,10 @@
 - [x] 5.1 建立 `resources/views/admin/conferences/index.blade.php`：列表、關鍵字 / status 篩選、分頁、連結到 create / edit；**不顯示刪除按鈕**
 - [x] 5.2 建立 `resources/views/admin/conferences/create.blade.php`：name、status select、四個 datetime input（共用 `_form.blade.php` partial）
 - [x] 5.3 建立 `resources/views/admin/conferences/edit.blade.php`：同上，預填當前資料
+- [x] 5.4 註冊 vite entry 與 flash auto-dismiss JS hook（沿用 sibling 模組慣例）：
+    - 新增 `resources/js/conferences/index.js`，呼叫 `autoDismissFlashes()`
+    - `vite.config.js` input 陣列加入該檔
+    - `index.blade.php` 加 `@push('scripts') @vite('resources/js/conferences/index.js') @endpush`
 
 ## 6. 測試
 
