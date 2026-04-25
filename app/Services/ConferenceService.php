@@ -7,7 +7,6 @@ use App\Models\Conference;
 use App\Repositories\ConferenceRepository;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\DB;
 
 class ConferenceService
 {
@@ -52,13 +51,13 @@ class ConferenceService
         ];
     }
 
-    public function createConference(array $data): Conference
+    public function createConference(array $data): void
     {
-        return DB::transaction(fn () => $this->conferenceRepository->create($data));
+        $this->conferenceRepository->create($data);
     }
 
     public function updateConference(Conference $conference, array $data): void
     {
-        DB::transaction(fn () => $this->conferenceRepository->update($conference, $data));
+        $this->conferenceRepository->update($conference, $data);
     }
 }
