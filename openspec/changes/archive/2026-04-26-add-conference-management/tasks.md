@@ -78,5 +78,5 @@
 ## 7. 收尾
 
 - [x] 7.1 Docker 內執行 `docker exec wsl-backend vendor/bin/pint --dirty --format agent` 通過
-- [ ] 7.2 手動驗證 `/conferences`：新增 → 列表 → 編輯 → status 切 Inactive → 關鍵字 / status 篩選皆正常（使用者自行驗證）
+- [x] 7.2 手動驗證 `/conferences`：新增 → 列表 → 編輯 → status 切 Inactive → 關鍵字 / status 篩選皆正常（使用者自行驗證）
 - [x] 7.3 `openspec validate add-conference-management --strict` 通過
