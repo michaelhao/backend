@@ -3,6 +3,7 @@
 use App\Http\Controllers\AddonController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BillController;
+use App\Http\Controllers\ConferenceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\PostController;
@@ -80,5 +81,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/addons/{id}/edit', [AddonController::class, 'edit'])->name('addons.edit');
         Route::put('/addons/{id}', [AddonController::class, 'update'])->name('addons.update');
         Route::delete('/addons/{id}', [AddonController::class, 'destroy'])->name('addons.destroy');
+
+        // 說明會管理
+        Route::get('/conferences', [ConferenceController::class, 'index'])->name('conferences.index');
+        Route::get('/conferences/create', [ConferenceController::class, 'create'])->name('conferences.create');
+        Route::post('/conferences', [ConferenceController::class, 'store'])->name('conferences.store');
+        Route::get('/conferences/{id}/edit', [ConferenceController::class, 'edit'])->name('conferences.edit');
+        Route::put('/conferences/{id}', [ConferenceController::class, 'update'])->name('conferences.update');
     });
 });

@@ -79,6 +79,14 @@ class PermissionSeeder extends Seeder
                 'writeoff' => '銷帳',
             ],
         ],
+        'Conference' => [
+            'label' => '說明會',
+            'actions' => [
+                'index'  => '列表',
+                'create' => '新增',
+                'update' => '編輯',
+            ],
+        ],
     ];
 
     public function run(): void
