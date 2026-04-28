@@ -24,18 +24,12 @@
 
     <div>
         <label for="password" class="block text-sm font-medium text-gray-700 mb-1">密碼</label>
-        <input type="password" name="password" id="password"
-               placeholder="{{ $method === 'PUT' ? '留空則不修改' : '' }}"
-               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
-        @error('password')
-            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-        @enderror
+        <x-password-input name="password" placeholder="{{ $method === 'PUT' ? '留空則不修改' : '' }}" />
     </div>
 
     <div>
         <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">確認密碼</label>
-        <input type="password" name="password_confirmation" id="password_confirmation"
-               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+        <x-password-input name="password_confirmation" />
     </div>
 
     <div>

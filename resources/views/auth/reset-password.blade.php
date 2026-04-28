@@ -3,14 +3,16 @@
 @section('content')
 <div class="w-full max-w-md">
     <div class="bg-white shadow-md rounded-lg px-8 py-8">
-        <h2 class="text-2xl font-bold text-center mb-6">登入</h2>
+        <h2 class="text-2xl font-bold text-center mb-6">重設密碼</h2>
 
-        <form method="POST" action="{{ route('login') }}">
+        <form method="POST" action="{{ route('password.update') }}">
             @csrf
+
+            <input type="hidden" name="token" value="{{ $token }}">
 
             <div class="mb-4">
                 <label for="email" class="block text-sm font-medium text-gray-700 mb-1">電子郵件</label>
-                <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus
+                <input id="email" type="email" name="email" value="{{ old('email', $email) }}" required autofocus
                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 @error('email')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -18,21 +20,18 @@
             </div>
 
             <div class="mb-4">
-                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">密碼</label>
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">新密碼</label>
                 <x-password-input name="password" :required="true" />
             </div>
 
-            <div class="mb-6 flex items-center justify-between">
-                <label class="flex items-center">
-                    <input type="checkbox" name="remember" class="rounded border-gray-300 text-blue-600">
-                    <span class="ml-2 text-sm text-gray-600">記住我</span>
-                </label>
-                <a href="{{ route('password.request') }}" class="text-sm text-blue-600 hover:underline">忘記密碼？</a>
+            <div class="mb-6">
+                <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">確認新密碼</label>
+                <x-password-input name="password_confirmation" :required="true" />
             </div>
 
             <button type="submit"
                     class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition">
-                登入
+                重設密碼
             </button>
         </form>
     </div>
