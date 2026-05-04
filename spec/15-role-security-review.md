@@ -26,16 +26,22 @@
 |---|---|
 | `app/Services/PermissionRouteResolver.php` | 從 middleware 抽出 permission ↔ route 對應邏輯，供 middleware 與 RoleRequest 共用 |
 
+### Listeners
+
+| 檔案 | 用途 |
+|---|---|
+| `app/Listeners/EnsurePermissionsLoadedToSession.php` | 監聽 `Authenticated` 事件，涵蓋 remember-me 自動登入；Laravel 12 自動發現註冊 |
+
 ---
 
 ## 需修改的檔案
 
 | 檔案 | 修改內容 |
 |---|---|
-| `app/Http/Middleware/CheckPermission.php` | 改用 `PermissionRouteResolver`；加入 session 版本戳檢查，stale 時自動 reload 權限；移除原本的 static cache |
+| `app/Http/Middleware/CheckPermission.php` | 改用 `PermissionRouteResolver`；加入 session 版本戳檢查，stale 時自動 reload 權限；加 `User` 型別提示；移除原本的 static cache |
 | `app/Models/Traits/HasPermissions.php` | session key 改為 `auth.permissions` / `auth.permissions_version`；新增 `currentPermissionsVersion()`、`permissionsSessionIsStale()` |
 | `app/Repositories/RoleRepository.php` | `syncPermissions()` 內呼叫 `$role->touch()` 更新版本戳；`getByName` → `findByNameOrFail` |
-| `app/Providers/AppServiceProvider.php` | 註冊 `PermissionRouteResolver` singleton；`Authenticated` event listener 涵蓋 remember-me |
+| `app/Providers/AppServiceProvider.php` | 註冊 `PermissionRouteResolver` singleton |
 | `app/Http/Requests/RoleRequest.php` | `default_route` 加自訂 rule 確認對應到實際命名路由 |
 | `tests/Feature/PermissionTest.php` | 新增 3 個測試 |
 
@@ -53,7 +59,7 @@
 - 用 `max(users.updated_at, roles.updated_at).timestamp` 當作版本戳，**不需新增欄位、不需 migration**。
 - 異動 role permissions 時於 `RoleRepository::syncPermissions()` 內 `$role->touch()`；異動 `users.role_id` 時 Eloquent 會自動 touch `users.updated_at`。
 - middleware 在每個 protected request 入口比對 session 版本戳與 DB 當前版本戳，不一致就 reload。
-- 額外註冊 `Illuminate\Auth\Events\Authenticated` listener 作為 defense-in-depth，涵蓋 remember-me 路徑。
+- 額外建立獨立的 `EnsurePermissionsLoadedToSession` listener 監聽 `Illuminate\Auth\Events\Authenticated`，作為 defense-in-depth 涵蓋 remember-me 路徑；放在 `app/Listeners/` 由 Laravel 12 自動發現註冊，方便 IDE / `php artisan event:list` 追蹤。
 
 **`HasPermissions` trait 重點**
 
@@ -105,6 +111,7 @@ public function __construct(private PermissionRouteResolver $resolver) {}
 
 public function handle(Request $request, Closure $next): Response
 {
+    /** @var User $user */
     $user = $request->user();
     // ... resolve permission name ...
 
@@ -124,6 +131,35 @@ public function handle(Request $request, Closure $next): Response
 }
 ```
 
+> ℹ️ `/** @var User $user */` 是因為 `$request->user()` 回傳型別為 `?Authenticatable`，靜態分析器看不到 trait 上的 `permissionsSessionIsStale()` / `loadPermissionsToSession()`；這個 PHPDoc 讓 IDE 正確解析方法。`auth` middleware 已保證 user 存在且為 `User`，不需 runtime check。
+
+**`EnsurePermissionsLoadedToSession` listener 重點**
+
+```php
+namespace App\Listeners;
+
+use App\Models\User;
+use Illuminate\Auth\Events\Authenticated;
+
+class EnsurePermissionsLoadedToSession
+{
+    public function handle(Authenticated $event): void
+    {
+        $user = $event->user;
+
+        if (! $user instanceof User) {
+            return;
+        }
+
+        if ($user->permissionsSessionIsStale()) {
+            $user->loadPermissionsToSession();
+        }
+    }
+}
+```
+
+> ℹ️ 用 `instanceof User` 同時做 runtime narrow 與型別 narrow。Listener 不像 middleware 有 auth 保證，且 `Authenticated` 事件未來可能由其他 guard（如 ShopAdmin）觸發，`instanceof` 比 PHPDoc 更穩。
+
 **`AppServiceProvider` 重點**
 
 ```php
@@ -134,19 +170,11 @@ public function register(): void
 
 public function boot(): void
 {
-    Event::listen(Authenticated::class, function (Authenticated $event): void {
-        $user = $event->user;
-
-        if (! in_array(HasPermissions::class, class_uses_recursive($user), true)) {
-            return;
-        }
-
-        if ($user->permissionsSessionIsStale()) {
-            $user->loadPermissionsToSession();
-        }
-    });
+    //
 }
 ```
+
+> ℹ️ Listener 不在 `AppServiceProvider::boot()` 內用閉包 `Event::listen` 註冊，原因是閉包匿名、不易追蹤脈絡、stack trace 與 `event:list` 顯示不出來。改放獨立 class 由 Laravel 12 自動發現。
 
 ---
 
