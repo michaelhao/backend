@@ -60,12 +60,17 @@
 - 異動 role permissions 時於 `RoleRepository::syncPermissions()` 內 `$role->touch()`；異動 `users.role_id` 時 Eloquent 會自動 touch `users.updated_at`。
 - middleware 在每個 protected request 入口比對 session 版本戳與 DB 當前版本戳，不一致就 reload。
 - 額外建立獨立的 `EnsurePermissionsLoadedToSession` listener 監聽 `Illuminate\Auth\Events\Authenticated`，作為 defense-in-depth 涵蓋 remember-me 路徑；放在 `app/Listeners/` 由 Laravel 12 自動發現註冊，方便 IDE / `php artisan event:list` 追蹤。
+- `loadPermissionsToSession()` 內先 `$this->unsetRelation('role')` 再讀取 — 避免 user.role_id 已被 update 但 Eloquent 仍快取舊角色關聯，造成載入到錯誤的角色權限。
+- middleware 與 listener **同時保留** stale check，原因：在測試環境用 `actingAs($user)` 時，後續 request 走 `SessionGuard::user()` 的 cached user 路徑不會 fire `Authenticated` 事件，必須由 middleware 兜底；production 雖會多 2 個 PK lookup，但對內部後台流量可忽略，換來測試/正式環境行為一致。
 
 **`HasPermissions` trait 重點**
 
 ```php
 public function loadPermissionsToSession(): void
 {
+    // 確保讀到最新的 role 資料 — 避免 Eloquent 快取住的舊關聯造成 role_id 已換但載入舊角色權限
+    $this->unsetRelation('role');
+
     $permissions = $this->role
         ? $this->role->permissions()->pluck('name')->toArray()
         : [];
@@ -198,27 +203,23 @@ public function clearCache(): void;
 
 **`RoleRequest` 自訂 rule**
 
+直接以 closure rule 內嵌，避免 anonymous class 樣板：
+
 ```php
-private function defaultRouteResolvableRule(): ValidationRule
-{
-    $resolver = app(PermissionRouteResolver::class);
-
-    return new class($resolver) implements ValidationRule
-    {
-        public function __construct(private PermissionRouteResolver $resolver) {}
-
-        public function validate(string $attribute, mixed $value, \Closure $fail): void
-        {
-            if (! is_string($value) || $value === '') {
-                return;
-            }
-
-            if ($this->resolver->routeNameFor($value) === null) {
-                $fail('所選的預設頁面尚未對應到任何路由。');
-            }
+'default_route' => [
+    'required',
+    'string',
+    'exists:permissions,name',
+    function (string $attribute, mixed $value, Closure $fail): void {
+        if (! is_string($value) || $value === '') {
+            return;
         }
-    };
-}
+
+        if (app(PermissionRouteResolver::class)->routeNameFor($value) === null) {
+            $fail('所選的預設頁面尚未對應到任何路由。');
+        }
+    },
+],
 ```
 
 ---
@@ -257,12 +258,14 @@ docker compose exec backend-api php artisan test --compact --filter=PermissionTe
 docker compose exec backend-api php artisan test --compact   # 全測
 ```
 
-`PermissionTest` 新增 3 個測試（共 21 個全綠）：
+`PermissionTest` 新增 4 個測試（共 22 個全綠）：
 
 - `test_role_request_rejects_default_route_without_named_route`
   建立一個存在於 `permissions` 但無對應 route 的 permission，POST `/roles` 設為 `default_route` → `assertSessionHasErrors('default_route')`。
 - `test_permission_session_reloads_when_role_updated_at_advances`
   使用者已可訪問 `/roles`；管理者拔掉該角色的 `Role.index` 權限並 advance `roles.updated_at` → 同 session 再次請求應自動 reload，導向 default_route。
+- `test_permission_session_reloads_when_user_role_id_changes`
+  把使用者 `role_id` 換成只擁有 `Dashboard.index` 的最小角色並 advance `users.updated_at` → 同 session 再次請求應 reload 並導向 default_route，同時驗證 `unsetRelation('role')` 修補有效。
 - `test_session_without_loaded_permissions_is_auto_loaded`
   模擬 remember-me：`actingAs` 後手動 `forget('auth.permissions')` → 仍應能正常進入受保護的頁面。
 
