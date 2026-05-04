@@ -6,9 +6,9 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthService
 {
-    public function attempt(array $credentials, bool $remember): bool
+    public function attempt(array $credentials): bool
     {
-        return Auth::attempt($credentials, $remember);
+        return Auth::attempt($credentials);
     }
 
     public function loginSession(): void

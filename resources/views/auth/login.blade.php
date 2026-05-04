@@ -22,11 +22,7 @@
                 <x-password-input name="password" :required="true" />
             </div>
 
-            <div class="mb-6 flex items-center justify-between">
-                <label class="flex items-center">
-                    <input type="checkbox" name="remember" class="rounded border-gray-300 text-blue-600">
-                    <span class="ml-2 text-sm text-gray-600">記住我</span>
-                </label>
+            <div class="mb-6 flex justify-end">
                 <a href="{{ route('password.request') }}" class="text-sm text-blue-600 hover:underline">忘記密碼？</a>
             </div>
 

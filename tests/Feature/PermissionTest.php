@@ -303,4 +303,72 @@ class PermissionTest extends TestCase
 
         $response->assertSessionHasErrors('default_route');
     }
+
+    public function test_role_request_rejects_default_route_without_named_route(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+
+        // 建立一個存在於 permissions 但無對應命名路由的 permission
+        Permission::create([
+            'name' => 'OrphanModule.ghost',
+            'module' => 'OrphanModule',
+            'action' => 'ghost',
+            'description' => '無對應路由',
+        ]);
+
+        $existing = Permission::where('name', 'Dashboard.index')->first();
+
+        $response = $this->post(route('roles.store'), [
+            'name' => 'OrphanRole',
+            'default_route' => 'OrphanModule.ghost',
+            'permissions' => [$existing->id],
+        ]);
+
+        $response->assertSessionHasErrors('default_route');
+    }
+
+    public function test_permission_session_reloads_when_role_updated_at_advances(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+
+        // 確認原本可訪問 /roles
+        $this->get(route('roles.index'))->assertStatus(200);
+
+        // 模擬管理者拔掉 Admin 角色的 Role.index 權限（保留 default_route 對應的 Dashboard.index）
+        $admin = Role::where('name', 'Admin')->first();
+        $dashboard = Permission::where('name', 'Dashboard.index')->first();
+        $admin->permissions()->sync([$dashboard->id]);
+        $admin->forceFill(['updated_at' => now()->addMinute()])->save();
+
+        // 同一個 session 再次請求 → middleware 應偵測 stale 並重載，導向 default_route
+        $this->get(route('roles.index'))->assertRedirect(route('dashboard'));
+    }
+
+    public function test_permission_session_reloads_when_user_role_id_changes(): void
+    {
+        $this->seedPermissions();
+
+        // 使用者一開始是 Admin（擁有 Role.index）
+        $user = $this->createUserWithRole('Admin');
+        $this->get(route('roles.index'))->assertStatus(200);
+
+        // 建立只有 Dashboard.index 的最小角色（不可用 Viewer，Viewer 也有 Role.index）
+        $dashboard = Permission::where('name', 'Dashboard.index')->first();
+        $minimalRole = Role::factory()->create(['default_route' => 'Dashboard.index']);
+        $minimalRole->permissions()->sync([$dashboard->id]);
+
+        // 管理者把 user 換到最小角色
+        $user->forceFill([
+            'role_id' => $minimalRole->id,
+            'updated_at' => now()->addMinute(),
+        ])->save();
+
+        // 同一個 session 再次請求 → middleware 應偵測 user.updated_at 已 advance 並重載
+        // 新角色沒有 Role.index → 應導向 default_route
+        $this->get(route('roles.index'))->assertRedirect(route('dashboard'));
+    }
 }

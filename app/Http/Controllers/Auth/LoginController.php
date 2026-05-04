@@ -22,7 +22,7 @@ class LoginController extends Controller
             'password' => ['required'],
         ]);
 
-        if ($this->authService->attempt($credentials, $request->boolean('remember'))) {
+        if ($this->authService->attempt($credentials)) {
             $this->authService->loginSession();
 
             return redirect()->intended('/');
