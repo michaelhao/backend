@@ -26,18 +26,27 @@ class RoleRequest extends FormRequest
                 'required',
                 'string',
                 'exists:permissions,name',
-                function (string $attribute, mixed $value, Closure $fail): void {
-                    if (! is_string($value) || $value === '') {
-                        return;
-                    }
-
-                    if (app(PermissionRouteResolver::class)->routeNameFor($value) === null) {
-                        $fail('所選的預設頁面尚未對應到任何路由。');
-                    }
-                },
+                $this->defaultRouteResolvableRule(),
             ],
             'permissions' => ['required', 'array', 'min:1'],
             'permissions.*' => ['required', 'integer', 'exists:permissions,id'],
         ];
+    }
+
+    /**
+     * 確認 default_route 對應的 permission 能解析到實際命名路由
+     * （permission 存在於 DB ≠ controller method 仍存在）。
+     */
+    private function defaultRouteResolvableRule(): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail): void {
+            if (! is_string($value) || $value === '') {
+                return;
+            }
+
+            if (app(PermissionRouteResolver::class)->routeNameFor($value) === null) {
+                $fail('所選的預設頁面尚未對應到任何路由。');
+            }
+        };
     }
 }
