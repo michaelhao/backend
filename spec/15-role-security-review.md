@@ -203,14 +203,30 @@ public function clearCache(): void;
 
 **`RoleRequest` 自訂 rule**
 
-直接以 closure rule 內嵌，避免 anonymous class 樣板：
+用 closure rule 並抽成獨立 method，rules() 表保持精簡可讀：
 
 ```php
-'default_route' => [
-    'required',
-    'string',
-    'exists:permissions,name',
-    function (string $attribute, mixed $value, Closure $fail): void {
+public function rules(): array
+{
+    return [
+        // ...
+        'default_route' => [
+            'required',
+            'string',
+            'exists:permissions,name',
+            $this->defaultRouteResolvableRule(),
+        ],
+        // ...
+    ];
+}
+
+/**
+ * 確認 default_route 對應的 permission 能解析到實際命名路由
+ * （permission 存在於 DB ≠ controller method 仍存在）。
+ */
+private function defaultRouteResolvableRule(): Closure
+{
+    return function (string $attribute, mixed $value, Closure $fail): void {
         if (! is_string($value) || $value === '') {
             return;
         }
@@ -218,8 +234,8 @@ public function clearCache(): void;
         if (app(PermissionRouteResolver::class)->routeNameFor($value) === null) {
             $fail('所選的預設頁面尚未對應到任何路由。');
         }
-    },
-],
+    };
+}
 ```
 
 ---
