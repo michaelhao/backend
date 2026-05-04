@@ -303,4 +303,64 @@ class PermissionTest extends TestCase
 
         $response->assertSessionHasErrors('default_route');
     }
+
+    public function test_role_request_rejects_default_route_without_named_route(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+
+        // 建立一個存在於 permissions 但無對應命名路由的 permission
+        Permission::create([
+            'name' => 'OrphanModule.ghost',
+            'module' => 'OrphanModule',
+            'action' => 'ghost',
+            'description' => '無對應路由',
+        ]);
+
+        $existing = Permission::where('name', 'Dashboard.index')->first();
+
+        $response = $this->post(route('roles.store'), [
+            'name' => 'OrphanRole',
+            'default_route' => 'OrphanModule.ghost',
+            'permissions' => [$existing->id],
+        ]);
+
+        $response->assertSessionHasErrors('default_route');
+    }
+
+    public function test_permission_session_reloads_when_role_updated_at_advances(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+
+        // 確認原本可訪問 /roles
+        $this->get(route('roles.index'))->assertStatus(200);
+
+        // 模擬管理者拔掉 Admin 角色的 Role.index 權限（保留 default_route 對應的 Dashboard.index）
+        $admin = Role::where('name', 'Admin')->first();
+        $dashboard = Permission::where('name', 'Dashboard.index')->first();
+        $admin->permissions()->sync([$dashboard->id]);
+        $admin->forceFill(['updated_at' => now()->addMinute()])->save();
+
+        // 同一個 session 再次請求 → middleware 應偵測 stale 並重載，導向 default_route
+        $this->get(route('roles.index'))->assertRedirect(route('dashboard'));
+    }
+
+    public function test_session_without_loaded_permissions_is_auto_loaded(): void
+    {
+        $this->seedPermissions();
+
+        $admin = Role::where('name', 'Admin')->first();
+        $user = User::factory()->create(['role_id' => $admin->id]);
+
+        // 模擬 remember-me：直接 actingAs 但不主動 loadPermissionsToSession
+        $this->actingAs($user);
+        session()->forget('auth.permissions');
+        session()->forget('auth.permissions_version');
+
+        // 仍應能正常進入受權限保護的頁面
+        $this->get(route('roles.index'))->assertStatus(200);
+    }
 }

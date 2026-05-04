@@ -36,6 +36,8 @@ class RoleRepository
     public function syncPermissions(Role $role, array $permissionIds): void
     {
         $role->permissions()->sync($permissionIds);
+        // 觸發 updated_at，作為 session 權限版本戳的依據
+        $role->touch();
     }
 
     public function getPermissionIds(Role $role): array
@@ -43,7 +45,7 @@ class RoleRepository
         return $role->permissions()->pluck('permissions.id')->toArray();
     }
 
-    public function getByName(string $name): Role
+    public function findByNameOrFail(string $name): Role
     {
         return Role::where('name', $name)->firstOrFail();
     }
