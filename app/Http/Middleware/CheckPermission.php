@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use App\Services\PermissionRouteResolver;
 use Closure;
 use Illuminate\Http\Request;
@@ -13,6 +14,7 @@ class CheckPermission
 
     public function handle(Request $request, Closure $next): Response
     {
+        /** @var User $user */
         $user = $request->user();
 
         $action = $request->route()->getAction();
