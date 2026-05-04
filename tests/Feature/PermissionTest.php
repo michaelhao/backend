@@ -348,22 +348,6 @@ class PermissionTest extends TestCase
         $this->get(route('roles.index'))->assertRedirect(route('dashboard'));
     }
 
-    public function test_session_without_loaded_permissions_is_auto_loaded(): void
-    {
-        $this->seedPermissions();
-
-        $admin = Role::where('name', 'Admin')->first();
-        $user = User::factory()->create(['role_id' => $admin->id]);
-
-        // 模擬 remember-me：直接 actingAs 但不主動 loadPermissionsToSession
-        $this->actingAs($user);
-        session()->forget('auth.permissions');
-        session()->forget('auth.permissions_version');
-
-        // 仍應能正常進入受權限保護的頁面
-        $this->get(route('roles.index'))->assertStatus(200);
-    }
-
     public function test_permission_session_reloads_when_user_role_id_changes(): void
     {
         $this->seedPermissions();

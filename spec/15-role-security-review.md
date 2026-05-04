@@ -5,7 +5,7 @@
 針對既有角色管理流程做一次完整的安全性審查（自製權限系統、Role/Permission/User 三表、attribute-based middleware、session 快取權限）。整體架構分層清楚、Form Request / Repository / Service 都到位，但有幾項缺口需補上：
 
 - session 中的權限只在登入時載入一次，管理者異動角色權限後**已登入使用者不會即時生效**，需登出/過期才會更新
-- Remember-me 自動登入未走 `AuthService::loginSession()` → session 完全沒有 `permissions` key，使用者體感「整個權限系統壞掉」
+- Remember-me 自動登入機制本身會繞過 `AuthService::loginSession()`、且長 lifetime cookie 一旦被竊取會放大暴露窗口；本次決定**整個移除 remember-me**，靠 session lifetime 強制 2 小時不活動即重登
 - `default_route` 只驗證 `exists:permissions,name`，但 permission 存在 ≠ 命名路由存在；refactor 後若 route 被移除，使用者會卡住進不去任何頁
 - `session('permissions')` key 命名太通用，易與其他模組撞名
 - `RoleRepository::getByName()` 內部用 `firstOrFail()` 但名字不體現會丟例外
@@ -26,11 +26,11 @@
 |---|---|
 | `app/Services/PermissionRouteResolver.php` | 從 middleware 抽出 permission ↔ route 對應邏輯，供 middleware 與 RoleRequest 共用 |
 
-### Listeners
+### Migrations
 
 | 檔案 | 用途 |
 |---|---|
-| `app/Listeners/EnsurePermissionsLoadedToSession.php` | 監聽 `Authenticated` 事件，涵蓋 remember-me 自動登入；Laravel 12 自動發現註冊 |
+| `database/migrations/<timestamp>_drop_remember_token_from_users_table.php` | 移除 `users.remember_token` 欄位（不再使用 remember-me） |
 
 ---
 
@@ -43,25 +43,31 @@
 | `app/Repositories/RoleRepository.php` | `syncPermissions()` 內呼叫 `$role->touch()` 更新版本戳；`getByName` → `findByNameOrFail` |
 | `app/Providers/AppServiceProvider.php` | 註冊 `PermissionRouteResolver` singleton |
 | `app/Http/Requests/RoleRequest.php` | `default_route` 加自訂 rule 確認對應到實際命名路由 |
+| `app/Services/AuthService.php` | `attempt()` 簽名移除 `bool $remember`；不再產生 remember cookie |
+| `app/Http/Controllers/Auth/LoginController.php` | 不再讀取 `remember` 欄位 |
+| `app/Http/Controllers/Auth/ResetPasswordController.php` | 移除 `setRememberToken` 呼叫（不再有 remember cookie 需失效） |
+| `app/Models/User.php` | `#[Hidden]` 移除 `remember_token`（欄位已 drop） |
+| `database/factories/UserFactory.php` | 移除 `remember_token` 預設值 |
+| `resources/views/auth/login.blade.php` | 移除「記住我」checkbox |
 | `tests/Feature/PermissionTest.php` | 新增 3 個測試 |
 
 ---
 
 ## 實作細節
 
-### 1. Session 權限即時撤銷 + Remember-me 修補（P2）
+### 1. Session 權限即時撤銷（P2）+ 移除 Remember-me
 
 **問題**
 - `loadPermissionsToSession()` 僅在 `AuthService::loginSession()` 中被呼叫；管理者修改 Role 權限或使用者 `role_id` 後，已登入者 session 內權限不會更新。
-- Remember-me 自動登入沒走 `attempt() → loginSession()`，session 中沒有 `permissions` key → middleware 一律判定無權限。
+- Remember-me 自動登入會繞過 `loginSession()` 與 session 版本戳機制，且 5 年 lifetime 的 cookie 一旦被竊取會放大暴露窗口；本次決定整個拆除，不再依賴 listener 補洞。
 
 **設計重點**
-- 用 `max(users.updated_at, roles.updated_at).timestamp` 當作版本戳，**不需新增欄位、不需 migration**。
+- 用 `max(users.updated_at, roles.updated_at).timestamp` 當作版本戳，**不需新增欄位、不需 migration**（版本戳本身）。
 - 異動 role permissions 時於 `RoleRepository::syncPermissions()` 內 `$role->touch()`；異動 `users.role_id` 時 Eloquent 會自動 touch `users.updated_at`。
 - middleware 在每個 protected request 入口比對 session 版本戳與 DB 當前版本戳，不一致就 reload。
-- 額外建立獨立的 `EnsurePermissionsLoadedToSession` listener 監聽 `Illuminate\Auth\Events\Authenticated`，作為 defense-in-depth 涵蓋 remember-me 路徑；放在 `app/Listeners/` 由 Laravel 12 自動發現註冊，方便 IDE / `php artisan event:list` 追蹤。
 - `loadPermissionsToSession()` 內先 `$this->unsetRelation('role')` 再讀取 — 避免 user.role_id 已被 update 但 Eloquent 仍快取舊角色關聯，造成載入到錯誤的角色權限。
-- middleware 與 listener **同時保留** stale check，原因：在測試環境用 `actingAs($user)` 時，後續 request 走 `SessionGuard::user()` 的 cached user 路徑不會 fire `Authenticated` 事件，必須由 middleware 兜底；production 雖會多 2 個 PK lookup，但對內部後台流量可忽略，換來測試/正式環境行為一致。
+- 完全移除 remember-me：登入表單沒有「記住我」checkbox、`AuthService::attempt()` 不傳 remember flag、不再發 `remember_web_*` cookie、`users.remember_token` 欄位以 migration drop 掉、`ResetPasswordController` 不再呼叫 `setRememberToken`。session lifetime 為 120 分鐘，2 小時不活動即過期需重登。
+- 沒掛 `permission` middleware 但仍會呼叫 `hasPermissionTo()` 的場景（例如直接顯示 sidebar 的 layout），仰賴 `loginSession()` 在登入當下已寫入 session；測試的 `actingAs($user)` 場景需自行呼叫 `loadPermissionsToSession()` 或進入有 `permission` middleware 的路由觸發 stale reload。
 
 **`HasPermissions` trait 重點**
 
@@ -138,33 +144,6 @@ public function handle(Request $request, Closure $next): Response
 
 > ℹ️ `/** @var User $user */` 是因為 `$request->user()` 回傳型別為 `?Authenticatable`，靜態分析器看不到 trait 上的 `permissionsSessionIsStale()` / `loadPermissionsToSession()`；這個 PHPDoc 讓 IDE 正確解析方法。`auth` middleware 已保證 user 存在且為 `User`，不需 runtime check。
 
-**`EnsurePermissionsLoadedToSession` listener 重點**
-
-```php
-namespace App\Listeners;
-
-use App\Models\User;
-use Illuminate\Auth\Events\Authenticated;
-
-class EnsurePermissionsLoadedToSession
-{
-    public function handle(Authenticated $event): void
-    {
-        $user = $event->user;
-
-        if (! $user instanceof User) {
-            return;
-        }
-
-        if ($user->permissionsSessionIsStale()) {
-            $user->loadPermissionsToSession();
-        }
-    }
-}
-```
-
-> ℹ️ 用 `instanceof User` 同時做 runtime narrow 與型別 narrow。Listener 不像 middleware 有 auth 保證，且 `Authenticated` 事件未來可能由其他 guard（如 ShopAdmin）觸發，`instanceof` 比 PHPDoc 更穩。
-
 **`AppServiceProvider` 重點**
 
 ```php
@@ -178,8 +157,6 @@ public function boot(): void
     //
 }
 ```
-
-> ℹ️ Listener 不在 `AppServiceProvider::boot()` 內用閉包 `Event::listen` 註冊，原因是閉包匿名、不易追蹤脈絡、stack trace 與 `event:list` 顯示不出來。改放獨立 class 由 Laravel 12 自動發現。
 
 ---
 
@@ -274,7 +251,7 @@ docker compose exec backend-api php artisan test --compact --filter=PermissionTe
 docker compose exec backend-api php artisan test --compact   # 全測
 ```
 
-`PermissionTest` 新增 4 個測試（共 22 個全綠）：
+`PermissionTest` 新增 3 個測試：
 
 - `test_role_request_rejects_default_route_without_named_route`
   建立一個存在於 `permissions` 但無對應 route 的 permission，POST `/roles` 設為 `default_route` → `assertSessionHasErrors('default_route')`。
@@ -282,15 +259,13 @@ docker compose exec backend-api php artisan test --compact   # 全測
   使用者已可訪問 `/roles`；管理者拔掉該角色的 `Role.index` 權限並 advance `roles.updated_at` → 同 session 再次請求應自動 reload，導向 default_route。
 - `test_permission_session_reloads_when_user_role_id_changes`
   把使用者 `role_id` 換成只擁有 `Dashboard.index` 的最小角色並 advance `users.updated_at` → 同 session 再次請求應 reload 並導向 default_route，同時驗證 `unsetRelation('role')` 修補有效。
-- `test_session_without_loaded_permissions_is_auto_loaded`
-  模擬 remember-me：`actingAs` 後手動 `forget('auth.permissions')` → 仍應能正常進入受保護的頁面。
 
 ### 手動
 
 1. 兩個瀏覽器：A 用 Admin 登入、B 用 Viewer 登入。
 2. A 把 Viewer 角色的 `Dashboard.index` 之外的權限全拿掉。
 3. B 重新整理任意管理頁面 → 應立即被導回 dashboard，無需登出。
-4. 勾選「記住我」登入 → 關閉瀏覽器後重開 → 直接進到任一管理頁，菜單與權限正常。
+4. 登入頁應已不存在「記住我」checkbox；登入成功後 DevTools → Application → Cookies 應只有 `<APP_NAME>_session`，不應有 `remember_web_*`。
 5. 嘗試在角色編輯頁把 `default_route` 設為一個沒有對應命名路由的 permission（需先手動建一個 orphan permission）→ 表單應報錯。
 
 ---
@@ -298,9 +273,9 @@ docker compose exec backend-api php artisan test --compact   # 全測
 ## 影響範圍
 
 - **行為改變**：管理者異動角色權限後，受影響使用者**下一次 request** 即生效（原本要登出 / session 過期）。
-- **行為改變**：Remember-me 自動登入後權限正常運作（原本可能整個壞掉）。
+- **行為改變**：移除 remember-me — 登入頁不再有「記住我」checkbox、session 過期（120 分鐘不活動）必須重新輸入帳密。
 - **行為改變**：`default_route` 設定時會多一層命名路由存在性驗證。
-- **無 schema 變動**：不需 migration，沿用既有 `updated_at` + `$role->touch()`。
+- **Schema 變動**：新增 migration drop `users.remember_token` 欄位。
 - **每個 protected request 多 2 個輕量 SELECT**（取 `users.updated_at` 與 `roles.updated_at`）— 內部後台流量可接受。
 
 ---
