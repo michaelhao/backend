@@ -26,6 +26,9 @@ trait HasPermissions
 
     public function loadPermissionsToSession(): void
     {
+        // 確保讀到最新的 role 資料 — 避免 Eloquent 快取住的舊關聯造成 role_id 已換但載入舊角色權限
+        $this->unsetRelation('role');
+
         $permissions = $this->role
             ? $this->role->permissions()->pluck('name')->toArray()
             : [];

@@ -363,4 +363,28 @@ class PermissionTest extends TestCase
         // 仍應能正常進入受權限保護的頁面
         $this->get(route('roles.index'))->assertStatus(200);
     }
+
+    public function test_permission_session_reloads_when_user_role_id_changes(): void
+    {
+        $this->seedPermissions();
+
+        // 使用者一開始是 Admin（擁有 Role.index）
+        $user = $this->createUserWithRole('Admin');
+        $this->get(route('roles.index'))->assertStatus(200);
+
+        // 建立只有 Dashboard.index 的最小角色（不可用 Viewer，Viewer 也有 Role.index）
+        $dashboard = Permission::where('name', 'Dashboard.index')->first();
+        $minimalRole = Role::factory()->create(['default_route' => 'Dashboard.index']);
+        $minimalRole->permissions()->sync([$dashboard->id]);
+
+        // 管理者把 user 換到最小角色
+        $user->forceFill([
+            'role_id' => $minimalRole->id,
+            'updated_at' => now()->addMinute(),
+        ])->save();
+
+        // 同一個 session 再次請求 → middleware 應偵測 user.updated_at 已 advance 並重載
+        // 新角色沒有 Role.index → 應導向 default_route
+        $this->get(route('roles.index'))->assertRedirect(route('dashboard'));
+    }
 }
