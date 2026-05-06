@@ -8,20 +8,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const excludeId = input.dataset.excludeId || null;
     const isEdit    = !!excludeId;
+    const submitBtn = input.closest('form')?.querySelector('button[type="submit"]');
+
+    const setWeightError = (message) => {
+        errorEl.textContent = message;
+        errorEl.classList.remove('hidden');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    };
+
+    const clearWeightError = () => {
+        errorEl.classList.add('hidden');
+        errorEl.textContent = '';
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    };
 
     input.addEventListener('change', async function () {
         const weight = this.value.trim();
 
         listEl.querySelectorAll('.weight-row').forEach(r => r.classList.remove('text-red-600', 'font-semibold', 'text-blue-600', 'font-medium'));
         listEl.querySelectorAll('.weight-preview').forEach(r => r.remove());
-        errorEl.classList.add('hidden');
-        errorEl.textContent = '';
+        clearWeightError();
 
         if (!weight) return;
 
         if (parseInt(weight) < 1) {
-            errorEl.textContent = '版本權重最低為 1';
-            errorEl.classList.remove('hidden');
+            setWeightError('版本權重最低為 1');
             return;
         }
 
@@ -35,8 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (data.duplicate) {
-            errorEl.textContent = '請確認版本權重';
-            errorEl.classList.remove('hidden');
+            setWeightError('請確認版本權重');
             const conflictRow = listEl.querySelector(`.weight-row[data-id="${data.conflicting_grade.id}"]`);
             if (conflictRow) conflictRow.classList.add('text-red-600', 'font-semibold');
             return;
