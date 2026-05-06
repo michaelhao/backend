@@ -8,6 +8,22 @@
 
 ---
 
+## 停用後行為（status = Inactive）
+
+停用版本不影響任何既有引用：所有已關聯到該版本的 shop / bill detail / addon 持續維持原樣，不被回頭驗證或自動清空。
+
+但下列「新建立的引用」會被擋下：
+
+| 來源 | 規則 | 邊界 |
+|---|---|---|
+| `ShopUpdateRequest::grade_id` | 變更為 inactive grade → 422 | 維持原 grade（即使該 grade 已 inactive）→ 允許,以便管理員修改其他欄位 |
+| `StoreBillRequest::details.*.grade_id` | 任何 inactive grade → 422 | 無豁免,新建 bill 必須使用 active grade |
+| `AddonRequest::grade_ids.*` | 新關聯的 inactive grade → 422 | 已關聯到當前 addon 的 inactive grade → 允許保留 |
+
+**為何這樣設計**:停用代表「不再賣這個版本」,新指派違反此意圖;但回頭擋既有引用會讓編輯既有資料變得困難（管理員只想改名稱卻被驗證擋住）,因此採「只擋新指派、保留既有」策略。
+
+---
+
 ## 架構設計
 
 沿用 Controller / Service / Repository / Request / Blade Views 的完整分層架構（比照 UserController 系列）。

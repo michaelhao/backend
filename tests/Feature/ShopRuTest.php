@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\GradeStatus;
 use App\Enums\ShopStatus;
 use App\Models\Grade;
 use App\Models\Role;
@@ -248,6 +249,50 @@ class ShopRuTest extends TestCase
         ]);
 
         $response->assertSessionHasErrors('grade_id');
+    }
+
+    public function test_update_fails_when_assigning_inactive_grade(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $shop = $this->createShopWithAdmin();
+        $inactiveGrade = Grade::factory()->create(['status' => GradeStatus::Inactive]);
+
+        $response = $this->put(route('shops.update', $shop), [
+            'name' => $shop->name,
+            'email' => $shop->email,
+            'grade_id' => $inactiveGrade->id,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => $shop->admin->name,
+                'email' => $shop->admin->email,
+            ],
+        ]);
+
+        $response->assertSessionHasErrors('grade_id');
+    }
+
+    public function test_update_allows_keeping_existing_inactive_grade(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $inactiveGrade = Grade::factory()->create(['status' => GradeStatus::Inactive]);
+        $shop = $this->createShopWithAdmin(['grade_id' => $inactiveGrade->id]);
+
+        $response = $this->put(route('shops.update', $shop), [
+            'name' => '改其他欄位',
+            'email' => $shop->email,
+            'grade_id' => $inactiveGrade->id,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => $shop->admin->name,
+                'email' => $shop->admin->email,
+            ],
+        ]);
+
+        $response->assertRedirect(route('shops.index'));
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('shops', ['id' => $shop->id, 'name' => '改其他欄位']);
     }
 
     public function test_certification_data_saved_to_db(): void

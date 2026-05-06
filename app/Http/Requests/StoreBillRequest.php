@@ -3,10 +3,12 @@
 namespace App\Http\Requests;
 
 use App\Enums\BillDetailType;
+use App\Enums\GradeStatus;
 use App\Models\Grade;
 use App\Models\Shop;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreBillRequest extends FormRequest
 {
@@ -22,7 +24,11 @@ class StoreBillRequest extends FormRequest
             'shop_id' => ['required', 'integer', 'exists:shops,id'],
             'details' => ['required', 'array', 'min:1'],
             'details.*.type' => ['required', 'integer', 'in:1,2,3'],
-            'details.*.grade_id' => ['nullable', 'integer', 'exists:grades,id', 'required_if:details.*.type,1,2'],
+            'details.*.grade_id' => [
+                'nullable', 'integer',
+                Rule::exists('grades', 'id')->where('status', GradeStatus::Active->value),
+                'required_if:details.*.type,1,2',
+            ],
             'details.*.addon_id' => ['nullable', 'integer', 'exists:addons,id', 'required_if:details.*.type,3'],
             'details.*.payment_type' => ['nullable', 'integer', 'in:1,2,3'],
             'details.*.quantity' => ['required', 'integer', 'min:1'],
