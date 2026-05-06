@@ -4,6 +4,7 @@ namespace Tests\Feature\Bill;
 
 use App\Enums\BillDetailType;
 use App\Enums\BillPaymentStatus;
+use App\Enums\GradeStatus;
 use App\Models\Bill;
 use App\Models\BillDetail;
 use App\Models\BillDiscount;
@@ -187,5 +188,29 @@ class BillStoreTest extends TestCase
         $this->assertNull($row->start_at);
         $this->assertNull($row->expired_at);
         $this->assertNull($row->total_months);
+    }
+
+    public function test_store_fails_when_detail_grade_id_is_inactive(): void
+    {
+        $user = $this->actingAsAdmin();
+        [$shop] = $this->makeShop($user, weight: 10, price: 1000);
+        $inactiveGrade = Grade::factory()->create([
+            'price' => 2000, 'weight' => 50, 'status' => GradeStatus::Inactive,
+        ]);
+
+        $response = $this->post(route('bills.store'), [
+            'shop_id' => $shop->id,
+            'payment_method' => 2,
+            'details' => [[
+                'type' => BillDetailType::Grades->value,
+                'grade_id' => $inactiveGrade->id,
+                'quantity' => 1,
+                'start_at' => today()->format('Y-m-d'),
+                'total_months' => 12,
+            ]],
+        ]);
+
+        $response->assertSessionHasErrors('details.0.grade_id');
+        $this->assertDatabaseCount('bills', 0);
     }
 }

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\AddonStatus;
 use App\Enums\AddonSyncing;
 use App\Enums\AddonType;
+use App\Enums\GradeStatus;
 use App\Enums\ShopAddonSource;
 use App\Enums\ShopAddonStatus;
 use App\Jobs\SyncShopAddonsForGrade;
@@ -152,6 +153,47 @@ class AddonCrudTest extends TestCase
         Bus::assertBatched(fn ($batch) => $batch->jobs->contains(
             fn ($job) => $job instanceof SyncShopAddonsForGrade
         ));
+    }
+
+    public function test_store_fails_when_grade_ids_contains_inactive_grade(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $inactiveGrade = Grade::factory()->create(['status' => GradeStatus::Inactive]);
+
+        $response = $this->post(route('addons.store'), $this->validAddonData([
+            'name' => '不可建立',
+            'grade_ids' => [$inactiveGrade->id],
+        ]));
+
+        $response->assertSessionHasErrors('grade_ids.0');
+        $this->assertDatabaseMissing('addons', ['name' => '不可建立']);
+    }
+
+    public function test_update_allows_keeping_existing_inactive_grade_link(): void
+    {
+        Bus::fake();
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $grade = Grade::factory()->create();
+        $addon = Addon::factory()->create();
+        DB::table('grades_addons')->insert([
+            'grade_id' => $grade->id,
+            'addon_id' => $addon->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $grade->update(['status' => GradeStatus::Inactive]);
+
+        $response = $this->put(route('addons.update', $addon), $this->validAddonData([
+            'name' => '只改名稱',
+            'grade_ids' => [$grade->id],
+        ]));
+
+        $response->assertRedirect(route('addons.index'));
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('addons', ['id' => $addon->id, 'name' => '只改名稱']);
+        $this->assertDatabaseHas('grades_addons', ['grade_id' => $grade->id, 'addon_id' => $addon->id]);
     }
 
     public function test_store_fails_with_invalid_type(): void

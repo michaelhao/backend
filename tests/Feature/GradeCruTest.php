@@ -154,6 +154,41 @@ class GradeCruTest extends TestCase
         $response->assertSessionHasErrors('name');
     }
 
+    public function test_store_fails_with_duplicate_weight(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        Grade::factory()->create(['weight' => 77]);
+
+        $response = $this->post(route('grades.store'), [
+            'code'   => 'grade_dupe_w',
+            'name'   => '權重重複',
+            'price'  => 2000,
+            'weight' => 77,
+            'status' => 1,
+        ]);
+
+        $response->assertSessionHasErrors('weight');
+    }
+
+    public function test_update_allows_same_weight_for_self(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $grade = Grade::factory()->create(['weight' => 88]);
+
+        $response = $this->put(route('grades.update', $grade), [
+            'code'   => $grade->code,
+            'name'   => $grade->name,
+            'price'  => $grade->price,
+            'weight' => 88,
+            'status' => $grade->status->value,
+        ]);
+
+        $response->assertRedirect(route('grades.index'));
+        $response->assertSessionHasNoErrors();
+    }
+
     public function test_store_fails_with_invalid_code_characters(): void
     {
         $this->seedPermissions();

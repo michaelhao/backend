@@ -39,4 +39,31 @@ class GradeRequest extends FormRequest
             'status' => ['required', new Enum(GradeStatus::class)],
         ];
     }
+
+    public function attributes(): array
+    {
+        return [
+            'code'   => '代碼',
+            'name'   => '名稱',
+            'price'  => '價格',
+            'weight' => '版本權重',
+            'status' => '狀態',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'required'    => ':attribute 為必填',
+            'string'      => ':attribute 必須為文字',
+            'integer'     => ':attribute 必須為整數',
+            'regex'       => ':attribute 僅限中英數與底線',
+            'unique'      => ':attribute 已被使用',
+            'code.max'    => ':attribute 不可超過 :max 個字元',
+            'name.max'    => ':attribute 不可超過 :max 個字元',
+            'price.min'   => ':attribute 不可小於 :min',
+            'weight.min'  => ':attribute 不可小於 :min',
+            'status.enum' => ':attribute 的值不正確',
+        ];
+    }
 }
