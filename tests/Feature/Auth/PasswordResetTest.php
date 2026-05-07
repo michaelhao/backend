@@ -6,12 +6,19 @@ use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class PasswordResetTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Http::fake(['https://api.pwnedpasswords.com/*' => Http::response('', 200)]);
+    }
 
     public function test_forgot_password_screen_can_be_rendered(): void
     {
@@ -63,14 +70,14 @@ class PasswordResetTest extends TestCase
             $response = $this->post(route('password.update'), [
                 'token' => $notification->token,
                 'email' => $user->email,
-                'password' => 'new_password_123',
-                'password_confirmation' => 'new_password_123',
+                'password' => 'Str0ng!P@ssword',
+                'password_confirmation' => 'Str0ng!P@ssword',
             ]);
 
             $response->assertRedirect(route('login'));
             $response->assertSessionHas('status');
 
-            $this->assertTrue(Hash::check('new_password_123', $user->fresh()->password));
+            $this->assertTrue(Hash::check('Str0ng!P@ssword', $user->fresh()->password));
 
             return true;
         });
@@ -84,8 +91,8 @@ class PasswordResetTest extends TestCase
         $response = $this->post(route('password.update'), [
             'token' => 'invalid-token',
             'email' => $user->email,
-            'password' => 'new_password_123',
-            'password_confirmation' => 'new_password_123',
+            'password' => 'Str0ng!P@ssword',
+            'password_confirmation' => 'Str0ng!P@ssword',
         ]);
 
         $response->assertSessionHasErrors('email');

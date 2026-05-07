@@ -59,10 +59,13 @@ class UserController extends Controller
             return redirect()->route('users.index')->with('error', '找不到該使用者');
         }
 
-        $this->userService->updateUser(
-            $user,
-            $request->safe()->only(['name', 'email', 'password', 'role_id']),
-        );
+        $data = $request->safe()->only(['name', 'email', 'password', 'role_id']);
+
+        if ($user->id === auth()->id() && isset($data['role_id']) && (int) $data['role_id'] !== $user->role_id) {
+            return redirect()->back()->with('error', '無法修改自己的角色');
+        }
+
+        $this->userService->updateUser($user, $data);
 
         return redirect()->route('users.index')->with('success', '使用者已更新');
     }

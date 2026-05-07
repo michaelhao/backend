@@ -7,11 +7,19 @@ use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class UserCrudTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // 避免 Password::uncompromised() 在測試中打 HIBP 外部 API
+        Http::fake(['https://api.pwnedpasswords.com/*' => Http::response('', 200)]);
+    }
 
     private function seedPermissions(): void
     {
@@ -51,8 +59,8 @@ class UserCrudTest extends TestCase
         $response = $this->post(route('users.store'), [
             'name' => 'New User',
             'email' => 'newuser@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Str0ng!P@ssword',
+            'password_confirmation' => 'Str0ng!P@ssword',
             'role_id' => $role->id,
         ]);
 
@@ -102,14 +110,14 @@ class UserCrudTest extends TestCase
         $response = $this->put(route('users.update', $target), [
             'name' => $target->name,
             'email' => $target->email,
-            'password' => 'new_password_123',
-            'password_confirmation' => 'new_password_123',
+            'password' => 'Str0ng!P@ssword',
+            'password_confirmation' => 'Str0ng!P@ssword',
             'role_id' => $role->id,
         ]);
 
         $response->assertRedirect(route('users.index'));
         $target->refresh();
-        $this->assertTrue(Hash::check('new_password_123', $target->password));
+        $this->assertTrue(Hash::check('Str0ng!P@ssword', $target->password));
     }
 
     public function test_edit_form_loads_with_existing_values(): void
@@ -159,6 +167,45 @@ class UserCrudTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $admin->id]);
     }
 
+    public function test_admin_cannot_change_own_role(): void
+    {
+        $this->seedPermissions();
+
+        $admin = $this->createUserWithRole('Admin');
+        $viewerRole = Role::where('name', 'Viewer')->firstOrFail();
+
+        $response = $this->put(route('users.update', $admin), [
+            'name' => $admin->name,
+            'email' => $admin->email,
+            'password' => '',
+            'password_confirmation' => '',
+            'role_id' => $viewerRole->id,
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error', '無法修改自己的角色');
+        $this->assertDatabaseHas('users', ['id' => $admin->id, 'role_id' => $admin->role_id]);
+    }
+
+    public function test_admin_can_edit_own_name_without_changing_role(): void
+    {
+        $this->seedPermissions();
+
+        $admin = $this->createUserWithRole('Admin');
+
+        $response = $this->put(route('users.update', $admin), [
+            'name' => 'Updated Admin Name',
+            'email' => $admin->email,
+            'password' => '',
+            'password_confirmation' => '',
+            'role_id' => $admin->role_id,
+        ]);
+
+        $response->assertRedirect(route('users.index'));
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('users', ['id' => $admin->id, 'name' => 'Updated Admin Name']);
+    }
+
     public function test_viewer_cannot_access_create_page(): void
     {
         $this->seedPermissions();
@@ -181,8 +228,8 @@ class UserCrudTest extends TestCase
         $response = $this->post(route('users.store'), [
             'name' => 'Duplicate',
             'email' => $existing->email,
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Str0ng!P@ssword',
+            'password_confirmation' => 'Str0ng!P@ssword',
             'role_id' => $role->id,
         ]);
 
@@ -215,8 +262,8 @@ class UserCrudTest extends TestCase
         $response = $this->post(route('users.store'), [
             'name' => 'Mismatch',
             'email' => 'mismatch@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'different_password',
+            'password' => 'Str0ng!P@ssword',
+            'password_confirmation' => 'Str0ng!Different',
             'role_id' => $role->id,
         ]);
 
@@ -252,8 +299,8 @@ class UserCrudTest extends TestCase
         $response = $this->post(route('users.store'), [
             'name' => 'Invalid Role',
             'email' => 'invalid-role@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Str0ng!P@ssword',
+            'password_confirmation' => 'Str0ng!P@ssword',
             'role_id' => 99999,
         ]);
 

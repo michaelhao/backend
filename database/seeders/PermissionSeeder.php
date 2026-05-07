@@ -19,15 +19,6 @@ class PermissionSeeder extends Seeder
                 'detail' => '詳細頁',
             ],
         ],
-        'Post' => [
-            'label' => '文章',
-            'actions' => [
-                'index' => '列表',
-                'create' => '新增',
-                'update' => '編輯',
-                'delete' => '刪除',
-            ],
-        ],
         'User' => [
             'label' => '使用者',
             'actions' => [

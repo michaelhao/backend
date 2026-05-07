@@ -223,7 +223,7 @@ class PermissionTest extends TestCase
 
         $this->createUserWithRole('Admin');
 
-        $otherPermission = Permission::where('name', 'Post.index')->first();
+        $otherPermission = Permission::where('name', 'Grade.index')->first();
         $defaultPermission = Permission::where('name', 'Dashboard.index')->first();
 
         $response = $this->post(route('roles.store'), [
@@ -245,7 +245,7 @@ class PermissionTest extends TestCase
         $this->createUserWithRole('Admin');
 
         $role = Role::where('name', 'Viewer')->first();
-        $otherPermission = Permission::where('name', 'Post.index')->first();
+        $otherPermission = Permission::where('name', 'Grade.index')->first();
         $defaultPermission = Permission::where('name', 'Dashboard.index')->first();
 
         $this->put(route('roles.update', $role), [
