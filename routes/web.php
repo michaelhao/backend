@@ -8,7 +8,6 @@ use App\Http\Controllers\BillController;
 use App\Http\Controllers\ConferenceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GradeController;
-use App\Http\Controllers\PostController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\UserController;
@@ -17,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 // 訪客專用路由（已登入使用者會被導向 /）
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [LoginController::class, 'login']);
+    Route::post('/login', [LoginController::class, 'login'])->middleware(\App\Http\Middleware\ThrottleLogin::class);
 
     Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
     Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
@@ -31,8 +30,6 @@ Route::middleware('auth')->group(function () {
 
     // 無角色提示頁（不受 permission middleware 保護）
     Route::get('/no-role', fn () => view('no-role'))->name('no-role');
-
-    Route::get('/test-db', [PostController::class, 'test']);
 
     // 需要權限檢查的 routes — middleware 自動推斷權限
     Route::middleware('permission')->group(function () {

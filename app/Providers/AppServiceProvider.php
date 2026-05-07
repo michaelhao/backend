@@ -11,9 +11,4 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(PermissionRouteResolver::class);
     }
-
-    public function boot(): void
-    {
-        //
-    }
 }

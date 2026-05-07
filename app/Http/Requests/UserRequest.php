@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class UserRequest extends FormRequest
 {
@@ -18,7 +19,7 @@ class UserRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->route('id'))],
-            'password' => [$this->isMethod('POST') ? 'required' : 'nullable', 'string', 'min:8', 'confirmed'],
+            'password' => [$this->isMethod('POST') ? 'required' : 'nullable', 'confirmed', Password::min(12)->mixedCase()->numbers()->symbols()->uncompromised()],
             'role_id' => ['required', 'exists:roles,id'],
         ];
     }
