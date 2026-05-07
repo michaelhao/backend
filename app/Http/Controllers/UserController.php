@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Attributes\RequiresPermission;
-use App\Http\Requests\UserRequest;
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
@@ -29,7 +30,7 @@ class UserController extends Controller
     }
 
     #[RequiresPermission('User.create')]
-    public function store(UserRequest $request)
+    public function store(StoreUserRequest $request)
     {
         $this->userService->createUser(
             $request->safe()->only(['name', 'email', 'password', 'role_id']),
@@ -52,7 +53,7 @@ class UserController extends Controller
     }
 
     #[RequiresPermission('User.update')]
-    public function update(UserRequest $request, int $id)
+    public function update(UpdateUserRequest $request, int $id)
     {
         $user = User::find($id);
         if (! $user) {
