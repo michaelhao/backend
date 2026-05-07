@@ -29,8 +29,16 @@ class ResetPasswordController extends Controller
             },
         );
 
-        return $status === Password::PasswordReset
-            ? redirect()->route('login')->with('status', __($status))
-            : back()->withErrors(['email' => __($status)]);
+        if ($status === Password::PasswordReset) {
+            return redirect()->route('login')->with('status', '密碼已重設，請重新登入');
+        }
+
+        $message = match ($status) {
+            Password::InvalidToken,
+            Password::InvalidUser => '重設連結已過期或無效，請重新申請',
+            default => '密碼重設失敗',
+        };
+
+        return back()->withErrors(['email' => $message]);
     }
 }
