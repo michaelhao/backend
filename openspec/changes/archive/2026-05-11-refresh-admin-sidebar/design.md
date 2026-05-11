@@ -1,11 +1,11 @@
 ## Context
 
-[layouts/admin.blade.php](resources/views/layouts/admin.blade.php) 為所有 admin 頁面共用版型。Claude Design 設計稿確立淺色紫品牌方向。本次純視覺改動，**不**動 layout 結構、選單項、權限、路由。
+[layouts/admin.blade.php](resources/views/layouts/admin.blade.php) 為所有 admin 頁面共用版型。Claude Design 設計稿確立淺色藍品牌方向。本次純視覺改動，**不**動 layout 結構、選單項、權限、路由。
 
 ## Goals / Non-Goals
 
 **Goals**
-- sidebar 由深色 → 淺色紫品牌
+- sidebar 由深色 → 淺色藍品牌
 - 9 個既有 admin 頁面視覺一致
 - 純 utility class 改動，不引新依賴
 
@@ -21,7 +21,7 @@
 
 **替代案**：dashboard 用獨立 layout、其他頁面保留深色。
 
-**理由**：兩套配色維護成本高且視覺斷裂。設計稿既已確立淺色紫，9 頁回歸成本可控（僅 utility class 改動）。
+**理由**：兩套配色維護成本高且視覺斷裂。設計稿既已確立淺色藍，9 頁回歸成本可控（僅 utility class 改動）。
 
 ### 2. 9 個選單全保留
 **選擇**：不採用設計稿 mock 中只示意 4 項的設計，9 項既有全保留。
@@ -29,14 +29,14 @@
 **理由**：設計稿那 4 項純為視覺示意，實際選單項要對應實際 capability。
 
 ### 3. 色碼採 Tailwind 標準色（不寫死 hex）
-**選擇**：active 用 `bg-violet-50 text-violet-600`、非 active 用 `text-slate-500 hover:bg-slate-100`。
+**選擇**：active 用 `bg-blue-50 text-blue-600`、非 active 用 `text-slate-500 hover:bg-slate-100`。
 
 **理由**：layout 是純 utility class 場景（非 inline style），Tailwind purge 不會出錯；用標準色階方便後續 dark mode 或主題切換。
 
 ### 4. active 不換字重
-**選擇**：active 與非 active 都用 `font-medium`，active 只靠顏色（`bg-violet-50` + `text-violet-600`）區分。
+**選擇**：active 與非 active 都用 `font-medium`，active 只靠顏色（`bg-blue-50` + `text-blue-600`）區分。
 
-**理由**：中文 `font-medium`（500）→ `font-bold`（700）字寬會肉眼可見變寬，切頁時 active 項抖動；紫底 + 紫字已足夠區分。
+**理由**：中文 `font-medium`（500）→ `font-bold`（700）字寬會肉眼可見變寬，切頁時 active 項抖動；藍底 + 藍字已足夠區分。
 
 ### 5. logo block 不留 border
 **選擇**：移除既有 `border-b border-gray-800`，不換成淺色 border。
@@ -44,9 +44,9 @@
 **理由**：淺色 admin 用 padding + 字級自然分組 logo / nav；多一條 border 反而切割視覺，少一條維護點。
 
 ### 6. top bar 灰系與 sidebar 對齊
-**選擇**：scope 微擴一行，`<header>` 內所有 `gray-*` token 改為對應 `slate-*`，但紫色不下放。
+**選擇**：scope 微擴一行，`<header>` 內所有 `gray-*` token 改為對應 `slate-*`，但藍色不下放。
 
-**理由**：sidebar 已選 slate，top bar 仍 gray 會產生兩種近似但不同的灰相鄰；紫色保留給 sidebar active 維持「sidebar 是品牌區、top bar 是資訊列」分工。
+**理由**：sidebar 已選 slate，top bar 仍 gray 會產生兩種近似但不同的灰相鄰；藍色保留給 sidebar active 維持「sidebar 是品牌區、top bar 是資訊列」分工。
 
 ## Risks / Trade-offs
 
