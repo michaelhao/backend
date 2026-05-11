@@ -9,12 +9,11 @@ use Illuminate\Database\Eloquent\Collection;
 
 class DashboardRepository
 {
-    // TODO: change-app-timezone-to-taipei 落地後可改用 today() / now()，移除 'Asia/Taipei' 參數
     private function todayRange(): array
     {
         return [
-            Carbon::now('Asia/Taipei')->startOfDay(),
-            Carbon::now('Asia/Taipei')->endOfDay(),
+            Carbon::now()->startOfDay(),
+            Carbon::now()->endOfDay(),
         ];
     }
 
@@ -42,7 +41,7 @@ class DashboardRepository
 
     public function getMyExpiringShops(int $userId): Collection
     {
-        $now = Carbon::now('Asia/Taipei');
+        $now = Carbon::now();
 
         return Shop::query()
             ->where('sales_id', $userId)

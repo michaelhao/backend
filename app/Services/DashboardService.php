@@ -76,7 +76,7 @@ class DashboardService
 
     private function daysToExpire(Carbon $expiredAt): int
     {
-        return (int) Carbon::today('Asia/Taipei')
+        return (int) Carbon::today()
             ->diffInDays(Carbon::parse($expiredAt->toDateString()));
     }
 
