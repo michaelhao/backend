@@ -65,15 +65,15 @@
 
 ## 9. 目視驗證
 
-- [ ] 9.1 開啟 `/admin/addons/create`，focus 各文字欄位與 select，確認文字與藍色邊框有清楚間距
-- [ ] 9.2 開啟 `/admin/conferences/create`，重複 9.1 驗證
-- [ ] 9.3 開啟 `/admin/users/create`、`/admin/grades/create`、`/admin/roles/create`，重複 9.1 驗證
-- [ ] 9.4 開啟 `/admin/shops/{shop}/edit`，重複 9.1 驗證
-- [ ] 9.5 開啟 `/admin/bills/create`，重複 9.1 驗證
-- [ ] 9.6 開啟 `/admin/addons`、`/admin/conferences`、`/admin/bills`、`/admin/shops` 的 filter 列驗證寬度未被拉成 `w-full`
-- [ ] 9.7 開啟 `/login`、`/forgot-password`、`/reset-password` 驗證
-- [ ] 9.8 開啟含 `<x-searchable-select>` 的頁面驗證搜尋 input 視覺對齊
-- [ ] 9.9 比對驗證後欄位視覺與 `<x-password-input>` 的呼吸感一致
+- [x] 9.1 開啟 `/admin/addons/create`，focus 各文字欄位與 select，確認文字與藍色邊框有清楚間距
+- [x] 9.2 開啟 `/admin/conferences/create`，重複 9.1 驗證
+- [x] 9.3 開啟 `/admin/users/create`、`/admin/grades/create`、`/admin/roles/create`，重複 9.1 驗證
+- [x] 9.4 開啟 `/admin/shops/{shop}/edit`，重複 9.1 驗證
+- [x] 9.5 開啟 `/admin/bills/create`，重複 9.1 驗證
+- [x] 9.6 開啟 `/admin/addons`、`/admin/conferences`、`/admin/bills`、`/admin/shops` 的 filter 列驗證寬度未被拉成 `w-full`
+- [x] 9.7 開啟 `/login`、`/forgot-password`、`/reset-password` 驗證
+- [x] 9.8 開啟含 `<x-searchable-select>` 的頁面驗證搜尋 input 視覺對齊
+- [x] 9.9 比對驗證後欄位視覺與 `<x-password-input>` 的呼吸感一致
 
 ## 10. 自動化測試
 
