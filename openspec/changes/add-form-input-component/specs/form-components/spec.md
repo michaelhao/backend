@@ -68,7 +68,8 @@
 
 元件 SHALL：
 
-- 接受 props：`name`（必填）、`id`（選填，預設等於 `name`）。
+- 接受 props：`name`（必填，由 caller 傳入）、`id`（選填，預設等於 `name`）。
+- 元件實作對 null 做防禦性處理：當 `name` 為 `null` 時 **NOT** 輸出 `name` 屬性；當效力 id（`$id ?? $name`）為 `null` 時 **NOT** 輸出 `id` 屬性。此防禦不改變 caller 契約 —— 常規 select **SHALL** 傳 `name`，與 form-input 區隔（form-input 因 wizard id-only 場景才額外把 `name` 列為選填）。
 - 透過 `$attributes->merge(['class' => 'form-control'])` 套用基底樣式。
 - 為純 slot wrapper：渲染 `<select ...>{{ $slot }}</select>`，由 caller 在 slot 內自行寫 `<option>` 與 `selected` 判斷。
 - 透過 attribute bag 透傳任意 HTML 屬性。

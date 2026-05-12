@@ -1,11 +1,15 @@
 @props([
-    'name',
+    'name' => null,
     'id' => null,
 ])
 
+@php
+    $resolvedId = $id ?? $name;
+@endphp
+
 <select
-    name="{{ $name }}"
-    id="{{ $id ?? $name }}"
+    @if (! is_null($name)) name="{{ $name }}" @endif
+    @if (! is_null($resolvedId)) id="{{ $resolvedId }}" @endif
     {{ $attributes->merge(['class' => 'form-control']) }}>
     {{ $slot }}
 </select>
