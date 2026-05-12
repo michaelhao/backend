@@ -16,7 +16,6 @@ class PermissionSeeder extends Seeder
             'label' => '儀表板',
             'actions' => [
                 'index' => '首頁',
-                'detail' => '詳細頁',
             ],
         ],
         'User' => [

@@ -8,13 +8,13 @@
     <title>@yield('page-title', 'Dashboard') - {{ config('app.name', 'Laravel') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/layouts/admin.js'])
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-slate-100 min-h-screen">
     <div class="flex min-h-screen">
         {{-- 側邊欄 --}}
-        <aside class="w-64 bg-gray-900 text-gray-100 flex flex-col flex-shrink-0">
+        <aside class="w-64 bg-white text-slate-700 border-r border-slate-200 flex flex-col flex-shrink-0">
             {{-- Logo / 站名 --}}
-            <div class="h-16 flex items-center px-6 border-b border-gray-800">
-                <span class="text-xl font-bold tracking-wide">{{ config('app.name', 'Laravel') }}</span>
+            <div class="h-16 flex items-center px-6">
+                <span class="text-xl font-bold tracking-wide text-blue-600">{{ config('app.name', 'Laravel') }}</span>
             </div>
 
             {{-- 導覽連結 --}}
@@ -22,62 +22,62 @@
                 <x-permission name="Dashboard.index">
                     <a href="{{ route('dashboard') }}"
                        class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
-                              {{ request()->routeIs('dashboard') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                              {{ request()->routeIs('dashboard') ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700' }}">
                         儀表板
                     </a>
                 </x-permission>
                 <x-permission name="Post.index">
                     <a href="#"
-                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
+                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors">
                         文章管理
                     </a>
                 </x-permission>
                 <x-permission name="User.index">
                     <a href="{{ route('users.index') }}"
                        class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
-                              {{ request()->routeIs('users.*') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                              {{ request()->routeIs('users.*') ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700' }}">
                         使用者管理
                     </a>
                 </x-permission>
                 <x-permission name="Role.index">
                     <a href="{{ route('roles.index') }}"
                        class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
-                              {{ request()->routeIs('roles.*') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                              {{ request()->routeIs('roles.*') ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700' }}">
                         角色管理
                     </a>
                 </x-permission>
                 <x-permission name="Grade.index">
                     <a href="{{ route('grades.index') }}"
                        class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
-                              {{ request()->routeIs('grades.*') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                              {{ request()->routeIs('grades.*') ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700' }}">
                         版本管理
                     </a>
                 </x-permission>
                 <x-permission name="Shop.index">
                     <a href="{{ route('shops.index') }}"
                        class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
-                              {{ request()->routeIs('shops.*') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                              {{ request()->routeIs('shops.*') ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700' }}">
                         商店管理
                     </a>
                 </x-permission>
                 <x-permission name="Addon.index">
                     <a href="{{ route('addons.index') }}"
                        class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
-                              {{ request()->routeIs('addons.*') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                              {{ request()->routeIs('addons.*') ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700' }}">
                         加購功能管理
                     </a>
                 </x-permission>
                 <x-permission name="Bill.index">
                     <a href="{{ route('bills.index') }}"
                        class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
-                              {{ request()->routeIs('bills.*') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                              {{ request()->routeIs('bills.*') ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700' }}">
                         帳務管理
                     </a>
                 </x-permission>
                 <x-permission name="Conference.index">
                     <a href="{{ route('conferences.index') }}"
                        class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
-                              {{ request()->routeIs('conferences.*') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                              {{ request()->routeIs('conferences.*') ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700' }}">
                         說明會管理
                     </a>
                 </x-permission>
@@ -87,16 +87,16 @@
         {{-- 右側主區域 --}}
         <div class="flex-1 flex flex-col">
             {{-- 頂部列 --}}
-            <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0">
-                <h1 class="text-lg font-semibold text-gray-800">@yield('page-title', 'Dashboard')</h1>
+            <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0">
+                <h1 class="text-lg font-semibold text-slate-800">@yield('page-title', 'Dashboard')</h1>
 
                 <div class="flex items-center gap-4">
-                    <span id="session-timer" class="text-sm text-gray-400 font-mono" title="Session 剩餘時間"></span>
-                    <span class="text-sm text-gray-600">{{ Auth::user()->name }}</span>
+                    <span id="session-timer" class="text-sm text-slate-400 font-mono" title="Session 剩餘時間"></span>
+                    <span class="text-sm text-slate-600">{{ Auth::user()->name }}</span>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button type="submit"
-                                class="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+                                class="text-sm text-slate-500 hover:text-slate-700 transition-colors">
                             登出
                         </button>
                     </form>
