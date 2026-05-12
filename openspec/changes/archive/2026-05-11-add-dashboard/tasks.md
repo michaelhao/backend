@@ -155,5 +155,5 @@
 
 - [x] 7.1 Docker 內執行 `docker compose exec backend-api vendor/bin/pint --dirty --format agent` 通過
 - [x] 7.2 執行 `docker compose exec backend-api openspec validate add-dashboard --strict` 通過
-- [ ] 7.3 手動驗證 `/`：以擁有 / 不擁有 `Shop.update` 兩個角色登入，確認 row 為 `<a>` / `<span>`；點開展開／收起；切到其他頁面正常
-- [ ] 7.4 OpenSpec archive：`openspec archive add-dashboard`（待 user 確認後）
+- [x] 7.3 手動驗證 `/`：以擁有 / 不擁有 `Shop.update` 兩個角色登入，確認 row 為 `<a>` / `<span>`；點開展開／收起；切到其他頁面正常
+- [x] 7.4 OpenSpec archive：`openspec archive add-dashboard`
