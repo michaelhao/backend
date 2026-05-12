@@ -6,8 +6,7 @@
 
     <div>
         <label for="name" class="block text-sm font-medium text-gray-700 mb-1">名稱</label>
-        <input type="text" name="name" id="name" value="{{ old('name', $user->name ?? '') }}"
-               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+        <x-form-input name="name" :value="old('name', $user->name ?? '')" class="w-full" />
         @error('name')
             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
         @enderror
@@ -15,8 +14,7 @@
 
     <div>
         <label for="email" class="block text-sm font-medium text-gray-700 mb-1">電子郵件</label>
-        <input type="email" name="email" id="email" value="{{ old('email', $user->email ?? '') }}"
-               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+        <x-form-input type="email" name="email" :value="old('email', $user->email ?? '')" class="w-full" />
         @error('email')
             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
         @enderror
@@ -34,15 +32,14 @@
 
     <div>
         <label for="role_id" class="block text-sm font-medium text-gray-700 mb-1">角色</label>
-        <select name="role_id" id="role_id"
-                class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+        <x-form-select name="role_id" class="w-full">
             <option value="">請選擇角色</option>
             @foreach ($roles as $role)
                 <option value="{{ $role->id }}" {{ old('role_id', $user->role_id ?? '') == $role->id ? 'selected' : '' }}>
                     {{ $role->name }}
                 </option>
             @endforeach
-        </select>
+        </x-form-select>
         @error('role_id')
             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
         @enderror

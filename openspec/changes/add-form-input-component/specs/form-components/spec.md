@@ -27,12 +27,15 @@
 
 元件 SHALL：
 
-- 接受 props：`name`（必填）、`id`（選填，預設等於 `name`）、`type`（選填，預設 `text`）、`value`（選填，預設 `null`）。
+- 接受 props：`name`（選填，預設 `null`）、`id`（選填，預設等於 `name`）、`type`（選填，預設 `text`）、`value`（選填，預設 `null`）。
 - 透過 `$attributes->merge(['class' => 'form-control'])` 套用基底樣式。
 - 永遠輸出 `value="{{ $value }}"` 屬性（不對 null 做特殊處理）。
+- 當 `name` 為 `null` 時 **NOT** 輸出 `name` 屬性；當效力 id（`$id ?? $name`）為 `null` 時 **NOT** 輸出 `id` 屬性。
 - 透過 attribute bag 透傳任意 HTML 屬性（如 `placeholder`、`required`、`min`、`step`、`pattern`、`autofocus`、`autocomplete` 等）。
 
-元件支援的 type 範圍 SHALL 為：`text` / `number` / `email` / `url` / `tel` / `date` / `search`。
+`name` 之所以為選填，是因為 wizard / JS 驅動的 UI（如 `bills/create.blade.php` 的 shop-keyword）只透過 `id` 取值，無需 HTTP form name。常規表單欄位仍 SHALL 傳 `name`。
+
+元件支援的 type 範圍 SHALL 為：`text` / `number` / `email` / `url` / `tel` / `date` / `datetime-local` / `search`。
 
 元件 **NOT** 用於 `type="password"` 場景；password 場景一律使用 `<x-password-input>`。`<x-form-input>` 與 `<x-password-input>` 職責分明、不重疊。
 
@@ -102,7 +105,7 @@
 
 ### Requirement: 既有文字 input 與 select 全面遷移至元件
 
-下列 Blade 檔的原生 `<input>`（type 為 text / number / email / url / tel / date / search）與 `<select>` **SHALL** 改用 `<x-form-input>` / `<x-form-select>` 元件，不再直接寫原生標籤配 `border-gray-300 ... focus:border-blue-500` 字串樣式：
+下列 Blade 檔的原生 `<input>`（type 為 text / number / email / url / tel / date / datetime-local / search）與 `<select>` **SHALL** 改用 `<x-form-input>` / `<x-form-select>` 元件，不再直接寫原生標籤配 `border-gray-300 ... focus:border-blue-500` 字串樣式（`bills/create.blade.php` 為部分遷移例外，見下說明）：
 
 - `resources/views/admin/addons/_form.blade.php`
 - `resources/views/admin/conferences/_form.blade.php`
@@ -120,6 +123,14 @@
 - `resources/views/auth/reset-password.blade.php`
 
 下列元素 **SHALL NOT** 被本次遷移觸及：`<textarea>`、`<input type="file">`、`<input type="checkbox">`、`<input type="radio">`。
+
+`bills/create.blade.php` 為步驟式 wizard UI，多數 `<input>` / `<select>` 為 JS 驅動且使用與其他標準檔不同的視覺樣式（顯式 border 寬度、無 shadow、focus:ring-1、outline-none、readonly/disabled 帶自訂 bg）。本次僅遷移該檔的 `shop-keyword` 文字 input（最接近標準樣式），其餘 8 個 wizard 元素（grade-select / grade-start-at / grade-months / grade-amount / grade-expired-at / discount-type / discount-amount / payment-method-select）**SHALL** 維持原樣，留待後續另立 change 處理。
+
+`shops/edit.blade.php` 主要表單欄位（name / email / grade_id / status / admin_name / admin-email-input）使用「條件式 error 紅框」UX（`border @error(...) border-red-400 @else border-gray-300 @enderror`），與標準 13 檔不同。遷移到 `.form-control` 會損失此 UX。本次僅遷移該檔的 `cert-business-number`（modal 裡的單純 input、樣式較接近標準），其餘主表單欄位 **SHALL** 維持原樣，留待後續另立 change 處理錯誤態樣式統一。
+
+`bills/index.blade.php` 整檔 **SHALL NOT** 被遷移：filter 列使用緊湊 `px-3 py-1.5` 樣式（與 `.form-control` 的 `px-3 py-2` 不同），是刻意的緊湊 filter chrome 設計；該檔 modal 中的 3 個 input/select 為 id-only 且使用相同緊湊樣式。整體留待後續另立 change 處理。
+
+各 index 頁面的 `per-page-select` 元素使用 `px-2 py-1` 更緊湊的下拉樣式（單行小數字選擇器），**SHALL NOT** 被遷移，維持原樣。
 
 寬度規則：form 欄位 caller SHALL 傳 `class="w-full"`，filter 列 caller SHALL 傳對應的窄寬 class（如 `class="w-48"`）。
 

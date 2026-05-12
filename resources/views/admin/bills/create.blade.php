@@ -15,8 +15,7 @@
             <p class="text-lg text-gray-700 mb-1">Hi！{{ Auth::user()->name }}</p>
             <p class="text-gray-500 mb-4">今天你要幫哪間商店處理帳務呢？</p>
             <div class="flex gap-2">
-                <input id="shop-keyword" type="text" placeholder="輸入商店 ID、代碼或名稱關鍵字"
-                       class="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none">
+                <x-form-input id="shop-keyword" placeholder="輸入商店 ID、代碼或名稱關鍵字" class="flex-1" />
                 <button id="shop-search-btn"
                         class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
                     搜尋

@@ -6,8 +6,7 @@
 
     <div>
         <label for="name" class="block text-sm font-medium text-gray-700 mb-1">說明會名稱</label>
-        <input type="text" name="name" id="name" value="{{ old('name', $conference->name ?? '') }}" maxlength="100"
-               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+        <x-form-input name="name" :value="old('name', $conference->name ?? '')" maxlength="100" class="w-full" />
         @error('name')
             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
         @enderror
@@ -15,15 +14,14 @@
 
     <div>
         <label for="status" class="block text-sm font-medium text-gray-700 mb-1">狀態</label>
-        <select name="status" id="status"
-                class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+        <x-form-select name="status" class="w-full">
             @foreach ($statuses as $status)
                 <option value="{{ $status->value }}"
                     {{ old('status', $conference?->status->value ?? \App\Enums\ConferenceStatus::Active->value) == $status->value ? 'selected' : '' }}>
                     {{ $status === \App\Enums\ConferenceStatus::Active ? '啟用' : '停用' }}
                 </option>
             @endforeach
-        </select>
+        </x-form-select>
         @error('status')
             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
         @enderror
@@ -34,9 +32,9 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
                 <label for="register_started_at" class="block text-sm font-medium text-gray-700 mb-1">報名開始</label>
-                <input type="datetime-local" name="register_started_at" id="register_started_at"
-                       value="{{ old('register_started_at', isset($conference) ? $conference->register_started_at->format('Y-m-d\TH:i') : '') }}"
-                       class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                <x-form-input type="datetime-local" name="register_started_at"
+                              :value="old('register_started_at', isset($conference) ? $conference->register_started_at->format('Y-m-d\TH:i') : '')"
+                              class="w-full" />
                 @error('register_started_at')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
@@ -44,9 +42,9 @@
 
             <div>
                 <label for="register_ended_at" class="block text-sm font-medium text-gray-700 mb-1">報名截止</label>
-                <input type="datetime-local" name="register_ended_at" id="register_ended_at"
-                       value="{{ old('register_ended_at', isset($conference) ? $conference->register_ended_at->format('Y-m-d\TH:i') : '') }}"
-                       class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                <x-form-input type="datetime-local" name="register_ended_at"
+                              :value="old('register_ended_at', isset($conference) ? $conference->register_ended_at->format('Y-m-d\TH:i') : '')"
+                              class="w-full" />
                 @error('register_ended_at')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
@@ -59,9 +57,9 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
                 <label for="started_at" class="block text-sm font-medium text-gray-700 mb-1">活動開始</label>
-                <input type="datetime-local" name="started_at" id="started_at"
-                       value="{{ old('started_at', isset($conference) ? $conference->started_at->format('Y-m-d\TH:i') : '') }}"
-                       class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                <x-form-input type="datetime-local" name="started_at"
+                              :value="old('started_at', isset($conference) ? $conference->started_at->format('Y-m-d\TH:i') : '')"
+                              class="w-full" />
                 @error('started_at')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
@@ -69,9 +67,9 @@
 
             <div>
                 <label for="ended_at" class="block text-sm font-medium text-gray-700 mb-1">活動結束</label>
-                <input type="datetime-local" name="ended_at" id="ended_at"
-                       value="{{ old('ended_at', isset($conference) ? $conference->ended_at->format('Y-m-d\TH:i') : '') }}"
-                       class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                <x-form-input type="datetime-local" name="ended_at"
+                              :value="old('ended_at', isset($conference) ? $conference->ended_at->format('Y-m-d\TH:i') : '')"
+                              class="w-full" />
                 @error('ended_at')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror

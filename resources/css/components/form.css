@@ -1,0 +1,6 @@
+@layer components {
+    .form-control {
+        @apply rounded-lg border-gray-300 shadow-sm px-3 py-2
+               focus:border-blue-500 focus:ring-blue-500 text-sm;
+    }
+}
