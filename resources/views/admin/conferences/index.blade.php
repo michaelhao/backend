@@ -28,18 +28,15 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
                 <label for="keyword" class="block text-xs font-medium text-gray-600 mb-1">關鍵字（名稱）</label>
-                <input id="keyword" type="text" name="keyword" value="{{ $filters['keyword'] ?? '' }}"
-                       placeholder="搜尋說明會名稱"
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+                <x-form-input name="keyword" :value="$filters['keyword'] ?? ''" placeholder="搜尋說明會名稱" class="w-full" />
             </div>
             <div>
                 <label for="status" class="block text-xs font-medium text-gray-600 mb-1">狀態</label>
-                <select id="status" name="status"
-                        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+                <x-form-select name="status" class="w-full">
                     <option value="">全部</option>
                     <option value="1" {{ ($filters['status'] ?? '') === '1' ? 'selected' : '' }}>啟用</option>
                     <option value="0" {{ ($filters['status'] ?? '') === '0' ? 'selected' : '' }}>停用</option>
-                </select>
+                </x-form-select>
             </div>
         </div>
         <div class="mt-4 flex items-center gap-3">

@@ -6,8 +6,7 @@
 
     <div>
         <label for="code" class="block text-sm font-medium text-gray-700 mb-1">代碼</label>
-        <input type="text" name="code" id="code" value="{{ old('code', $grade->code ?? '') }}"
-               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+        <x-form-input name="code" :value="old('code', $grade->code ?? '')" class="w-full" />
         @error('code')
             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
         @enderror
@@ -15,8 +14,7 @@
 
     <div>
         <label for="name" class="block text-sm font-medium text-gray-700 mb-1">名稱</label>
-        <input type="text" name="name" id="name" value="{{ old('name', $grade->name ?? '') }}"
-               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+        <x-form-input name="name" :value="old('name', $grade->name ?? '')" class="w-full" />
         @error('name')
             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
         @enderror
@@ -24,8 +22,7 @@
 
     <div>
         <label for="price" class="block text-sm font-medium text-gray-700 mb-1">價格</label>
-        <input type="number" name="price" id="price" value="{{ old('price', $grade->price ?? '') }}" min="2"
-               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+        <x-form-input type="number" name="price" :value="old('price', $grade->price ?? '')" min="2" class="w-full" />
         @error('price')
             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
         @enderror
@@ -45,10 +42,10 @@
 
     <div>
         <label for="weight" class="block text-sm font-medium text-gray-700 mb-1">版本權重</label>
-        <input type="number" name="weight" id="weight"
-               value="{{ old('weight', $grade->weight ?? '') }}"
-               data-exclude-id="{{ $grade->id ?? '' }}"
-               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+        <x-form-input type="number" name="weight"
+                      :value="old('weight', $grade->weight ?? '')"
+                      data-exclude-id="{{ $grade->id ?? '' }}"
+                      class="w-full" />
         <div id="weight-error" class="mt-1 text-sm text-red-600 hidden"></div>
         @error('weight')
             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -57,11 +54,10 @@
 
     <div>
         <label for="status" class="block text-sm font-medium text-gray-700 mb-1">狀態</label>
-        <select name="status" id="status"
-                class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+        <x-form-select name="status" class="w-full">
             <option value="1" {{ old('status', $grade?->status->value ?? 1) == 1 ? 'selected' : '' }}>啟用</option>
             <option value="0" {{ old('status', $grade?->status->value ?? 1) == 0 ? 'selected' : '' }}>關閉</option>
-        </select>
+        </x-form-select>
         @error('status')
             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
         @enderror

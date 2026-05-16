@@ -20,7 +20,7 @@
            value="{{ $selectedLabel }}"
            placeholder="{{ $placeholder }}"
            autocomplete="off"
-           class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm ss-input">
+           class="form-control w-full ss-input">
 
     <div class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden ss-dropdown">
         @foreach ($permissions as $module => $modulePermissions)

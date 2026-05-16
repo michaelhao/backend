@@ -6,8 +6,7 @@
 
     <div>
         <label for="name" class="block text-sm font-medium text-gray-700 mb-1">角色名稱</label>
-        <input type="text" name="name" id="name" value="{{ old('name', $role->name ?? '') }}"
-               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+        <x-form-input name="name" :value="old('name', $role->name ?? '')" class="w-full" />
         @error('name')
             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
         @enderror
@@ -15,8 +14,7 @@
 
     <div>
         <label for="description" class="block text-sm font-medium text-gray-700 mb-1">說明</label>
-        <input type="text" name="description" id="description" value="{{ old('description', $role->description ?? '') }}"
-               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+        <x-form-input name="description" :value="old('description', $role->description ?? '')" class="w-full" />
         @error('description')
             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
         @enderror

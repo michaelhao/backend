@@ -8,8 +8,7 @@
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div>
             <label for="name" class="block text-sm font-medium text-gray-700 mb-1">功能名稱</label>
-            <input type="text" name="name" id="name" value="{{ old('name', $addon->name ?? '') }}"
-                   class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+            <x-form-input name="name" :value="old('name', $addon->name ?? '')" class="w-full" />
             @error('name')
                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
             @enderror
@@ -17,15 +16,14 @@
 
         <div>
             <label for="type" class="block text-sm font-medium text-gray-700 mb-1">類型</label>
-            <select name="type" id="type"
-                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+            <x-form-select name="type" class="w-full">
                 @foreach ($types as $type)
                     <option value="{{ $type->value }}"
                         {{ old('type', $addon?->type->value ?? '') == $type->value ? 'selected' : '' }}>
                         {{ $type === \App\Enums\AddonType::Feature ? '功能' : '配額' }}
                     </option>
                 @endforeach
-            </select>
+            </x-form-select>
             @error('type')
                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
             @enderror
@@ -33,8 +31,7 @@
 
         <div>
             <label for="price" class="block text-sm font-medium text-gray-700 mb-1">售價</label>
-            <input type="number" name="price" id="price" value="{{ old('price', $addon->price ?? '') }}" min="0"
-                   class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+            <x-form-input type="number" name="price" :value="old('price', $addon->price ?? '')" min="0" class="w-full" />
             @error('price')
                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
             @enderror
@@ -42,8 +39,7 @@
 
         <div>
             <label for="unit" class="block text-sm font-medium text-gray-700 mb-1">單位 <span class="text-gray-400 text-xs">（選填）</span></label>
-            <input type="text" name="unit" id="unit" value="{{ old('unit', $addon->unit ?? '') }}"
-                   class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+            <x-form-input name="unit" :value="old('unit', $addon->unit ?? '')" class="w-full" />
             @error('unit')
                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
             @enderror
@@ -51,15 +47,14 @@
 
         <div>
             <label for="status" class="block text-sm font-medium text-gray-700 mb-1">狀態</label>
-            <select name="status" id="status"
-                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+            <x-form-select name="status" class="w-full">
                 @foreach ($statuses as $status)
                     <option value="{{ $status->value }}"
                         {{ old('status', $addon?->status->value ?? \App\Enums\AddonStatus::Active->value) == $status->value ? 'selected' : '' }}>
                         {{ $status === \App\Enums\AddonStatus::Active ? '上架' : '下架' }}
                     </option>
                 @endforeach
-            </select>
+            </x-form-select>
             @error('status')
                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
             @enderror

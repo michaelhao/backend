@@ -191,9 +191,9 @@
 
             <div class="mb-4">
                 <label for="cert-business-number" class="block text-sm font-medium text-gray-700 mb-1">統一編號（8 位數字）</label>
-                <input id="cert-business-number" type="text" maxlength="8" inputmode="numeric" pattern="\d{8}"
-                       placeholder="請輸入統一編號"
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono focus:border-blue-500 focus:outline-none">
+                <x-form-input id="cert-business-number" maxlength="8" inputmode="numeric" pattern="\d{8}"
+                              placeholder="請輸入統一編號"
+                              class="w-full font-mono" />
                 <p id="cert-input-error" class="mt-1 text-xs text-red-600 hidden">請輸入 8 位數字</p>
             </div>
 

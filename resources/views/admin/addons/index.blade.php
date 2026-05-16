@@ -28,39 +28,34 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
                 <label for="keyword" class="block text-xs font-medium text-gray-600 mb-1">關鍵字（名稱）</label>
-                <input id="keyword" type="text" name="keyword" value="{{ $filters['keyword'] ?? '' }}"
-                       placeholder="搜尋功能名稱"
-                       class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+                <x-form-input name="keyword" :value="$filters['keyword'] ?? ''" placeholder="搜尋功能名稱" class="w-full" />
             </div>
             <div>
                 <label for="type" class="block text-xs font-medium text-gray-600 mb-1">類型</label>
-                <select id="type" name="type"
-                        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+                <x-form-select name="type" class="w-full">
                     <option value="">全部</option>
                     <option value="1" {{ ($filters['type'] ?? '') === '1' ? 'selected' : '' }}>功能</option>
                     <option value="2" {{ ($filters['type'] ?? '') === '2' ? 'selected' : '' }}>配額</option>
-                </select>
+                </x-form-select>
             </div>
             <div>
                 <label for="status" class="block text-xs font-medium text-gray-600 mb-1">狀態</label>
-                <select id="status" name="status"
-                        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+                <x-form-select name="status" class="w-full">
                     <option value="">全部</option>
                     <option value="1" {{ ($filters['status'] ?? '') === '1' ? 'selected' : '' }}>上架</option>
                     <option value="0" {{ ($filters['status'] ?? '') === '0' ? 'selected' : '' }}>下架</option>
-                </select>
+                </x-form-select>
             </div>
             <div>
                 <label for="grade_id" class="block text-xs font-medium text-gray-600 mb-1">所屬版本</label>
-                <select id="grade_id" name="grade_id"
-                        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+                <x-form-select name="grade_id" class="w-full">
                     <option value="">全部</option>
                     @foreach ($grades as $grade)
                         <option value="{{ $grade->id }}" {{ ($filters['grade_id'] ?? '') == $grade->id ? 'selected' : '' }}>
                             {{ $grade->name }}
                         </option>
                     @endforeach
-                </select>
+                </x-form-select>
             </div>
         </div>
         <div class="mt-4 flex items-center gap-3">

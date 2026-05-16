@@ -1,0 +1,80 @@
+## 1. CSS shared base
+
+- [x] 1.1 新增 `resources/css/components/form.css`，內含：
+  ```css
+  @layer components {
+      .form-control {
+          @apply rounded-lg border-gray-300 shadow-sm px-3 py-2
+                 focus:border-blue-500 focus:ring-blue-500 text-sm;
+      }
+  }
+  ```
+- [x] 1.2 修改 `resources/css/app.css`，在 `@import 'tailwindcss';` 後加入 `@import './components/form.css';`
+
+## 2. 建立新元件
+
+- [x] 2.1 建立 `resources/views/components/form-input.blade.php`
+  - Props: `name`（必填）、`id`（預設 `name`）、`type`（預設 `text`）、`value`（預設 `null`）
+  - 使用 `$attributes->merge(['class' => 'form-control'])`
+  - 永遠輸出 `value="{{ $value }}"`
+- [x] 2.2 建立 `resources/views/components/form-select.blade.php`
+  - Props: `name`（必填）、`id`（預設 `name`）
+  - 使用 `$attributes->merge(['class' => 'form-control'])`
+  - 純 slot wrapper：`<select ...>{{ $slot }}</select>`
+- [x] 2.3 用 `php artisan view:clear` 後快速驗證元件渲染（class、id、type、value 預期值）
+
+## 3. Refactor 既有元件
+
+- [x] 3.1 修改 `resources/views/components/password-input.blade.php`：預設 class 改為 `form-control w-full pr-10`，移除其他重複字串
+- [x] 3.2 修改 `resources/views/components/searchable-select.blade.php`：搜尋 `<input>` class 改為 `form-control w-full ss-input`（保留 `.ss-input` 給 JS 綁定）
+- [x] 3.3 grep 驗證 `resources/views/components/` 內已無 `border-gray-300` 殘留
+
+## 4. 遷移 admin 表單（_form / create / edit）
+
+- [x] 4.1 遷移 `resources/views/admin/addons/_form.blade.php` 的文字 input 與 select
+- [x] 4.2 遷移 `resources/views/admin/conferences/_form.blade.php`
+- [x] 4.3 遷移 `resources/views/admin/users/_form.blade.php`
+- [x] 4.4 遷移 `resources/views/admin/grades/_form.blade.php`
+- [x] 4.5 遷移 `resources/views/admin/roles/_form.blade.php`
+- [x] 4.6 遷移 `resources/views/admin/bills/create.blade.php`（部分遷移：只動 shop-keyword input，其餘 wizard 元素留待後續 change）
+- [x] 4.7 遷移 `resources/views/admin/shops/edit.blade.php`（部分遷移：只動 cert-business-number，主表單欄位因 error 紅框 UX 留待後續 change）
+
+## 5. 遷移 admin index 頁 filter 列
+
+- [x] 5.1 遷移 `resources/views/admin/addons/index.blade.php` 的 filter input / select（per-page-select 保留原 `px-2 py-1` 緊湊樣式）
+- [x] 5.2 遷移 `resources/views/admin/conferences/index.blade.php`（per-page-select 保留原 `px-2 py-1` 緊湊樣式）
+- [x] 5.3 遷移 `resources/views/admin/bills/index.blade.php`（跳過整檔：filter 列為刻意緊湊 `py-1.5` 設計、modal 為 id-only 同樣緊湊）
+- [x] 5.4 遷移 `resources/views/admin/shops/index.blade.php`（per-page-select 保留原 `px-2 py-1` 緊湊樣式）
+
+## 6. 遷移 auth 頁面
+
+- [x] 6.1 遷移 `resources/views/auth/login.blade.php`（不含 password — 維持 `<x-password-input>`）
+- [x] 6.2 遷移 `resources/views/auth/forgot-password.blade.php`
+- [x] 6.3 遷移 `resources/views/auth/reset-password.blade.php`（不含 password — 維持 `<x-password-input>`）
+
+## 7. 範圍驗收
+
+- [x] 7.1 `grep -rln 'border-gray-300' resources/views --exclude-dir=components` 命中皆為合法 skip：per-page-select / bills/index 緊湊 filter / bills/create wizard / shops/edit 主表單（紅框 UX）/ checkbox / image wrapper / welcome.blade.php（非範圍）
+- [x] 7.2 `grep -rln 'border-gray-300' resources/views/components` 命中 0（password-input / searchable-select 已改吃 `.form-control`）
+- [x] 7.3 確認所有 `<input type="file">`、`<input type="checkbox">`、`<input type="radio">` 維持原本寫法
+
+## 8. 格式化與前端 build
+
+- [x] 8.1 若有 .php 變更，執行 `vendor/bin/pint --dirty --format agent`（本次 0 個 .php 變更，Pint 跳過）
+- [x] 8.2 執行 `npm run build`（或請使用者執行 `npm run dev` / `composer run dev`）
+
+## 9. 目視驗證
+
+- [x] 9.1 開啟 `/admin/addons/create`，focus 各文字欄位與 select，確認文字與藍色邊框有清楚間距
+- [x] 9.2 開啟 `/admin/conferences/create`，重複 9.1 驗證
+- [x] 9.3 開啟 `/admin/users/create`、`/admin/grades/create`、`/admin/roles/create`，重複 9.1 驗證
+- [x] 9.4 開啟 `/admin/shops/{shop}/edit`，重複 9.1 驗證
+- [x] 9.5 開啟 `/admin/bills/create`，重複 9.1 驗證
+- [x] 9.6 開啟 `/admin/addons`、`/admin/conferences`、`/admin/bills`、`/admin/shops` 的 filter 列驗證寬度未被拉成 `w-full`
+- [x] 9.7 開啟 `/login`、`/forgot-password`、`/reset-password` 驗證
+- [x] 9.8 開啟含 `<x-searchable-select>` 的頁面驗證搜尋 input 視覺對齊
+- [x] 9.9 比對驗證後欄位視覺與 `<x-password-input>` 的呼吸感一致
+
+## 10. 自動化測試
+
+- [x] 10.1 執行 `docker compose exec backend-api php artisan test --compact` 確認既有測試全綠（196 passed / 420 assertions）

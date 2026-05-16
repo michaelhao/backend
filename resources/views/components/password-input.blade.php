@@ -14,7 +14,7 @@
         @if ($required) required @endif
         @if ($autofocus) autofocus @endif
         @if ($placeholder) placeholder="{{ $placeholder }}" @endif
-        {{ $attributes->merge(['class' => 'w-full border border-gray-300 rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500']) }}>
+        {{ $attributes->merge(['class' => 'form-control w-full pr-10']) }}>
 
     <button type="button" tabindex="-1"
             class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
