@@ -103,7 +103,7 @@ class AddonService
         return $addon;
     }
 
-    public function updateAddon(Addon $addon, array $data, ?UploadedFile $image): void
+    public function updateAddon(Addon $addon, array $data, ?UploadedFile $image, bool $removeImage = false): void
     {
         $gradeIds = $data['grade_ids'] ?? [];
         $addonData = array_diff_key($data, ['grade_ids' => null]);
@@ -111,7 +111,7 @@ class AddonService
         $oldImageUrl = null;
         $affectedGradeIds = [];
 
-        DB::transaction(function () use ($addon, $addonData, $gradeIds, $image, &$oldImageUrl, &$affectedGradeIds) {
+        DB::transaction(function () use ($addon, $addonData, $gradeIds, $image, $removeImage, &$oldImageUrl, &$affectedGradeIds) {
             $oldImageUrl = $addon->image?->image_url;
 
             $this->addonRepository->update($addon, $addonData);
@@ -124,9 +124,11 @@ class AddonService
                 $this->addonRepository->upsertImage($addon, $newUrl);
 
                 if ($oldImageUrl) {
-                    $oldPath = $oldImageUrl;
-                    DB::afterCommit(fn () => Storage::disk('public')->delete($oldPath));
+                    DB::afterCommit(fn () => Storage::disk('public')->delete($oldImageUrl));
                 }
+            } elseif ($removeImage && $oldImageUrl) {
+                $this->addonRepository->deleteImage($addon);
+                DB::afterCommit(fn () => Storage::disk('public')->delete($oldImageUrl));
             }
 
             if (! empty($affectedGradeIds)) {

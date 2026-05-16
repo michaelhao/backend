@@ -188,6 +188,7 @@ Schedule::command('queue:prune-batches --hours=48')->daily();
 * **儲存位置**：`Storage::disk('public')` → 實際路徑 `storage/app/public/addons/{filename}`。使用 `Storage::disk('public')->putFileAs('addons', $image, $filename)` 串流寫入。
 * **單圖邏輯**：每個 Addon 僅對應一筆 `addons_image` 紀錄。
 * **更新順序**：先存新圖，成功後再刪舊圖（避免存檔失敗造成無圖狀態）。
+* **刪除既有圖片**：編輯頁支援單獨刪除圖片（送出 `remove_image=1`）。`addons_image` row 於 Transaction 內 DELETE，實體檔案於 `DB::afterCommit` 透過 `Storage::disk('public')->delete()` 移除。若同時上傳新圖，以新圖為主、忽略 `remove_image`。
 * **URL 生成**：Blade 使用 `asset('storage/' . $image_url)`，不使用 `Storage::disk('public')->url()`。後者會硬編碼 `APP_URL`，在 Docker 環境中可能與瀏覽器存取的 host 不符導致破圖。
 * **Symlink**：部署後需執行 `php artisan storage:link`，確保 `public/storage` → `storage/app/public`。
 

@@ -112,16 +112,29 @@
         </div>
 
         <input type="file" name="image" id="image" accept=".jpg,.jpeg,.png" class="hidden">
+        <input type="hidden" name="remove_image" id="remove_image" value="{{ old('remove_image', '0') }}">
 
-        <button type="button"
-                onclick="document.getElementById('image').click()"
-                class="mt-3 inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-            </svg>
-            選擇圖片
-        </button>
-        <span id="image-filename" class="ml-2 text-sm text-gray-500"></span>
+        <div class="mt-3 flex items-center gap-2">
+            <button type="button"
+                    onclick="document.getElementById('image').click()"
+                    class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                選擇圖片
+            </button>
+
+            <button type="button"
+                    id="image-remove-btn"
+                    class="inline-flex items-center gap-2 border border-red-500 text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors {{ isset($addon) && $addon?->image ? '' : 'hidden' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+                刪除圖片
+            </button>
+
+            <span id="image-filename" class="text-sm text-gray-500"></span>
+        </div>
 
         @error('image')
             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>

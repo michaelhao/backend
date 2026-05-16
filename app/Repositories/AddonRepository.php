@@ -70,4 +70,9 @@ class AddonRepository
             ['image_url' => $imageUrl],
         );
     }
+
+    public function deleteImage(Addon $addon): void
+    {
+        DB::table('addons_image')->where('addon_id', $addon->id)->delete();
+    }
 }
