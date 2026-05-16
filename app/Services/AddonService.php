@@ -7,6 +7,7 @@ use App\Enums\AddonSyncing;
 use App\Enums\AddonType;
 use App\Jobs\SyncShopAddonsForGrade;
 use App\Models\Addon;
+use App\Models\AddonImage;
 use App\Models\Grade;
 use App\Repositories\AddonRepository;
 use Illuminate\Bus\Batch;
@@ -103,7 +104,7 @@ class AddonService
         return $addon;
     }
 
-    public function updateAddon(Addon $addon, array $data, ?UploadedFile $image): void
+    public function updateAddon(Addon $addon, array $data, ?UploadedFile $image, bool $removeImage = false): void
     {
         $gradeIds = $data['grade_ids'] ?? [];
         $addonData = array_diff_key($data, ['grade_ids' => null]);
@@ -111,7 +112,7 @@ class AddonService
         $oldImageUrl = null;
         $affectedGradeIds = [];
 
-        DB::transaction(function () use ($addon, $addonData, $gradeIds, $image, &$oldImageUrl, &$affectedGradeIds) {
+        DB::transaction(function () use ($addon, $addonData, $gradeIds, $image, $removeImage, &$oldImageUrl, &$affectedGradeIds) {
             $oldImageUrl = $addon->image?->image_url;
 
             $this->addonRepository->update($addon, $addonData);
@@ -127,6 +128,10 @@ class AddonService
                     $oldPath = $oldImageUrl;
                     DB::afterCommit(fn () => Storage::disk('public')->delete($oldPath));
                 }
+            } elseif ($removeImage && $oldImageUrl) {
+                AddonImage::where('addon_id', $addon->id)->delete();
+                $oldPath = $oldImageUrl;
+                DB::afterCommit(fn () => Storage::disk('public')->delete($oldPath));
             }
 
             if (! empty($affectedGradeIds)) {

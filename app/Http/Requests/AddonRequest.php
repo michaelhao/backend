@@ -30,6 +30,7 @@ class AddonRequest extends FormRequest
             'grade_ids' => ['nullable', 'array'],
             'grade_ids.*' => ['integer', 'exists:grades,id', $this->gradeMustBeActiveUnlessAlreadyLinkedRule()],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
+            'remove_image' => ['nullable', 'boolean'],
         ];
     }
 

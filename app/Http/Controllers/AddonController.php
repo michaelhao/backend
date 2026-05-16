@@ -60,8 +60,9 @@ class AddonController extends Controller
 
         $this->addonService->updateAddon(
             $addon,
-            $request->safe()->except('image'),
+            $request->safe()->except(['image', 'remove_image']),
             $request->file('image'),
+            $request->boolean('remove_image'),
         );
 
         return redirect()->route('addons.index')->with('success', '附加功能已更新');

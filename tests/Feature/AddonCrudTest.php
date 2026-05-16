@@ -10,6 +10,7 @@ use App\Enums\ShopAddonSource;
 use App\Enums\ShopAddonStatus;
 use App\Jobs\SyncShopAddonsForGrade;
 use App\Models\Addon;
+use App\Models\AddonImage;
 use App\Models\Grade;
 use App\Models\Role;
 use App\Models\Shop;
@@ -286,6 +287,59 @@ class AddonCrudTest extends TestCase
         $response->assertSessionHas('success');
         $addon->refresh();
         $this->assertEquals('新名稱', $addon->name);
+    }
+
+    public function test_update_can_remove_existing_image(): void
+    {
+        Storage::fake('public');
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $addon = Addon::factory()->create();
+        $imagePath = "addons/{$addon->id}-img-existing.jpg";
+        Storage::disk('public')->put($imagePath, 'dummy');
+        AddonImage::create(['addon_id' => $addon->id, 'image_url' => $imagePath]);
+
+        $response = $this->put(route('addons.update', $addon), $this->validAddonData(['remove_image' => 1]));
+
+        $response->assertRedirect(route('addons.index'));
+        $this->assertDatabaseMissing('addons_image', ['addon_id' => $addon->id]);
+        Storage::disk('public')->assertMissing($imagePath);
+    }
+
+    public function test_update_with_new_image_overrides_remove_image(): void
+    {
+        Storage::fake('public');
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $addon = Addon::factory()->create();
+        $oldPath = "addons/{$addon->id}-img-old.jpg";
+        Storage::disk('public')->put($oldPath, 'dummy');
+        AddonImage::create(['addon_id' => $addon->id, 'image_url' => $oldPath]);
+
+        $jpegContent = base64_decode(
+            '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0a'.
+            'HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAAR'.
+            'CAABAAEDASIAAhEBAxEB/8QAFgABAQEAAAAAAAAAAAAAAAAABgQF/8QAIBAAAQQCAgMAAAAAAAAAAAAAAQIDBBExBSFB'.
+            'Yf/EABUBAQEAAAAAAAAAAAAAAAAAAAAB/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8Anr2xWXW7HF'.
+            'MsJkMpFqiB4sJiJeHxmCj2v5uqSaNrR//2Q=='
+        );
+        $tmpPath = sys_get_temp_dir().'/test_addon_'.uniqid().'.jpg';
+        file_put_contents($tmpPath, $jpegContent);
+        $file = new UploadedFile($tmpPath, 'new.jpg', 'image/jpeg', null, true);
+
+        $response = $this->put(route('addons.update', $addon), array_merge(
+            $this->validAddonData(['remove_image' => 1]),
+            ['image' => $file],
+        ));
+
+        @unlink($tmpPath);
+
+        $response->assertRedirect(route('addons.index'));
+        $this->assertDatabaseHas('addons_image', ['addon_id' => $addon->id]);
+        $image = AddonImage::where('addon_id', $addon->id)->firstOrFail();
+        $this->assertNotEquals($oldPath, $image->image_url);
     }
 
     public function test_update_with_changed_grade_ids_dispatches_sync_batch(): void
