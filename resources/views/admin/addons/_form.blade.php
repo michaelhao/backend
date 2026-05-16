@@ -112,7 +112,7 @@
         </div>
 
         <input type="file" name="image" id="image" accept=".jpg,.jpeg,.png" class="hidden">
-        <input type="hidden" name="remove_image" id="remove_image" value="0">
+        <input type="hidden" name="remove_image" id="remove_image" value="{{ old('remove_image', '0') }}">
 
         <div class="mt-3 flex items-center gap-2">
             <button type="button"

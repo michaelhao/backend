@@ -9,6 +9,15 @@
     if (!input) return;
 
     const hadInitialImage = preview && !preview.classList.contains('hidden') && preview.getAttribute('src');
+    const isPendingRemove = removeFlag && removeFlag.value === '1';
+
+    // 驗證失敗重渲染：remove_image=1 時把 UI 還原成「已刪除」狀態
+    if (hadInitialImage && isPendingRemove) {
+        preview.src = '';
+        preview.classList.add('hidden');
+        overlay.classList.add('hidden');
+        holder.classList.remove('hidden');
+    }
 
     input.addEventListener('change', function () {
         const file = this.files[0];
@@ -41,8 +50,8 @@
         });
     }
 
-    // 若一開始無圖（建立頁或編輯但無圖），確保刪除按鈕保持隱藏
-    if (!hadInitialImage && removeBtn) {
+    // 無圖（建立頁、編輯但無圖）或已待刪：隱藏刪除按鈕
+    if ((!hadInitialImage || isPendingRemove) && removeBtn) {
         removeBtn.classList.add('hidden');
     }
 })();

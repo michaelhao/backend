@@ -342,6 +342,38 @@ class AddonCrudTest extends TestCase
         $this->assertNotEquals($oldPath, $image->image_url);
     }
 
+    public function test_update_with_remove_image_when_no_image_exists_is_noop(): void
+    {
+        Storage::fake('public');
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $addon = Addon::factory()->create();
+
+        $response = $this->put(route('addons.update', $addon), $this->validAddonData(['remove_image' => 1]));
+
+        $response->assertRedirect(route('addons.index'));
+        $this->assertDatabaseMissing('addons_image', ['addon_id' => $addon->id]);
+    }
+
+    public function test_update_keeps_image_when_remove_image_is_zero(): void
+    {
+        Storage::fake('public');
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $addon = Addon::factory()->create();
+        $imagePath = "addons/{$addon->id}-img-keep.jpg";
+        Storage::disk('public')->put($imagePath, 'dummy');
+        AddonImage::create(['addon_id' => $addon->id, 'image_url' => $imagePath]);
+
+        $response = $this->put(route('addons.update', $addon), $this->validAddonData(['remove_image' => 0]));
+
+        $response->assertRedirect(route('addons.index'));
+        $this->assertDatabaseHas('addons_image', ['addon_id' => $addon->id, 'image_url' => $imagePath]);
+        Storage::disk('public')->assertExists($imagePath);
+    }
+
     public function test_update_with_changed_grade_ids_dispatches_sync_batch(): void
     {
         Bus::fake();

@@ -7,7 +7,6 @@ use App\Enums\AddonSyncing;
 use App\Enums\AddonType;
 use App\Jobs\SyncShopAddonsForGrade;
 use App\Models\Addon;
-use App\Models\AddonImage;
 use App\Models\Grade;
 use App\Repositories\AddonRepository;
 use Illuminate\Bus\Batch;
@@ -125,13 +124,11 @@ class AddonService
                 $this->addonRepository->upsertImage($addon, $newUrl);
 
                 if ($oldImageUrl) {
-                    $oldPath = $oldImageUrl;
-                    DB::afterCommit(fn () => Storage::disk('public')->delete($oldPath));
+                    DB::afterCommit(fn () => Storage::disk('public')->delete($oldImageUrl));
                 }
             } elseif ($removeImage && $oldImageUrl) {
-                AddonImage::where('addon_id', $addon->id)->delete();
-                $oldPath = $oldImageUrl;
-                DB::afterCommit(fn () => Storage::disk('public')->delete($oldPath));
+                $this->addonRepository->deleteImage($addon);
+                DB::afterCommit(fn () => Storage::disk('public')->delete($oldImageUrl));
             }
 
             if (! empty($affectedGradeIds)) {
