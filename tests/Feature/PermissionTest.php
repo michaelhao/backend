@@ -311,11 +311,10 @@ class PermissionTest extends TestCase
         $this->createUserWithRole('Admin');
 
         // 建立一個存在於 permissions 但無對應命名路由的 permission
-        Permission::create([
+        Permission::factory()->create([
             'name' => 'OrphanModule.ghost',
             'module' => 'OrphanModule',
             'action' => 'ghost',
-            'description' => '無對應路由',
         ]);
 
         $existing = Permission::where('name', 'Dashboard.index')->first();
@@ -370,5 +369,101 @@ class PermissionTest extends TestCase
         // 同一個 session 再次請求 → middleware 應偵測 user.updated_at 已 advance 並重載
         // 新角色沒有 Role.index → 應導向 default_route
         $this->get(route('roles.index'))->assertRedirect(route('dashboard'));
+    }
+
+    public function test_edit_nonexistent_role_redirects_with_error(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+
+        $response = $this->get(route('roles.edit', 99999));
+
+        $response->assertRedirect(route('roles.index'));
+        $response->assertSessionHas('error', '找不到該角色');
+    }
+
+    public function test_update_nonexistent_role_redirects_with_error(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+
+        $permission = Permission::where('name', 'Dashboard.index')->first();
+
+        $response = $this->put(route('roles.update', 99999), [
+            'name' => 'GhostRole',
+            'default_route' => 'Dashboard.index',
+            'permissions' => [$permission->id],
+        ]);
+
+        $response->assertRedirect(route('roles.index'));
+        $response->assertSessionHas('error', '找不到該角色');
+    }
+
+    public function test_destroy_nonexistent_role_returns_422(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+
+        $response = $this->delete(route('roles.destroy', 99999));
+
+        $response->assertStatus(422);
+        $response->assertExactJson(['message' => '找不到該角色']);
+    }
+
+    public function test_viewer_cannot_perform_role_write_operations(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Viewer');
+
+        $role = Role::where('name', 'Viewer')->first();
+        $permission = Permission::where('name', 'Dashboard.index')->first();
+
+        $payload = [
+            'name' => 'Hacked',
+            'default_route' => 'Dashboard.index',
+            'permissions' => [$permission->id],
+        ];
+
+        // Viewer 僅有 index 權限，寫入操作應被 middleware 導向 default_route
+        $this->post(route('roles.store'), $payload)->assertRedirect(route('dashboard'));
+        $this->put(route('roles.update', $role), $payload)->assertRedirect(route('dashboard'));
+        $this->delete(route('roles.destroy', $role))->assertRedirect(route('dashboard'));
+
+        $this->assertDatabaseMissing('roles', ['name' => 'Hacked']);
+        $this->assertDatabaseHas('roles', ['name' => 'Viewer']);
+    }
+
+    public function test_store_role_fails_with_nonexistent_permission_id(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+
+        $response = $this->post(route('roles.store'), [
+            'name' => 'TestRole',
+            'default_route' => 'Dashboard.index',
+            'permissions' => [999999],
+        ]);
+
+        $response->assertSessionHasErrors('permissions.0');
+        $this->assertDatabaseMissing('roles', ['name' => 'TestRole']);
+    }
+
+    public function test_delete_role_removes_pivot_rows(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+
+        $role = Role::where('name', 'Viewer')->first();
+        $this->assertDatabaseHas('role_has_permissions', ['role_id' => $role->id]);
+
+        $this->delete(route('roles.destroy', $role))->assertOk();
+
+        $this->assertDatabaseMissing('role_has_permissions', ['role_id' => $role->id]);
     }
 }
