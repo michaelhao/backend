@@ -7,6 +7,7 @@ use App\Repositories\PermissionRepository;
 use App\Repositories\RoleRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
+use Illuminate\Support\Facades\DB;
 
 class RoleService
 {
@@ -55,20 +56,24 @@ class RoleService
 
     public function createRole(array $data, array $permissionIds): Role
     {
-        $role = $this->roleRepository->create($data);
+        return DB::transaction(function () use ($data, $permissionIds): Role {
+            $role = $this->roleRepository->create($data);
 
-        $permissionIds = $this->ensureDefaultPermission($role->default_route, $permissionIds);
-        $this->roleRepository->syncPermissions($role, $permissionIds);
+            $permissionIds = $this->ensureDefaultPermission($role->default_route, $permissionIds);
+            $this->roleRepository->syncPermissions($role, $permissionIds);
 
-        return $role;
+            return $role;
+        });
     }
 
     public function updateRole(Role $role, array $data, array $permissionIds): void
     {
-        $this->roleRepository->update($role, $data);
+        DB::transaction(function () use ($role, $data, $permissionIds): void {
+            $this->roleRepository->update($role, $data);
 
-        $permissionIds = $this->ensureDefaultPermission($role->default_route, $permissionIds);
-        $this->roleRepository->syncPermissions($role, $permissionIds);
+            $permissionIds = $this->ensureDefaultPermission($role->default_route, $permissionIds);
+            $this->roleRepository->syncPermissions($role, $permissionIds);
+        });
     }
 
     /**
@@ -76,13 +81,15 @@ class RoleService
      */
     public function deleteRole(Role $role): bool
     {
-        if ($this->roleRepository->hasUsers($role)) {
-            return false;
-        }
+        return DB::transaction(function () use ($role): bool {
+            if ($this->roleRepository->hasUsers($role)) {
+                return false;
+            }
 
-        $this->roleRepository->delete($role);
+            $this->roleRepository->delete($role);
 
-        return true;
+            return true;
+        });
     }
 
     /**
