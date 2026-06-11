@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>auth Specification — 登入 / 節流 / 密碼重設</title>
+<style>
+  :root {
+    --ink: #1e293b;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --blue: #2563eb;   --blue-bg: #eff6ff;   --blue-line: #bfdbfe;
+    --amber: #d97706;  --amber-bg: #fffbeb;  --amber-line: #fde68a;
+    --green: #059669;  --green-bg: #ecfdf5;  --green-line: #a7f3d0;
+    --gray: #6b7280;   --gray-bg: #f3f4f6;   --gray-line: #d1d5db;
+    --red: #dc2626;    --red-bg: #fef2f2;
+    --sidebar-w: 264px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 0.86em;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+
+  /* ===== 版面 ===== */
+  .layout { display: flex; min-height: 100vh; }
+  nav.toc {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: sticky; top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: #0f172a;
+    color: #cbd5e1;
+    padding: 20px 0 32px;
+  }
+  main {
+    flex: 1;
+    min-width: 0;
+    max-width: 880px;
+    padding: 32px 40px 96px;
+  }
+
+  /* ===== 側欄 ===== */
+  .toc-title { padding: 0 20px 12px; font-weight: 700; color: #fff; font-size: 16px; }
+  .toc-title small { display: block; font-weight: 400; color: #94a3b8; font-size: 11px; margin-top: 2px; }
+  .toc-group { margin-top: 14px; }
+  .toc-group-label {
+    padding: 0 20px; font-size: 11px; letter-spacing: .08em;
+    color: #94a3b8; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .toc a {
+    display: block; padding: 5px 20px 5px 34px;
+    color: #cbd5e1; text-decoration: none; font-size: 13px;
+    border-left: 3px solid transparent;
+  }
+  .toc a:hover { color: #fff; background: rgba(255,255,255,.06); }
+  .toc a.active { color: #fff; background: rgba(255,255,255,.1); border-left-color: #60a5fa; }
+
+  /* ===== Header ===== */
+  header h1 { font-size: 26px; margin: 0 0 4px; }
+  header .sub { color: var(--muted); margin-bottom: 16px; }
+  .threat-banner {
+    background: var(--amber-bg); border: 1px solid var(--amber-line);
+    border-radius: 10px; padding: 12px 16px; font-size: 14px; margin-bottom: 12px;
+  }
+  .threat-banner strong { color: var(--amber); }
+  .meta { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; }
+  .meta span { white-space: nowrap; }
+  .truth-note { font-size: 12.5px; color: var(--muted); margin-bottom: 24px; }
+
+  /* ===== 工具列 ===== */
+  .toolbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: flex-end; padding: 8px 0; background: linear-gradient(var(--bg) 80%, transparent); }
+  .toolbar button {
+    font: inherit; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card);
+    border-radius: 8px; padding: 6px 14px; color: var(--ink);
+  }
+  .toolbar button:hover { border-color: #94a3b8; }
+
+  /* ===== 區段標題 ===== */
+  h2.section {
+    font-size: 19px; margin: 44px 0 6px;
+    padding-left: 12px; border-left: 5px solid var(--c, var(--blue));
+  }
+  .section-desc { color: var(--muted); font-size: 13.5px; margin: 0 0 18px 17px; }
+
+  /* ===== 流程圖 ===== */
+  .flow {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px 24px; margin-bottom: 18px; overflow-x: auto;
+  }
+  .flow h3 { margin: 0 0 16px; font-size: 15px; }
+  .frow { display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap; min-width: max-content; }
+  .fnode {
+    border: 1.5px solid var(--blue-line); background: var(--blue-bg);
+    border-radius: 8px; padding: 7px 12px; font-size: 13px;
+    display: flex; flex-direction: column; justify-content: center;
+    text-align: center; max-width: 190px;
+  }
+  .fnode small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+  .fnode.start { border-color: #94a3b8; background: #f1f5f9; font-weight: 600; }
+  .fnode.ok { border-color: var(--green-line); background: var(--green-bg); }
+  .fnode.fail { border-color: #fecaca; background: var(--red-bg); }
+  .fnode.gate { border-color: var(--amber-line); background: var(--amber-bg); }
+  .farrow {
+    align-self: center; padding: 0 8px; color: var(--muted);
+    font-size: 12px; text-align: center; flex-shrink: 0; line-height: 1.3;
+  }
+  .farrow::after { content: "→"; display: block; font-size: 16px; color: #94a3b8; }
+  .fbranches { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+  .fbranch { display: flex; align-items: center; }
+
+  /* ===== Requirement 卡片 ===== */
+  .req {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 5px solid var(--c, var(--blue));
+    border-radius: 12px; padding: 18px 22px 14px; margin-bottom: 16px;
+    scroll-margin-top: 56px;
+  }
+  .req h3 { margin: 0 0 8px; font-size: 16px; display: flex; align-items: baseline; gap: 10px; }
+  .req h3 .no { color: var(--muted); font-size: 13px; font-weight: 600; }
+  .req .body { font-size: 14.5px; margin-bottom: 12px; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    border-radius: 5px; padding: 0 7px; vertical-align: 1px;
+  }
+  .badge.shall { background: var(--blue); color: #fff; }
+  .badge.mustnot { background: var(--red); color: #fff; }
+  .note { font-size: 13px; color: var(--muted); background: var(--gray-bg); border-radius: 8px; padding: 8px 12px; margin-top: 8px; }
+
+  /* ===== Scenario ===== */
+  details.scn { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: #fcfdfe; }
+  details.scn summary {
+    cursor: pointer; padding: 9px 14px; font-size: 13.5px; font-weight: 600;
+    list-style: none; display: flex; align-items: center; gap: 8px;
+  }
+  details.scn summary::-webkit-details-marker { display: none; }
+  details.scn summary::before { content: "▸"; color: #94a3b8; transition: transform .15s; }
+  details.scn[open] summary::before { transform: rotate(90deg); }
+  .scn-body { padding: 2px 14px 12px 34px; }
+  .gwt { display: flex; gap: 10px; margin: 5px 0; font-size: 13.5px; align-items: baseline; }
+  .gwt .kw {
+    flex-shrink: 0; width: 56px; text-align: center; font-size: 11px; font-weight: 700;
+    border-radius: 5px; padding: 1px 0; letter-spacing: .05em;
+  }
+  .kw.given { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-line); }
+  .kw.when  { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-line); }
+  .kw.then  { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-line); }
+  .kw.and   { background: #fff; color: var(--muted); border: 1px dashed var(--gray-line); }
+  .testref {
+    margin-left: auto; font-size: 11px; font-weight: 400; color: var(--muted);
+    background: var(--gray-bg); border-radius: 99px; padding: 1px 10px; white-space: nowrap;
+  }
+  .testref.none { background: var(--amber-bg); color: var(--amber); }
+
+  /* ===== 刻意不做 ===== */
+  .req.excluded { border-left-color: var(--gray); background: #fafafa; }
+  .nots { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+  .not-card { border: 1px dashed var(--gray-line); border-radius: 10px; padding: 10px 14px; background: var(--card); font-size: 13.5px; }
+  .not-card .x { font-weight: 700; color: var(--gray); text-decoration: line-through; }
+  .not-card small { display: block; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+  footer { margin-top: 56px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+  @media (max-width: 860px) {
+    nav.toc { display: none; }
+    main { padding: 20px 18px 64px; }
+  }
+  @media print {
+    nav.toc, .toolbar { display: none; }
+    details.scn { open: true; }
+    .req { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <div class="toc-title">auth Specification<small>登入 / 節流 / 密碼重設</small></div>
+  <div class="toc-group">
+    <div class="toc-group-label">總覽</div>
+    <a href="#overview">行為流程圖</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--blue)"></span>登入與登出</div>
+    <a href="#r1">1. 登入頁存取</a>
+    <a href="#r2">2. 未登入導向</a>
+    <a href="#r3">3. 登入驗證</a>
+    <a href="#r4">4. 登入成功</a>
+    <a href="#r5">5. 登入失敗</a>
+    <a href="#r7">7. 登出</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--amber)"></span>登入節流</div>
+    <a href="#r6">6. 登入節流</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--green)"></span>密碼重設</div>
+    <a href="#r9">9. 忘記密碼</a>
+    <a href="#r10">10. 重設密碼表單</a>
+    <a href="#r11">11. 密碼強度規則</a>
+    <a href="#r12">12. 重設密碼成功</a>
+    <a href="#r13">13. 重設密碼失敗</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--gray)"></span>刻意設計</div>
+    <a href="#r8">8. 無 remember me</a>
+    <a href="#excluded">刻意不做的事</a>
+  </div>
+</nav>
+
+<main>
+<header>
+  <h1>auth Specification</h1>
+  <div class="sub">後台登入 / 登出、登入節流與密碼重設的完整行為規格</div>
+  <div class="threat-banner">
+    <strong>威脅模型：</strong>內部後台、非公網暴露（brute-force 不在 scope）；正式環境<strong>無對外網際網路連線</strong>（禁用外部 API）。
+  </div>
+  <div class="meta">
+    <span>來源：<code>openspec/specs/auth/spec.md</code></span>
+    <span>實作：<code>4adf510</code>、<code>9339bf4</code></span>
+    <span>change：<code>2026-06-11-add-auth-spec</code></span>
+  </div>
+  <div class="truth-note">本頁為人工同步的閱讀版；若與 <code>spec.md</code> 不一致，以 <code>spec.md</code> 為準。每個 Scenario 右側標註對應的自動化測試。</div>
+</header>
+
+<div class="toolbar"><button id="toggleAll" data-open="0">全部展開</button></div>
+
+<!-- ============ 總覽流程圖 ============ -->
+<h2 class="section" id="overview" style="--c:#94a3b8">行為流程圖</h2>
+<p class="section-desc">先看懂兩條主流程，再讀下方逐項規格。</p>
+
+<div class="flow">
+  <h3>登入流程（POST /login）</h3>
+  <div class="frow">
+    <div class="fnode start">POST /login</div>
+    <div class="farrow"></div>
+    <div class="fnode gate">節流檢查<small>5 次 / 60 秒<br>key = email(正規化) + IP</small></div>
+    <div class="farrow">通過</div>
+    <div class="fnode">LoginRequest 驗證<small>email 必填+格式<br>password 必填</small></div>
+    <div class="farrow">通過</div>
+    <div class="fnode">Auth::attempt</div>
+    <div class="farrow">成功</div>
+    <div class="fbranches">
+      <div class="fbranch">
+        <div class="fnode ok">regenerate session → 載入權限至 session → 清除節流計數 → 導向 intended <code>/</code></div>
+      </div>
+    </div>
+  </div>
+  <div class="frow" style="margin-top:12px">
+    <div class="fnode fail">超限：回登入頁，顯示剩餘等候秒數</div>
+    <div class="farrow"></div>
+    <div class="fnode fail">驗證失敗：欄位錯誤</div>
+    <div class="farrow"></div>
+    <div class="fnode fail">attempt 失敗：「帳號或密碼錯誤」（計入節流次數、只保留 email）</div>
+  </div>
+</div>
+
+<div class="flow">
+  <h3>密碼重設流程</h3>
+  <div class="frow">
+    <div class="fnode start">POST /forgot-password</div>
+    <div class="farrow"></div>
+    <div class="fnode gate">固定回應<small>「若該 email 存在，我們已寄出重設連結」<br>不洩漏帳號存在性</small></div>
+    <div class="farrow">email 存在時寄信</div>
+    <div class="fnode">GET /reset-password/{token}<small>重設表單</small></div>
+    <div class="farrow"></div>
+    <div class="fnode">POST /reset-password<small>token + email + 新密碼</small></div>
+    <div class="farrow">token 有效</div>
+    <div class="fnode ok">更新密碼（hashed）→ 刪除該 user 全部 sessions → 發 PasswordReset 事件 → 導向 /login</div>
+  </div>
+  <div class="frow" style="margin-top:12px">
+    <div class="fnode fail">token 無效／與 email 不符：「重設連結已過期或無效，請重新申請」，密碼不變</div>
+  </div>
+</div>
+
+<!-- ============ 登入與登出 ============ -->
+<h2 class="section" style="--c:var(--blue)">登入與登出</h2>
+
+<section class="req" id="r1" style="--c:var(--blue)">
+  <h3><span class="no">R1</span>登入頁存取</h3>
+  <div class="body">系統 <span class="badge shall">SHALL</span> 在 <code>GET /login</code> 提供登入頁（guest 限定）。已登入使用者存取 <code>/login</code> <span class="badge shall">SHALL</span> 被 302 導向 <code>/</code>。</div>
+  <details class="scn"><summary>訪客可見登入頁<span class="testref">LoginTest::login_screen_can_be_rendered</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>訪客 GET <code>/login</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200 並渲染登入表單（email、密碼、忘記密碼連結）</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>已登入者被導離登入頁<span class="testref">LoginTest::authenticated_user_is_redirected_away_from_login</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>已登入使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/login</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導向 <code>/</code></span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r2" style="--c:var(--blue)">
+  <h3><span class="no">R2</span>未登入導向</h3>
+  <div class="body">未登入使用者存取任何受 <code>auth</code> middleware 保護的路由 <span class="badge shall">SHALL</span> 被 302 導向 <code>/login</code>，登入成功後 <span class="badge shall">SHALL</span> 回到原請求路徑（<code>redirect()-&gt;intended()</code>）。</div>
+  <details class="scn"><summary>訪客存取受保護路由<span class="testref">LoginTest::guest_is_redirected_to_login</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>訪客 GET <code>/</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導向 <code>/login</code></span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r3" style="--c:var(--blue)">
+  <h3><span class="no">R3</span>登入驗證</h3>
+  <div class="body"><code>POST /login</code> <span class="badge shall">SHALL</span> 以 <code>LoginRequest</code> 驗證輸入：<code>email</code> 必填且須為 email 格式、<code>password</code> 必填。驗證失敗 <span class="badge shall">SHALL</span> 回到登入頁並顯示對應欄位錯誤，且維持未登入。</div>
+  <details class="scn"><summary>缺少必填欄位<span class="testref">LoginTest::login_validation_requires_email_and_password</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/login</code> 不帶 email 與 password</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>email</code> 與 <code>password</code></span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>使用者維持未登入</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r4" style="--c:var(--blue)">
+  <h3><span class="no">R4</span>登入成功</h3>
+  <div class="body">憑證正確時系統 <span class="badge shall">SHALL</span> 依序：(1) regenerate session id（防 session fixation）、(2) 將使用者角色權限載入 session（<code>auth.permissions</code>）、(3) 302 導向 intended 路徑（預設 <code>/</code>）。</div>
+  <details class="scn"><summary>正確帳密登入<span class="testref">LoginTest::user_can_login_with_correct_credentials</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>已存在的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/login</code> 帶正確 email 與密碼</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導向 <code>/</code></span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>使用者已通過認證</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>session 含 <code>auth.permissions</code></span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r5" style="--c:var(--blue)">
+  <h3><span class="no">R5</span>登入失敗</h3>
+  <div class="body">憑證錯誤時系統 <span class="badge shall">SHALL</span> 回到登入頁、顯示<strong>不區分帳號或密碼錯誤</strong>的通用訊息「帳號或密碼錯誤」（掛在 <code>email</code> 欄位），且只保留 email 輸入值（不保留密碼）。</div>
+  <details class="scn"><summary>密碼錯誤<span class="testref">LoginTest::user_cannot_login_with_wrong_password</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>已存在的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/login</code> 帶正確 email 與錯誤密碼</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>email</code></span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>使用者維持未登入</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r7" style="--c:var(--blue)">
+  <h3><span class="no">R7</span>登出</h3>
+  <div class="body"><code>POST /logout</code>（auth 限定）<span class="badge shall">SHALL</span> 依序：登出使用者、invalidate session、regenerate CSRF token，並 302 導向 <code>/login</code>。</div>
+  <details class="scn"><summary>登出<span class="testref">LoginTest::user_can_logout</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>已登入使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/logout</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導向 <code>/login</code></span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>使用者維持未登入</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 登入節流 ============ -->
+<h2 class="section" style="--c:var(--amber)">登入節流</h2>
+<p class="section-desc">定位為防呆而非防暴力破解——內部後台、非公網暴露，brute-force 不在威脅模型內。</p>
+
+<section class="req" id="r6" style="--c:var(--amber)">
+  <h3><span class="no">R6</span>登入節流</h3>
+  <div class="body"><code>POST /login</code> <span class="badge shall">SHALL</span> 以 <code>ThrottleLogin</code> middleware 限制同一 key 在 60 秒內最多 5 次嘗試。key <span class="badge shall">SHALL</span> 為 <code>transliterate(lower(email)) + '|' + 來源 IP</code>（email 大小寫變形不得繞過計數）。超限時 <span class="badge shall">SHALL</span> 回登入頁並顯示含剩餘等候秒數的錯誤訊息。登入成功 <span class="badge shall">SHALL</span> 立即清除該 key 的計數。</div>
+  <details class="scn"><summary>超過嘗試上限被擋下<span class="testref">LoginTest::login_is_throttled_after_too_many_attempts</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>同一 email 與 IP 已失敗嘗試 5 次</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>第 6 次 POST <code>/login</code>（即使憑證正確）</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>email</code>（節流訊息）</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>使用者維持未登入</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>大小寫變形不繞過節流<span class="testref">LoginTest::throttle_key_is_case_insensitive_on_email</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>以 <code>ADMIN@example.com</code> 失敗嘗試 5 次</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>以 <code>admin@example.com</code> POST <code>/login</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>該次嘗試被節流擋下</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>成功登入清除計數<span class="testref">LoginTest::successful_login_clears_throttle_counter</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>失敗嘗試 4 次後成功登入並登出</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>再次以正確憑證 POST <code>/login</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導向 <code>/</code>（不被節流）</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>使用者已通過認證</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 密碼重設 ============ -->
+<h2 class="section" style="--c:var(--green)">密碼重設</h2>
+
+<section class="req" id="r9" style="--c:var(--green)">
+  <h3><span class="no">R9</span>忘記密碼（防帳號列舉）</h3>
+  <div class="body"><code>POST /forgot-password</code>（guest 限定）<span class="badge shall">SHALL</span> 驗證 email 必填與格式，並寄送重設連結。<strong>不論該 email 是否存在或被 broker 節流</strong>，系統 <span class="badge shall">SHALL</span> 一律回應相同的固定訊息「若該 email 存在，我們已寄出重設連結」，不得洩漏帳號存在性。</div>
+  <details class="scn"><summary>請求重設連結<span class="testref">PasswordResetTest::reset_password_link_can_be_requested</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>已存在的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/forgot-password</code> 帶該使用者 email</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session 含 <code>status</code> 訊息</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>系統對該使用者寄出 <code>ResetPassword</code> 通知</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>email 必填<span class="testref">PasswordResetTest::forgot_password_validation_requires_email</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/forgot-password</code> 不帶 email</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>email</code></span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r10" style="--c:var(--green)">
+  <h3><span class="no">R10</span>重設密碼表單</h3>
+  <div class="body"><code>GET /reset-password/{token}</code>（guest 限定）<span class="badge shall">SHALL</span> 渲染重設表單，token 由路徑帶入、email 由 query string 帶入。</div>
+  <details class="scn"><summary>開啟重設表單<span class="testref">PasswordResetTest::reset_password_screen_can_be_rendered</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>透過重設通知取得的有效 token</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/reset-password/{token}?email=...</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200 並渲染重設密碼表單</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r11" style="--c:var(--green)">
+  <h3><span class="no">R11</span>密碼強度規則</h3>
+  <div class="body">重設密碼的新密碼 <span class="badge shall">SHALL</span> 符合：最少 12 字元、含大小寫字母、數字與符號，且須通過確認欄位（<code>confirmed</code>）。系統 <span class="badge mustnot">MUST NOT</span> 使用 <code>Password::uncompromised()</code>（HIBP 外部 API）——正式環境無對外網際網路連線，外部呼叫必定失敗。</div>
+  <details class="scn"><summary>密碼過短被拒<span class="testref">PasswordResetTest::reset_password_validation_requires_min_length</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/reset-password</code> 帶長度不足 12 的密碼</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>password</code></span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r12" style="--c:var(--green)">
+  <h3><span class="no">R12</span>重設密碼成功</h3>
+  <div class="body">token 與 email 正確時系統 <span class="badge shall">SHALL</span> 依序：(1) 更新密碼（經 <code>hashed</code> cast 雜湊）、(2) 刪除該使用者<strong>所有</strong> database sessions（既有登入立即失效）、(3) 發送 <code>Illuminate\Auth\Events\PasswordReset</code> 事件，並 302 導向 <code>/login</code> 帶成功訊息。</div>
+  <details class="scn"><summary>以有效 token 重設<span class="testref">PasswordResetTest::password_can_be_reset_with_valid_token</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>透過重設通知取得的有效 token</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/reset-password</code> 帶 token、email 與合規新密碼</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導向 <code>/login</code> 並帶 <code>status</code> 訊息</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>新密碼可通過 Hash 驗證</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>重設後既有 sessions 失效且發送事件<span class="testref">PasswordResetTest::password_reset_invalidates_existing_sessions_and_fires_event</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>該使用者於 <code>sessions</code> 表存在既有 session 記錄</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>以有效 token 完成重設</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>sessions</code> 表不再有該使用者的記錄</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span><code>PasswordReset</code> 事件已發送</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r13" style="--c:var(--green)">
+  <h3><span class="no">R13</span>重設密碼失敗</h3>
+  <div class="body">token 無效或與 email 不符時，系統 <span class="badge shall">SHALL</span> 顯示錯誤訊息「重設連結已過期或無效，請重新申請」且 <span class="badge mustnot">MUST NOT</span> 變更密碼。</div>
+  <details class="scn"><summary>無效 token<span class="testref">PasswordResetTest::password_cannot_be_reset_with_invalid_token</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>已存在的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/reset-password</code> 帶無效 token</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>email</code></span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>使用者密碼維持原雜湊值</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 刻意設計 ============ -->
+<h2 class="section" style="--c:var(--gray)">刻意設計（不是缺漏）</h2>
+<p class="section-desc">以下為依威脅模型刻意排除的功能，避免後人誤判為待補項目。</p>
+
+<section class="req excluded" id="r8" style="--c:var(--gray)">
+  <h3><span class="no">R8</span>無 remember me（刻意設計）</h3>
+  <div class="body">系統 <span class="badge mustnot">MUST NOT</span> 提供「記住我」長效登入。<code>users.remember_token</code> 欄位已由 migration <code>2026_05_04_113610_drop_remember_token_from_users_table</code> 刻意移除；登入表單 <span class="badge mustnot">MUST NOT</span> 出現記住我選項。</div>
+  <details class="scn"><summary>登入表單無記住我<span class="testref none">無直接測試 — 目視確認 login.blade.php</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>訪客 GET <code>/login</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>表單僅含 email 與密碼欄位，無 remember 勾選框</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req excluded" id="excluded" style="--c:var(--gray)">
+  <h3><span class="no">—</span>刻意不做的事（彙整）</h3>
+  <div class="nots">
+    <div class="not-card"><span class="x">Remember me</span><small>內部後台不提供長效登入；<code>remember_token</code> 欄位已移除（R8）</small></div>
+    <div class="not-card"><span class="x">HIBP 密碼外洩檢查</span><small>正式環境無對外連線，<code>uncompromised()</code> 必定失敗（R11）</small></div>
+    <div class="not-card"><span class="x">2FA / 帳號鎖定</span><small>內部後台、非公網暴露，brute-force 不在威脅模型內；節流僅為防呆（R6）</small></div>
+  </div>
+</section>
+
+<footer>
+  產生自 <code>openspec/specs/auth/spec.md</code>（change <code>2026-06-11-add-auth-spec</code>）。13 項 Requirement、18 個 Scenario。
+  測試對應：<code>tests/Feature/Auth/LoginTest.php</code>、<code>tests/Feature/Auth/PasswordResetTest.php</code>。
+  本頁為人工同步版本，內容以 <code>spec.md</code> 為準。
+</footer>
+</main>
+</div>
+
+<script>
+// 全部展開 / 收合
+const btn = document.getElementById('toggleAll');
+btn.addEventListener('click', () => {
+  const open = btn.dataset.open !== '1';
+  document.querySelectorAll('details.scn').forEach(d => d.open = open);
+  btn.dataset.open = open ? '1' : '0';
+  btn.textContent = open ? '全部收合' : '全部展開';
+});
+
+// 側欄 scroll-spy
+const links = [...document.querySelectorAll('.toc a')];
+const targets = links
+  .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+  .filter(Boolean);
+const byId = Object.fromEntries(links.map(a => [a.getAttribute('href').slice(1), a]));
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(a => a.classList.remove('active'));
+      byId[e.target.id]?.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -75% 0px' });
+targets.forEach(t => observer.observe(t));
+</script>
+</body>
+</html>
