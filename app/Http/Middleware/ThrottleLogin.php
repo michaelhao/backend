@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class ThrottleLogin
@@ -15,7 +16,7 @@ class ThrottleLogin
 
     public function handle(Request $request, Closure $next): Response
     {
-        $key = $request->input('email').'|'.$request->ip();
+        $key = $this->keyFor($request);
 
         if (RateLimiter::tooManyAttempts($key, self::MAX_ATTEMPTS)) {
             $seconds = RateLimiter::availableIn($key);
@@ -27,6 +28,18 @@ class ThrottleLogin
 
         RateLimiter::hit($key, self::DECAY_SECONDS);
 
-        return $next($request);
+        $response = $next($request);
+
+        // 登入成功即重置計數，避免正常的重複登入累積到上限
+        if ($request->user()) {
+            RateLimiter::clear($key);
+        }
+
+        return $response;
+    }
+
+    private function keyFor(Request $request): string
+    {
+        return Str::transliterate(Str::lower((string) $request->string('email'))).'|'.$request->ip();
     }
 }

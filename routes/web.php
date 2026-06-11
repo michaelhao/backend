@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\ConferenceController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocsController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ShopController;
@@ -30,6 +31,11 @@ Route::middleware('auth')->group(function () {
 
     // 無角色提示頁（不受 permission middleware 保護）
     Route::get('/no-role', fn () => view('no-role'))->name('no-role');
+
+    // 系統文件（docs/*.html，登入即可瀏覽、不進權限系統）
+    Route::get('/docs', [DocsController::class, 'index'])->name('docs.index');
+    Route::get('/docs/{name}', [DocsController::class, 'show'])
+        ->where('name', '[A-Za-z0-9_\-]+')->name('docs.show');
 
     // 需要權限檢查的 routes — middleware 自動推斷權限
     Route::middleware('permission')->group(function () {

@@ -7,19 +7,11 @@ use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class UserCrudTest extends TestCase
 {
     use RefreshDatabase;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        // 避免 Password::uncompromised() 在測試中打 HIBP 外部 API
-        Http::fake(['https://api.pwnedpasswords.com/*' => Http::response('', 200)]);
-    }
 
     private function seedPermissions(): void
     {
