@@ -12,6 +12,11 @@ class RoleRepository
         return Role::withCount(['permissions', 'users'])->get();
     }
 
+    public function findById(int $id): ?Role
+    {
+        return Role::find($id);
+    }
+
     public function create(array $data): Role
     {
         return Role::create($data);
@@ -43,11 +48,6 @@ class RoleRepository
     public function getPermissionIds(Role $role): array
     {
         return $role->permissions()->pluck('permissions.id')->toArray();
-    }
-
-    public function findByNameOrFail(string $name): Role
-    {
-        return Role::where('name', $name)->firstOrFail();
     }
 
     public function getAll(): Collection

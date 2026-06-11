@@ -35,11 +35,6 @@ class PermissionRouteResolver
         return $this->getMap()[$permission] ?? null;
     }
 
-    public function clearCache(): void
-    {
-        $this->cache = null;
-    }
-
     /** @return array<string, string> */
     private function getMap(): array
     {

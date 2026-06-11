@@ -48,6 +48,11 @@ class RoleService
         ];
     }
 
+    public function findRoleById(int $id): ?Role
+    {
+        return $this->roleRepository->findById($id);
+    }
+
     public function createRole(array $data, array $permissionIds): Role
     {
         $role = $this->roleRepository->create($data);
