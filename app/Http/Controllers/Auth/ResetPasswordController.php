@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Models\User;
-use App\Repositories\UserRepository;
+use App\Services\AuthService;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Password;
@@ -13,7 +13,7 @@ use Illuminate\View\View;
 
 class ResetPasswordController extends Controller
 {
-    public function __construct(private UserRepository $userRepository) {}
+    public function __construct(private AuthService $authService) {}
 
     public function showResetForm(string $token): View
     {
@@ -32,7 +32,7 @@ class ResetPasswordController extends Controller
                 $user->save();
 
                 // 密碼重設後讓該帳號既有登入全部失效
-                $this->userRepository->deleteSessionsByUserId($user->id);
+                $this->authService->invalidateUserSessions($user->id);
 
                 event(new PasswordReset($user));
             },

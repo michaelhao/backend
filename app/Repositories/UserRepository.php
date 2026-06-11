@@ -33,6 +33,9 @@ class UserRepository
         $user->delete();
     }
 
+    /**
+     * 僅適用 SESSION_DRIVER=database；改用其他 driver 時此刪除不會生效。
+     */
     public function deleteSessionsByUserId(int $userId): void
     {
         DB::table('sessions')->where('user_id', $userId)->delete();
