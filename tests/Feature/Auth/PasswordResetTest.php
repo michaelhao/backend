@@ -3,8 +3,11 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
@@ -78,6 +81,38 @@ class PasswordResetTest extends TestCase
             $response->assertSessionHas('status');
 
             $this->assertTrue(Hash::check('Str0ng!P@ssword', $user->fresh()->password));
+
+            return true;
+        });
+    }
+
+    public function test_password_reset_invalidates_existing_sessions_and_fires_event(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+
+        DB::table('sessions')->insert([
+            'id' => 'existing-session-id',
+            'user_id' => $user->id,
+            'payload' => '',
+            'last_activity' => now()->getTimestamp(),
+        ]);
+
+        $this->post(route('password.email'), ['email' => $user->email]);
+
+        Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification) use ($user) {
+            Event::fake([PasswordReset::class]);
+
+            $this->post(route('password.update'), [
+                'token' => $notification->token,
+                'email' => $user->email,
+                'password' => 'Str0ng!P@ssword',
+                'password_confirmation' => 'Str0ng!P@ssword',
+            ]);
+
+            $this->assertDatabaseMissing('sessions', ['user_id' => $user->id]);
+            Event::assertDispatched(PasswordReset::class);
 
             return true;
         });

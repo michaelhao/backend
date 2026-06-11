@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class UserRepository
 {
@@ -30,5 +31,10 @@ class UserRepository
     public function delete(User $user): void
     {
         $user->delete();
+    }
+
+    public function deleteSessionsByUserId(int $userId): void
+    {
+        DB::table('sessions')->where('user_id', $userId)->delete();
     }
 }
