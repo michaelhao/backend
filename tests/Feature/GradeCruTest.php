@@ -415,6 +415,67 @@ class GradeCruTest extends TestCase
         ]);
     }
 
+    public function test_store_fails_without_weight(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->post(route('grades.store'), [
+            'code'   => 'grade_noweight',
+            'name'   => '無權重版本',
+            'price'  => 2000,
+            'status' => 1,
+        ]);
+
+        $response->assertSessionHasErrors('weight');
+    }
+
+    public function test_store_fails_with_weight_zero(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->post(route('grades.store'), [
+            'code'   => 'grade_zero_w',
+            'name'   => '零權重版本',
+            'price'  => 2000,
+            'weight' => 0,
+            'status' => 1,
+        ]);
+
+        $response->assertSessionHasErrors('weight');
+    }
+
+    public function test_store_fails_with_negative_price(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->post(route('grades.store'), [
+            'code'   => 'grade_neg',
+            'name'   => '負價版本',
+            'price'  => -100,
+            'weight' => 60,
+            'status' => 1,
+        ]);
+
+        $response->assertSessionHasErrors('price');
+    }
+
+    public function test_index_lists_grades_by_weight_descending(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $low = Grade::factory()->create(['name' => '低權重', 'weight' => 10]);
+        $high = Grade::factory()->create(['name' => '高權重', 'weight' => 90]);
+        $mid = Grade::factory()->create(['name' => '中權重', 'weight' => 50]);
+
+        $response = $this->get(route('grades.index'));
+
+        $response->assertOk();
+        $response->assertSeeInOrder([$high->name, $mid->name, $low->name]);
+    }
+
     public function test_viewer_cannot_check_weight(): void
     {
         $this->seedPermissions();
