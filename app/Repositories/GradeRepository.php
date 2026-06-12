@@ -13,6 +13,11 @@ class GradeRepository
         return Grade::orderByDesc('weight')->get();
     }
 
+    public function getById(int $id): ?Grade
+    {
+        return Grade::find($id);
+    }
+
     public function findByWeight(int $weight, ?int $excludeId): ?Grade
     {
         return Grade::where('weight', $weight)

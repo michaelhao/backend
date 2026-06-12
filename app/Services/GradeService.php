@@ -46,9 +46,36 @@ class GradeService
         ];
     }
 
+    public function findGradeById(int $id): ?Grade
+    {
+        return $this->gradeRepository->getById($id);
+    }
+
     public function findByWeight(int $weight, ?int $excludeId): ?Grade
     {
         return $this->gradeRepository->findByWeight($weight, $excludeId);
+    }
+
+    /**
+     * @return array{duplicate: bool, conflicting_grade: ?array{id: int, name: string, weight: int}, grades: array<int, array{id: int, name: string, weight: int}>}
+     */
+    public function checkWeightConflict(int $weight, ?int $excludeId): array
+    {
+        if ($weight < 1) {
+            return ['duplicate' => false, 'conflicting_grade' => null, 'grades' => []];
+        }
+
+        $conflict = $this->findByWeight($weight, $excludeId);
+
+        return [
+            'duplicate' => $conflict !== null,
+            'conflicting_grade' => $conflict
+                ? ['id' => $conflict->id, 'name' => $conflict->name, 'weight' => $conflict->weight]
+                : null,
+            'grades' => $this->getAllGrades()
+                ->map(fn (Grade $g) => ['id' => $g->id, 'name' => $g->name, 'weight' => $g->weight])
+                ->all(),
+        ];
     }
 
     public function createGrade(array $data): Grade
