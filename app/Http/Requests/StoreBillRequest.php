@@ -46,7 +46,15 @@ class StoreBillRequest extends FormRequest
         $validator->after(function ($validator) {
             $seenAddonIds = [];
             foreach ((array) $this->input('details', []) as $i => $d) {
-                if ((int) ($d['type'] ?? 0) !== BillDetailType::Addons->value || ! isset($d['addon_id'])) {
+                $type = (int) ($d['type'] ?? 0);
+
+                // grade-type rows are priced per contract, quantity never participates
+                if (in_array($type, [BillDetailType::Grades->value, BillDetailType::UpgradeFeeDiff->value], true)
+                    && (int) ($d['quantity'] ?? 1) !== 1) {
+                    $validator->errors()->add("details.{$i}.quantity", '版本類項目的數量僅能為 1');
+                }
+
+                if ($type !== BillDetailType::Addons->value || ! isset($d['addon_id'])) {
                     continue;
                 }
                 $addonId = (int) $d['addon_id'];

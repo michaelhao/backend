@@ -272,6 +272,28 @@ class BillStoreTest extends TestCase
         $this->assertDatabaseCount('bills', 1);
     }
 
+    public function test_grade_detail_with_quantity_above_one_is_rejected(): void
+    {
+        $user = $this->actingAsAdmin();
+        [$shop] = $this->makeShop($user);
+        $newGrade = Grade::factory()->create(['price' => 2000, 'weight' => 20]);
+
+        $response = $this->post(route('bills.store'), [
+            'shop_id' => $shop->id,
+            'payment_method' => 2,
+            'details' => [[
+                'type' => BillDetailType::Grades->value,
+                'grade_id' => $newGrade->id,
+                'quantity' => 2,
+                'start_at' => today()->format('Y-m-d'),
+                'total_months' => 12,
+            ]],
+        ]);
+
+        $response->assertSessionHasErrors('details.0.quantity');
+        $this->assertDatabaseCount('bills', 0);
+    }
+
     public function test_store_fails_when_detail_grade_id_is_inactive(): void
     {
         $user = $this->actingAsAdmin();
