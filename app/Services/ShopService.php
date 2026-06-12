@@ -6,9 +6,9 @@ use App\Enums\ShopStatus;
 use App\Models\Grade;
 use App\Models\Shop;
 use App\Models\ShopAdmin;
+use App\Repositories\GradeRepository;
 use App\Repositories\ShopRepository;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -18,20 +18,21 @@ class ShopService
 {
     public function __construct(
         private ShopRepository $shopRepository,
+        private GradeRepository $gradeRepository,
         private ShopAddonSyncService $shopAddonSync,
     ) {}
 
+    public function findShopById(int $id): ?Shop
+    {
+        return $this->shopRepository->getById($id);
+    }
+
     /**
+     * @param  array{keyword?: string, grade_id?: string, business_number?: string, is_certified?: string}  $filters
      * @return array{shops: LengthAwarePaginator, filters: array, perPage: int, grades: Collection}
      */
-    public function getIndexData(Request $request): array
+    public function getIndexData(array $filters, int $perPage): array
     {
-        $perPage = in_array((int) $request->per_page, [50, 100, 150, 200])
-            ? (int) $request->per_page
-            : 50;
-
-        $filters = $request->only(['keyword', 'grade_id', 'business_number', 'is_certified']);
-
         return [
             'shops' => $this->shopRepository->paginate($perPage, $filters),
             'filters' => $filters,
@@ -81,10 +82,7 @@ class ShopService
 
     private function syncShopAddonsOnGradeChange(int $shopId, int $newGradeId): void
     {
-        $sNew = DB::table('grades_addons')
-            ->where('grade_id', $newGradeId)
-            ->pluck('addon_id')
-            ->all();
+        $sNew = $this->gradeRepository->getAddonIdsForGrade($newGradeId);
 
         $this->shopAddonSync->syncForShop($shopId, $sNew);
     }

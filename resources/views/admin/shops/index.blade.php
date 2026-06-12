@@ -92,16 +92,15 @@
                         <td class="px-6 py-4 text-gray-500">{{ $shop->grade?->name ?? '-' }}</td>
                         <td class="px-6 py-4">
                             @php
-                                $statusLabels = [
-                                    \App\Enums\ShopStatus::Active->value   => ['label' => '啟用',  'class' => 'bg-green-100 text-green-800'],
-                                    \App\Enums\ShopStatus::Closed->value   => ['label' => '關閉',  'class' => 'bg-gray-100 text-gray-600'],
-                                    \App\Enums\ShopStatus::Expired->value  => ['label' => '過期',  'class' => 'bg-yellow-100 text-yellow-800'],
-                                    \App\Enums\ShopStatus::Archived->value => ['label' => '封存',  'class' => 'bg-red-100 text-red-800'],
+                                $statusClasses = [
+                                    \App\Enums\ShopStatus::Active->value   => 'bg-green-100 text-green-800',
+                                    \App\Enums\ShopStatus::Closed->value   => 'bg-gray-100 text-gray-600',
+                                    \App\Enums\ShopStatus::Expired->value  => 'bg-yellow-100 text-yellow-800',
+                                    \App\Enums\ShopStatus::Archived->value => 'bg-red-100 text-red-800',
                                 ];
-                                $statusInfo = $statusLabels[$shop->status->value] ?? ['label' => '未知', 'class' => 'bg-gray-100 text-gray-600'];
                             @endphp
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusInfo['class'] }}">
-                                {{ $statusInfo['label'] }}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusClasses[$shop->status->value] ?? 'bg-gray-100 text-gray-600' }}">
+                                {{ $shop->status->label() }}
                             </span>
                         </td>
                         <td class="px-6 py-4">
