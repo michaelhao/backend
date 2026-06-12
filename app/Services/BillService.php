@@ -56,6 +56,11 @@ class BillService
         ];
     }
 
+    public function getById(int $id): ?Bill
+    {
+        return $this->billRepository->getById($id);
+    }
+
     /**
      * Assemble the bill detail modal payload (effective and cancelled lines).
      *
@@ -63,7 +68,7 @@ class BillService
      */
     public function getDetailData(int $id): ?array
     {
-        $bill = $this->billRepository->getByIdForDetailModal($id);
+        $bill = $this->billRepository->getByIdWithShopCreatorDetails($id);
 
         if (! $bill) {
             return null;
@@ -200,7 +205,7 @@ class BillService
     public function createBill(array $data, User $creator): Bill
     {
         return DB::transaction(function () use ($data, $creator) {
-            $shop = $this->shopRepository->getByIdWithGrade((int) $data['shop_id']);
+            $shop = $this->shopRepository->getByIdWithGradeOrFail((int) $data['shop_id']);
 
             $billNo = $this->generateBillNo();
 
@@ -236,7 +241,7 @@ class BillService
                     throw ValidationException::withMessages(['discount_amount' => '折抵金額不得大於小計']);
                 }
 
-                $discount = $this->billDiscountRepository->getById($discountId);
+                $discount = $this->billDiscountRepository->getByIdOrFail($discountId);
 
                 $this->billDetailRepository->createBillDetails($bill, [[
                     'type' => BillDetailType::Discount->value,
@@ -324,18 +329,18 @@ class BillService
             $totalMonths = (int) $d['total_months'];
 
             if ($type === BillDetailType::Addons->value) {
-                $addon = $this->addonRepository->getById((int) $d['addon_id']);
+                $addon = $this->addonRepository->getByIdOrFail((int) $d['addon_id']);
                 $unitPrice = (int) $addon->price;
                 $name = $addon->name;
                 // total_price = 單份期間金額 × quantity（與前端顯示一致）
                 $totalPrice = $this->calc->calculateDetailTotal($unitPrice, $startAt, $totalMonths) * (int) $d['quantity'];
             } elseif ($type === BillDetailType::UpgradeFeeDiff->value) {
-                $grade = $this->gradeRepository->getById((int) $d['grade_id']);
+                $grade = $this->gradeRepository->getByIdOrFail((int) $d['grade_id']);
                 $unitPrice = (int) $grade->price;
                 $name = $grade->name;
                 $totalPrice = $this->calc->calculateUpgradeDiff($unitPrice, $currentGradePrice, $startAt, $totalMonths);
             } else {
-                $grade = $this->gradeRepository->getById((int) $d['grade_id']);
+                $grade = $this->gradeRepository->getByIdOrFail((int) $d['grade_id']);
                 $unitPrice = (int) $grade->price;
                 $name = $grade->name;
                 $totalPrice = $this->calc->calculateDetailTotal($unitPrice, $startAt, $totalMonths);

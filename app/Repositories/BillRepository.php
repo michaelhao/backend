@@ -34,7 +34,7 @@ class BillRepository
         return Bill::find($id);
     }
 
-    public function getByIdForDetailModal(int $id): ?Bill
+    public function getByIdWithShopCreatorDetails(int $id): ?Bill
     {
         return Bill::with(['shop', 'creator', 'details'])->find($id);
     }

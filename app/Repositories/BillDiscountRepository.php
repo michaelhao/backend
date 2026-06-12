@@ -12,8 +12,8 @@ class BillDiscountRepository
         return BillDiscount::orderBy('id')->get();
     }
 
-    public function getById(int $id): ?BillDiscount
+    public function getByIdOrFail(int $id): BillDiscount
     {
-        return BillDiscount::find($id);
+        return BillDiscount::findOrFail($id);
     }
 }

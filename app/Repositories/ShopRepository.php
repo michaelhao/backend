@@ -14,9 +14,9 @@ class ShopRepository
         return Shop::find($id);
     }
 
-    public function getByIdWithGrade(int $id): ?Shop
+    public function getByIdWithGradeOrFail(int $id): Shop
     {
-        return Shop::with('grade')->find($id);
+        return Shop::with('grade')->findOrFail($id);
     }
 
     public function getByIdWithGradeAndSales(int $id): ?Shop

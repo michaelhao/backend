@@ -19,6 +19,11 @@ class GradeRepository
         return Grade::find($id);
     }
 
+    public function getByIdOrFail(int $id): Grade
+    {
+        return Grade::findOrFail($id);
+    }
+
     /**
      * @param  string[]  $columns
      */

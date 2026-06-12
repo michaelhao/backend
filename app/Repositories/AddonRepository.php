@@ -31,6 +31,11 @@ class AddonRepository
         return Addon::find($id);
     }
 
+    public function getByIdOrFail(int $id): Addon
+    {
+        return Addon::findOrFail($id);
+    }
+
     /**
      * @param  string[]  $columns
      */

@@ -14,7 +14,7 @@ class ShopAddonRepository
     {
         return ShopAddon::with('addon')
             ->where('shop_id', $shopId)
-            ->where('status', 1)
+            ->where('status', ShopAddonStatus::Enabled->value)
             ->get();
     }
 
