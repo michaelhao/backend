@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Attributes\RequiresPermission;
 use App\Http\Requests\GradeRequest;
-use App\Models\Grade;
 use App\Services\GradeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -42,7 +41,7 @@ class GradeController extends Controller
     #[RequiresPermission('Grade.update')]
     public function edit(int $id)
     {
-        $grade = Grade::find($id);
+        $grade = $this->gradeService->findGradeById($id);
         if (! $grade) {
             return redirect()->route('grades.index')->with('error', '找不到該方案');
         }
@@ -55,7 +54,7 @@ class GradeController extends Controller
     #[RequiresPermission('Grade.update')]
     public function update(GradeRequest $request, int $id)
     {
-        $grade = Grade::find($id);
+        $grade = $this->gradeService->findGradeById($id);
         if (! $grade) {
             return redirect()->route('grades.index')->with('error', '找不到該方案');
         }
@@ -74,26 +73,13 @@ class GradeController extends Controller
         $weight = (int) $request->query('weight');
         $excludeId = $request->query('exclude_id') ? (int) $request->query('exclude_id') : null;
 
-        if ($weight < 1) {
-            return response()->json(['duplicate' => false, 'conflicting_grade' => null, 'grades' => []]);
-        }
-
-        $conflict = $this->gradeService->findByWeight($weight, $excludeId);
-        $grades = $this->gradeService->getAllGrades();
-
-        return response()->json([
-            'duplicate' => $conflict !== null,
-            'conflicting_grade' => $conflict
-                ? ['id' => $conflict->id, 'name' => $conflict->name, 'weight' => $conflict->weight]
-                : null,
-            'grades' => $grades->map(fn ($g) => ['id' => $g->id, 'name' => $g->name, 'weight' => $g->weight]),
-        ]);
+        return response()->json($this->gradeService->checkWeightConflict($weight, $excludeId));
     }
 
     #[RequiresPermission('Grade.update')]
     public function toggleStatus(int $id): JsonResponse
     {
-        $grade = Grade::find($id);
+        $grade = $this->gradeService->findGradeById($id);
         if (! $grade) {
             return response()->json(['message' => '找不到該版本'], 422);
         }
