@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Enums\BillPaymentStatus;
 use App\Models\Bill;
+use App\Models\BillStatusLog;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class BillRepository
@@ -26,6 +27,35 @@ class BillRepository
     public function findById(int $id): ?Bill
     {
         return Bill::with(['shop', 'details', 'statusLogs.operator'])->find($id);
+    }
+
+    public function getById(int $id): ?Bill
+    {
+        return Bill::find($id);
+    }
+
+    public function getByIdForDetailModal(int $id): ?Bill
+    {
+        return Bill::with(['shop', 'creator', 'details'])->find($id);
+    }
+
+    public function getByIdWithEffectiveDetails(int $id): ?Bill
+    {
+        return Bill::with(['shop', 'details' => fn ($q) => $q->where('is_effective', 1)])->find($id);
+    }
+
+    /**
+     * @param  string[]  $nos
+     * @return string[]
+     */
+    public function getTakenNos(array $nos): array
+    {
+        return Bill::whereIn('no', $nos)->pluck('no')->all();
+    }
+
+    public function createStatusLog(array $data): BillStatusLog
+    {
+        return BillStatusLog::create($data);
     }
 
     public function create(array $data): Bill

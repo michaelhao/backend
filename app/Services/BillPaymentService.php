@@ -5,19 +5,19 @@ namespace App\Services;
 use App\Enums\AddonType;
 use App\Enums\BillDetailType;
 use App\Enums\BillPaymentStatus;
-use App\Enums\ShopAddonSource;
-use App\Enums\ShopAddonStatus;
 use App\Exceptions\BillPaymentLockedException;
-use App\Models\Addon;
 use App\Models\Bill;
 use App\Models\BillDetail;
-use App\Models\BillStatusLog;
-use App\Models\Grade;
 use App\Models\Shop;
-use App\Models\ShopAddon;
 use App\Models\User;
+use App\Repositories\AddonRepository;
+use App\Repositories\BillDetailRepository;
 use App\Repositories\BillFutureEffectRepository;
+use App\Repositories\BillRepository;
+use App\Repositories\GradeRepository;
 use App\Repositories\ShopAddonBalanceRepository;
+use App\Repositories\ShopAddonRepository;
+use App\Repositories\ShopRepository;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -28,6 +28,12 @@ class BillPaymentService
         private BillFutureEffectRepository $futureEffectRepository,
         private ShopAddonBalanceRepository $shopAddonBalanceRepository,
         private ShopAddonSyncService $shopAddonSyncService,
+        private BillRepository $billRepository,
+        private BillDetailRepository $billDetailRepository,
+        private ShopRepository $shopRepository,
+        private ShopAddonRepository $shopAddonRepository,
+        private GradeRepository $gradeRepository,
+        private AddonRepository $addonRepository,
     ) {}
 
     /**
@@ -67,7 +73,7 @@ class BillPaymentService
                 $bill->update($updates);
 
                 if ($newStatus !== null && $newStatus !== $fromStatus) {
-                    BillStatusLog::create([
+                    $this->billRepository->createStatusLog([
                         'bill_id'     => $bill->id,
                         'from_status' => $fromStatus->value,
                         'to_status'   => $newStatus->value,
@@ -95,7 +101,7 @@ class BillPaymentService
         }
 
         DB::transaction(function () use ($detail) {
-            $shop = Shop::lockForUpdate()->findOrFail($detail->bill->shop_id);
+            $shop = $this->shopRepository->getByIdForUpdate($detail->bill->shop_id);
 
             if (in_array($detail->type->value, [BillDetailType::Grades->value, BillDetailType::UpgradeFeeDiff->value])) {
                 $this->installGradeDetail($shop, $detail);
@@ -111,7 +117,7 @@ class BillPaymentService
     {
         $today = today()->toDateString();
 
-        foreach ($bill->details()->where('is_effective', 1)->where('type', '!=', BillDetailType::Discount->value)->get() as $detail) {
+        foreach ($this->billDetailRepository->getEffectiveByBill($bill->id) as $detail) {
             // Pre-load the bill relation to avoid a lazy-load inside installDetail
             $detail->setRelation('bill', $bill);
 
@@ -131,7 +137,7 @@ class BillPaymentService
             return;
         }
 
-        $newGrade = Grade::find($detail->grade_id);
+        $newGrade = $this->gradeRepository->getById($detail->grade_id);
 
         if (! $newGrade) {
             Log::warning("BillPaymentService: grade #{$detail->grade_id} not found for detail #{$detail->id}");
@@ -139,12 +145,12 @@ class BillPaymentService
             return;
         }
 
-        $shop->update([
+        $this->shopRepository->update($shop, [
             'grade_id' => $newGrade->id,
             'expired_at' => $detail->expired_at,
         ]);
 
-        $newAddonIds = $newGrade->addons()->pluck('addons.id')->toArray();
+        $newAddonIds = $this->gradeRepository->getAddonIdsForGrade($newGrade->id);
         $this->shopAddonSyncService->syncForShop($shop->id, $newAddonIds);
     }
 
@@ -156,7 +162,7 @@ class BillPaymentService
             return;
         }
 
-        $addon = Addon::find($detail->addon_id);
+        $addon = $this->addonRepository->getById($detail->addon_id);
 
         if (! $addon) {
             Log::warning("BillPaymentService: addon #{$detail->addon_id} not found for detail #{$detail->id}");
@@ -164,14 +170,7 @@ class BillPaymentService
             return;
         }
 
-        ShopAddon::updateOrCreate(
-            ['shop_id' => $shop->id, 'addon_id' => $addon->id],
-            [
-                'source' => ShopAddonSource::Purchased,
-                'status' => ShopAddonStatus::Enabled,
-                'expired_at' => $detail->expired_at,
-            ]
-        );
+        $this->shopAddonRepository->upsertPurchased($shop->id, $addon->id, $detail->expired_at);
 
         if ($addon->type === AddonType::Quota) {
             $this->shopAddonBalanceRepository->create(

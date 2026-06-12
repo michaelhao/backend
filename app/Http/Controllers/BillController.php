@@ -6,7 +6,7 @@ use App\Attributes\RequiresPermission;
 use App\Http\Requests\StoreBillRequest;
 use App\Http\Requests\UpdateBillRequest;
 use App\Http\Requests\WriteoffBillRequest;
-use App\Models\Bill;
+use App\Repositories\BillRepository;
 use App\Services\BillPaymentService;
 use App\Services\BillService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -18,6 +18,7 @@ class BillController extends Controller
     public function __construct(
         private BillService $billService,
         private BillPaymentService $billPaymentService,
+        private BillRepository $billRepository,
     ) {}
 
     #[RequiresPermission('Bill.index')]
@@ -130,7 +131,7 @@ class BillController extends Controller
     #[RequiresPermission('Bill.pay')]
     public function update(UpdateBillRequest $request, int $id): JsonResponse
     {
-        $bill = Bill::find($id);
+        $bill = $this->billRepository->getById($id);
 
         if (! $bill) {
             return response()->json(['message' => '帳單不存在'], 404);
@@ -159,7 +160,7 @@ class BillController extends Controller
     #[RequiresPermission('Bill.writeoff')]
     public function writeoff(WriteoffBillRequest $request, int $id): JsonResponse
     {
-        $bill = Bill::find($id);
+        $bill = $this->billRepository->getById($id);
 
         if (! $bill) {
             return response()->json(['message' => '帳單不存在'], 404);
