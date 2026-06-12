@@ -249,6 +249,13 @@ class UserCrudTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $admin->id, 'name' => 'Updated Admin Name']);
     }
 
+    public function test_guest_is_redirected_to_login(): void
+    {
+        $response = $this->get(route('users.index'));
+
+        $response->assertRedirect(route('login'));
+    }
+
     public function test_viewer_cannot_access_create_page(): void
     {
         $this->seedPermissions();
@@ -258,6 +265,126 @@ class UserCrudTest extends TestCase
         $response = $this->get(route('users.create'));
 
         $response->assertRedirect();
+    }
+
+    public function test_viewer_cannot_update_user(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Viewer');
+        $role = Role::where('name', 'Viewer')->first();
+        $target = User::factory()->create(['role_id' => $role->id]);
+
+        $response = $this->put(route('users.update', $target), [
+            'name' => 'Hacked Name',
+            'email' => $target->email,
+            'password' => '',
+            'password_confirmation' => '',
+            'role_id' => $role->id,
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseMissing('users', ['id' => $target->id, 'name' => 'Hacked Name']);
+    }
+
+    public function test_viewer_cannot_delete_user(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Viewer');
+        $role = Role::where('name', 'Viewer')->first();
+        $target = User::factory()->create(['role_id' => $role->id]);
+
+        $response = $this->delete(route('users.destroy', $target));
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('users', ['id' => $target->id]);
+    }
+
+    public function test_edit_redirects_with_error_for_missing_user(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+
+        $response = $this->get(route('users.edit', 99999));
+
+        $response->assertRedirect(route('users.index'));
+        $response->assertSessionHas('error', '找不到該使用者');
+    }
+
+    public function test_update_redirects_with_error_for_missing_user(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+        $role = Role::where('name', 'Viewer')->first();
+
+        $response = $this->put(route('users.update', 99999), [
+            'name' => 'Ghost',
+            'email' => 'ghost@example.com',
+            'password' => '',
+            'password_confirmation' => '',
+            'role_id' => $role->id,
+        ]);
+
+        $response->assertRedirect(route('users.index'));
+        $response->assertSessionHas('error', '找不到該使用者');
+    }
+
+    public function test_store_fails_with_weak_password(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+        $role = Role::where('name', 'Viewer')->first();
+
+        $response = $this->post(route('users.store'), [
+            'name' => 'Weak Password',
+            'email' => 'weak@example.com',
+            'password' => 'alllowercase',
+            'password_confirmation' => 'alllowercase',
+            'role_id' => $role->id,
+        ]);
+
+        $response->assertSessionHasErrors('password');
+    }
+
+    public function test_update_fails_with_weak_password(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+        $role = Role::where('name', 'Viewer')->first();
+        $target = User::factory()->create(['role_id' => $role->id]);
+
+        $response = $this->put(route('users.update', $target), [
+            'name' => $target->name,
+            'email' => $target->email,
+            'password' => 'alllowercase',
+            'password_confirmation' => 'alllowercase',
+            'role_id' => $role->id,
+        ]);
+
+        $response->assertSessionHasErrors('password');
+    }
+
+    public function test_store_fails_with_too_long_name(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+        $role = Role::where('name', 'Viewer')->first();
+
+        $response = $this->post(route('users.store'), [
+            'name' => str_repeat('a', 101),
+            'email' => 'longname@example.com',
+            'password' => 'Str0ng!P@ssword',
+            'password_confirmation' => 'Str0ng!P@ssword',
+            'role_id' => $role->id,
+        ]);
+
+        $response->assertSessionHasErrors('name');
     }
 
     public function test_store_fails_with_duplicate_email(): void
