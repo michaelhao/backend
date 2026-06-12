@@ -23,6 +23,6 @@
 
 ## 3. HTML 文件
 
-- [ ] 3.1 從 spec.md 產生 `docs/bill-management-spec.html`（單檔自包含、零外部資源，範本 `docs/shop-management-spec.html`）
-- [ ] 3.2 驗證 requirement/scenario 數量一致、無外部資源引用、HTML 標籤平衡
-- [ ] 3.3 全套件測試確認無回歸
+- [x] 3.1 從 spec.md 產生 `docs/bill-management-spec.html`（單檔自包含、零外部資源，範本 `docs/shop-management-spec.html`）
+- [x] 3.2 驗證 requirement/scenario 數量一致、無外部資源引用、HTML 標籤平衡
+- [x] 3.3 全套件測試確認無回歸
