@@ -7,6 +7,7 @@ use App\Enums\BillDetailType;
 use App\Enums\BillPaymentStatus;
 use App\Enums\ShopAddonSource;
 use App\Enums\ShopAddonStatus;
+use App\Exceptions\BillPaymentLockedException;
 use App\Models\Addon;
 use App\Models\Bill;
 use App\Models\BillDetail;
@@ -33,7 +34,7 @@ class BillPaymentService
      * Update bill fields (payment_status, paid_at, invoice_no).
      * If status transitions to Paid, triggers the install flow with distributed lock.
      *
-     * @throws \Symfony\Component\HttpKernel\Exception\HttpException  429 if lock unavailable
+     * @throws BillPaymentLockedException if the payment lock is unavailable
      */
     public function update(Bill $bill, array $data, User $operator): void
     {
@@ -44,7 +45,7 @@ class BillPaymentService
         if ($transitionToPaid) {
             $lock = Cache::lock("bill_pay_{$bill->id}", 10);
             if (! $lock->get()) {
-                abort(429, '付款處理中，請勿重複操作');
+                throw new BillPaymentLockedException;
             }
         }
 
