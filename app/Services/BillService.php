@@ -51,11 +51,55 @@ class BillService
     }
 
     /**
+     * Assemble the bill detail modal payload (effective and cancelled lines).
+     *
+     * @return array{bill: array, details: \Illuminate\Support\Collection}|null
+     */
+    public function getDetailData(int $id): ?array
+    {
+        $bill = Bill::with(['shop', 'creator', 'details'])->find($id);
+
+        if (! $bill) {
+            return null;
+        }
+
+        return [
+            'bill' => [
+                'id' => $bill->id,
+                'no' => $bill->no,
+                'shop_name' => $bill->shop->name,
+                'creator_name' => $bill->creator?->name ?? '—',
+                'payment_status' => $bill->payment_status->value,
+                'status_label' => $bill->payment_status->label(),
+                'status_class' => $bill->payment_status->badgeClass(),
+                'total_grade' => $bill->total_grade,
+                'total_addons' => $bill->total_addons,
+                'discount_amount' => $bill->discount_amount,
+                'total' => $bill->total,
+                'paid_at' => $bill->paid_at?->format('Y-m-d'),
+                'invoice_no' => $bill->invoice_no,
+            ],
+            'details' => $bill->details->map(fn (BillDetail $d) => [
+                'id' => $d->id,
+                'name' => $d->name,
+                'type' => $d->type->value,
+                'type_label' => $d->type->label(),
+                'quantity' => $d->quantity,
+                'unit_price' => $d->unit_price,
+                'total_price' => $d->total_price,
+                'start_at' => $d->start_at?->format('Y-m-d'),
+                'expired_at' => $d->expired_at?->format('Y-m-d'),
+                'is_effective' => $d->is_effective,
+            ]),
+        ];
+    }
+
+    /**
      * Assemble the data needed to render the quotation PDF.
      *
      * @return array{bill: Bill, details: Collection, filename: string}|null
      */
-    public function getQuotationData(int $id, array $typeLabels): ?array
+    public function getQuotationData(int $id): ?array
     {
         $bill = Bill::with(['shop', 'details' => fn ($q) => $q->where('is_effective', 1)])->find($id);
 
@@ -65,7 +109,7 @@ class BillService
 
         $details = $bill->details->map(fn (BillDetail $d) => [
             'name'        => $d->name,
-            'type_label'  => $typeLabels[$d->type->value] ?? '—',
+            'type_label'  => $d->type->label(),
             'type'        => $d->type->value,
             'total_price' => $d->total_price,
             'start_at'    => $d->start_at?->format('Y-m-d'),

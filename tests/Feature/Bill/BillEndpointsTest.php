@@ -106,7 +106,7 @@ class BillEndpointsTest extends TestCase
             'canceled_at' => now(),
         ]);
 
-        $data = app(BillService::class)->getQuotationData($bill->id, []);
+        $data = app(BillService::class)->getQuotationData($bill->id);
 
         $names = collect($data['details'])->pluck('name');
         $this->assertTrue($names->contains('有效項目'));
