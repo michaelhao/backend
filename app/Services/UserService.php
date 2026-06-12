@@ -8,6 +8,7 @@ use App\Repositories\BillRepository;
 use App\Repositories\RoleRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class UserService
 {
@@ -87,7 +88,9 @@ class UserService
             throw new UserOperationException('該使用者為帳單業務，無法刪除');
         }
 
-        $this->userRepository->delete($user);
-        $this->userRepository->deleteSessionsByUserId($user->id);
+        DB::transaction(function () use ($user): void {
+            $this->userRepository->delete($user);
+            $this->userRepository->deleteSessionsByUserId($user->id);
+        });
     }
 }
