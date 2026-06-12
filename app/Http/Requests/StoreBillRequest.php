@@ -44,6 +44,19 @@ class StoreBillRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
+            $seenAddonIds = [];
+            foreach ((array) $this->input('details', []) as $i => $d) {
+                if ((int) ($d['type'] ?? 0) !== BillDetailType::Addons->value || ! isset($d['addon_id'])) {
+                    continue;
+                }
+                $addonId = (int) $d['addon_id'];
+                if (isset($seenAddonIds[$addonId])) {
+                    $validator->errors()->add("details.{$i}.addon_id", '同一張帳單內不可重複加購相同功能');
+                } else {
+                    $seenAddonIds[$addonId] = true;
+                }
+            }
+
             $shop = Shop::with('grade')->find((int) $this->input('shop_id'));
             if (! $shop || ! $shop->expired_at) {
                 return;

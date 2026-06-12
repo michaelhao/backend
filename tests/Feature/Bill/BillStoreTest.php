@@ -218,6 +218,60 @@ class BillStoreTest extends TestCase
         $this->assertSame(600, Bill::firstOrFail()->total_addons);
     }
 
+    public function test_duplicate_addon_in_same_bill_is_rejected(): void
+    {
+        $user = $this->actingAsAdmin();
+        [$shop] = $this->makeShop($user);
+        $addon = Addon::factory()->create(['price' => 100]);
+
+        $detailRow = [
+            'type' => BillDetailType::Addons->value,
+            'addon_id' => $addon->id,
+            'quantity' => 1,
+            'start_at' => today()->format('Y-m-d'),
+            'total_months' => 1,
+        ];
+
+        $response = $this->post(route('bills.store'), [
+            'shop_id' => $shop->id,
+            'payment_method' => 2,
+            'details' => [$detailRow, $detailRow],
+        ]);
+
+        $response->assertSessionHasErrors('details.1.addon_id');
+        $this->assertDatabaseCount('bills', 0);
+    }
+
+    public function test_two_different_addons_in_same_bill_are_accepted(): void
+    {
+        $user = $this->actingAsAdmin();
+        [$shop] = $this->makeShop($user);
+        [$addonA, $addonB] = Addon::factory()->count(2)->create(['price' => 100]);
+
+        $this->post(route('bills.store'), [
+            'shop_id' => $shop->id,
+            'payment_method' => 2,
+            'details' => [
+                [
+                    'type' => BillDetailType::Addons->value,
+                    'addon_id' => $addonA->id,
+                    'quantity' => 1,
+                    'start_at' => today()->format('Y-m-d'),
+                    'total_months' => 1,
+                ],
+                [
+                    'type' => BillDetailType::Addons->value,
+                    'addon_id' => $addonB->id,
+                    'quantity' => 1,
+                    'start_at' => today()->format('Y-m-d'),
+                    'total_months' => 1,
+                ],
+            ],
+        ])->assertRedirect(route('bills.index'));
+
+        $this->assertDatabaseCount('bills', 1);
+    }
+
     public function test_store_fails_when_detail_grade_id_is_inactive(): void
     {
         $user = $this->actingAsAdmin();
