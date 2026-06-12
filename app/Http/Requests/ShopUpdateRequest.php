@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\GradeStatus;
 use App\Enums\ShopStatus;
 use App\Models\Shop;
+use App\Repositories\ShopRepository;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
@@ -18,11 +19,11 @@ class ShopUpdateRequest extends FormRequest
 
     public function rules(): array
     {
-        $shop = Shop::find($this->route('id'));
+        $shop = app(ShopRepository::class)->getById((int) $this->route('id'));
 
         return [
             'name' => ['required', 'string', 'max:50'],
-            'email' => ['required', 'email', Rule::unique('shops', 'email')->ignore($shop->id)],
+            'email' => ['required', 'email', Rule::unique('shops', 'email')->ignore($this->route('id'))],
             'grade_id' => ['required', 'integer', $this->gradeIdExistsRule($shop)],
             'status' => ['required', new Enum(ShopStatus::class)],
             'admin.name' => ['required', 'string', 'max:20'],

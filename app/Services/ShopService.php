@@ -6,9 +6,9 @@ use App\Enums\ShopStatus;
 use App\Models\Grade;
 use App\Models\Shop;
 use App\Models\ShopAdmin;
+use App\Repositories\GradeRepository;
 use App\Repositories\ShopRepository;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -18,20 +18,21 @@ class ShopService
 {
     public function __construct(
         private ShopRepository $shopRepository,
+        private GradeRepository $gradeRepository,
         private ShopAddonSyncService $shopAddonSync,
     ) {}
 
+    public function findShopById(int $id): ?Shop
+    {
+        return $this->shopRepository->getById($id);
+    }
+
     /**
+     * @param  array{keyword?: string, grade_id?: string, business_number?: string, is_certified?: string}  $filters
      * @return array{shops: LengthAwarePaginator, filters: array, perPage: int, grades: Collection}
      */
-    public function getIndexData(Request $request): array
+    public function getIndexData(array $filters, int $perPage): array
     {
-        $perPage = in_array((int) $request->per_page, [50, 100, 150, 200])
-            ? (int) $request->per_page
-            : 50;
-
-        $filters = $request->only(['keyword', 'grade_id', 'business_number', 'is_certified']);
-
         return [
             'shops' => $this->shopRepository->paginate($perPage, $filters),
             'filters' => $filters,
@@ -56,12 +57,18 @@ class ShopService
 
     public function updateShop(Shop $shop, array $shopData, array $adminData): void
     {
-        $conflict = ShopAdmin::where('id', '!=', $shop->admin->id)
-            ->get()
-            ->first(fn ($a) => $a->email === $adminData['email']);
+        $admin = $shop->admin;
 
-        if ($conflict) {
-            throw ValidationException::withMessages(['admin.email' => '此 email 已被使用']);
+        if ($admin) {
+            $conflict = ShopAdmin::where('id', '!=', $admin->id)
+                ->get()
+                ->first(fn ($a) => $a->email === $adminData['email']);
+
+            if ($conflict) {
+                throw ValidationException::withMessages(['admin.email' => '此 email 已被使用']);
+            }
+
+            $adminData = $this->resolveCertificationData($admin, $adminData);
         }
 
         $gradeChanging = isset($shopData['grade_id'])
@@ -69,9 +76,12 @@ class ShopService
         $newGradeId = $gradeChanging ? (int) $shopData['grade_id'] : null;
         $shopId = $shop->id;
 
-        DB::transaction(function () use ($shop, $shopData, $adminData, $gradeChanging, $newGradeId, $shopId) {
+        DB::transaction(function () use ($shop, $admin, $shopData, $adminData, $gradeChanging, $newGradeId, $shopId) {
             $this->shopRepository->update($shop, $shopData);
-            $this->shopRepository->updateAdmin($shop->admin, $adminData);
+
+            if ($admin) {
+                $this->shopRepository->updateAdmin($admin, $adminData);
+            }
 
             if ($gradeChanging) {
                 $this->syncShopAddonsOnGradeChange($shopId, $newGradeId);
@@ -79,12 +89,51 @@ class ShopService
         });
     }
 
+    /**
+     * 認證資料以伺服端為準：business_number 變更時重新呼叫認證 API，
+     * company_name 一律採 API 回傳值或 DB 現值，不信任表單送來的值。
+     *
+     * @param  array{business_number?: ?string, company_name?: ?string}  $adminData
+     */
+    private function resolveCertificationData(ShopAdmin $admin, array $adminData): array
+    {
+        if (! array_key_exists('business_number', $adminData)) {
+            unset($adminData['company_name']);
+
+            return $adminData;
+        }
+
+        $businessNumber = $adminData['business_number'];
+
+        if ($businessNumber === null || $businessNumber === '') {
+            $adminData['business_number'] = null;
+            $adminData['company_name'] = null;
+
+            return $adminData;
+        }
+
+        if ($businessNumber === $admin->business_number) {
+            $adminData['company_name'] = $admin->company_name;
+
+            return $adminData;
+        }
+
+        $result = $this->verifyCertification($businessNumber);
+
+        if (! $result['success']) {
+            throw ValidationException::withMessages([
+                'admin.business_number' => '統一編號認證失敗，請重新進行認證',
+            ]);
+        }
+
+        $adminData['company_name'] = $result['company_name'];
+
+        return $adminData;
+    }
+
     private function syncShopAddonsOnGradeChange(int $shopId, int $newGradeId): void
     {
-        $sNew = DB::table('grades_addons')
-            ->where('grade_id', $newGradeId)
-            ->pluck('addon_id')
-            ->all();
+        $sNew = $this->gradeRepository->getAddonIdsForGrade($newGradeId);
 
         $this->shopAddonSync->syncForShop($shopId, $sNew);
     }

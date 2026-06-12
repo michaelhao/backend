@@ -68,19 +68,11 @@
                 {{-- status --}}
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-1">狀態</label>
-                    @php
-                        $statusLabels = [
-                            \App\Enums\ShopStatus::Active->value   => '啟用',
-                            \App\Enums\ShopStatus::Closed->value   => '關閉',
-                            \App\Enums\ShopStatus::Expired->value  => '過期',
-                            \App\Enums\ShopStatus::Archived->value => '封存',
-                        ];
-                    @endphp
                     <select id="status" name="status"
                             class="w-full rounded-md border @error('status') border-red-400 @else border-gray-300 @enderror px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
                         @foreach ($statuses as $statusCase)
                             <option value="{{ $statusCase->value }}" {{ old('status', $shop->status->value) == $statusCase->value ? 'selected' : '' }}>
-                                {{ $statusLabels[$statusCase->value] }}
+                                {{ $statusCase->label() }}
                             </option>
                         @endforeach
                     </select>

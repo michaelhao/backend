@@ -65,6 +65,116 @@ class ShopRuTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_guest_is_redirected_to_login(): void
+    {
+        $response = $this->get(route('shops.index'));
+
+        $response->assertRedirect(route('login'));
+    }
+
+    // ─── Index filters & pagination ──────────────────────────────────────────
+
+    public function test_index_filters_by_keyword_with_partial_match(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $this->createShopWithAdmin(['name' => '旗艦咖啡商店']);
+        $this->createShopWithAdmin(['name' => '無關五金行']);
+
+        $response = $this->get(route('shops.index', ['keyword' => '咖啡']));
+
+        $response->assertStatus(200);
+        $response->assertSee('旗艦咖啡商店');
+        $response->assertDontSee('無關五金行');
+    }
+
+    public function test_index_filters_by_grade_id(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $gradeA = Grade::factory()->create();
+        $gradeB = Grade::factory()->create();
+        $this->createShopWithAdmin(['name' => 'A版本商店', 'grade_id' => $gradeA->id]);
+        $this->createShopWithAdmin(['name' => 'B版本商店', 'grade_id' => $gradeB->id]);
+
+        $response = $this->get(route('shops.index', ['grade_id' => $gradeA->id]));
+
+        $response->assertStatus(200);
+        $response->assertSee('A版本商店');
+        $response->assertDontSee('B版本商店');
+    }
+
+    public function test_index_filters_by_exact_business_number(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $this->createShopWithAdmin(['name' => '已認證商店甲'], ['business_number' => '12345678']);
+        $this->createShopWithAdmin(['name' => '已認證商店乙'], ['business_number' => '12345670']);
+
+        $response = $this->get(route('shops.index', ['business_number' => '12345678']));
+
+        $response->assertStatus(200);
+        $response->assertSee('已認證商店甲');
+        $response->assertDontSee('已認證商店乙');
+    }
+
+    public function test_index_filters_by_certification_status(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $this->createShopWithAdmin(['name' => '已認證商店'], ['business_number' => '12345678']);
+        $this->createShopWithAdmin(['name' => '未認證商店'], ['business_number' => null]);
+
+        $certified = $this->get(route('shops.index', ['is_certified' => '1']));
+        $certified->assertSee('已認證商店');
+        $certified->assertDontSee('未認證商店');
+
+        $uncertified = $this->get(route('shops.index', ['is_certified' => '0']));
+        $uncertified->assertSee('未認證商店');
+        $uncertified->assertDontSee('已認證商店');
+    }
+
+    public function test_index_combined_filters_intersect(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $grade = Grade::factory()->create();
+        $this->createShopWithAdmin(['name' => '目標咖啡商店', 'grade_id' => $grade->id], ['business_number' => '12345678']);
+        $this->createShopWithAdmin(['name' => '別版咖啡商店'], ['business_number' => '12345670']);
+
+        $response = $this->get(route('shops.index', [
+            'keyword' => '咖啡',
+            'grade_id' => $grade->id,
+            'is_certified' => '1',
+        ]));
+
+        $response->assertStatus(200);
+        $response->assertSee('目標咖啡商店');
+        $response->assertDontSee('別版咖啡商店');
+    }
+
+    public function test_index_accepts_valid_per_page(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->get(route('shops.index', ['per_page' => 100]));
+
+        $response->assertStatus(200);
+        $response->assertSee('value="100" selected', false);
+    }
+
+    public function test_index_invalid_per_page_falls_back_to_50(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->get(route('shops.index', ['per_page' => 999]));
+
+        $response->assertStatus(200);
+        $response->assertSee('value="50" selected', false);
+    }
+
     // ─── Edit form ────────────────────────────────────────────────────────────
 
     public function test_admin_can_access_shop_edit(): void
@@ -301,6 +411,12 @@ class ShopRuTest extends TestCase
         $this->createUserWithRole('Admin');
         $shop = $this->createShopWithAdmin();
 
+        Http::fake([
+            '*' => Http::response([
+                ['Company_Name' => '測試股份有限公司'],
+            ], 200),
+        ]);
+
         $response = $this->put(route('shops.update', $shop), [
             'name' => $shop->name,
             'email' => $shop->email,
@@ -320,6 +436,200 @@ class ShopRuTest extends TestCase
             'business_number' => '12345678',
             'company_name' => '測試股份有限公司',
         ]);
+    }
+
+    public function test_update_reverifies_changed_business_number_and_uses_api_company_name(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $shop = $this->createShopWithAdmin();
+
+        Http::fake([
+            '*' => Http::response([
+                ['Company_Name' => '政府登記公司'],
+            ], 200),
+        ]);
+
+        $response = $this->put(route('shops.update', $shop), [
+            'name' => $shop->name,
+            'email' => $shop->email,
+            'grade_id' => $shop->grade_id,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => $shop->admin->name,
+                'email' => $shop->admin->email,
+                'business_number' => '87654321',
+                'company_name' => '偽造公司名稱',
+            ],
+        ]);
+
+        $response->assertRedirect(route('shops.index'));
+        $this->assertDatabaseHas('shops_admin', [
+            'shop_id' => $shop->id,
+            'business_number' => '87654321',
+            'company_name' => '政府登記公司',
+        ]);
+    }
+
+    public function test_update_rejects_business_number_that_fails_verification(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $shop = $this->createShopWithAdmin(
+            [],
+            ['business_number' => '11111111', 'company_name' => '原始公司'],
+        );
+
+        Http::fake([
+            '*' => Http::response([], 200),
+        ]);
+
+        $response = $this->put(route('shops.update', $shop), [
+            'name' => $shop->name,
+            'email' => $shop->email,
+            'grade_id' => $shop->grade_id,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => $shop->admin->name,
+                'email' => $shop->admin->email,
+                'business_number' => '87654321',
+                'company_name' => '偽造公司名稱',
+            ],
+        ]);
+
+        $response->assertSessionHasErrors('admin.business_number');
+        $this->assertDatabaseHas('shops_admin', [
+            'shop_id' => $shop->id,
+            'business_number' => '11111111',
+            'company_name' => '原始公司',
+        ]);
+    }
+
+    public function test_update_unchanged_business_number_keeps_company_name_without_api_call(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $shop = $this->createShopWithAdmin(
+            [],
+            ['business_number' => '11111111', 'company_name' => '原始公司'],
+        );
+
+        Http::fake();
+
+        $response = $this->put(route('shops.update', $shop), [
+            'name' => $shop->name,
+            'email' => $shop->email,
+            'grade_id' => $shop->grade_id,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => $shop->admin->name,
+                'email' => $shop->admin->email,
+                'business_number' => '11111111',
+                'company_name' => '偽造公司名稱',
+            ],
+        ]);
+
+        $response->assertRedirect(route('shops.index'));
+        Http::assertNothingSent();
+        $this->assertDatabaseHas('shops_admin', [
+            'shop_id' => $shop->id,
+            'business_number' => '11111111',
+            'company_name' => '原始公司',
+        ]);
+    }
+
+    public function test_edit_nonexistent_shop_redirects_with_error(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->get(route('shops.edit', 99999));
+
+        $response->assertRedirect(route('shops.index'));
+        $response->assertSessionHas('error');
+    }
+
+    public function test_update_nonexistent_shop_redirects_with_error(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $grade = Grade::factory()->create();
+
+        $response = $this->put(route('shops.update', 99999), [
+            'name' => '不存在的商店',
+            'email' => 'ghost@shop.com',
+            'grade_id' => $grade->id,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => '管理員',
+                'email' => 'ghost-admin@shop.com',
+            ],
+        ]);
+
+        $response->assertRedirect(route('shops.index'));
+        $response->assertSessionHas('error');
+    }
+
+    public function test_update_ignores_unvalidated_admin_fields(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $shop = $this->createShopWithAdmin();
+        $otherShop = Shop::factory()->create();
+        $originalPassword = $shop->admin->getRawOriginal('password');
+
+        $response = $this->put(route('shops.update', $shop), [
+            'name' => $shop->name,
+            'email' => $shop->email,
+            'grade_id' => $shop->grade_id,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => $shop->admin->name,
+                'email' => $shop->admin->email,
+                'password' => 'hacked-password',
+                'shop_id' => $otherShop->id,
+            ],
+        ]);
+
+        $response->assertRedirect(route('shops.index'));
+
+        $admin = $shop->admin->fresh();
+        $this->assertSame($originalPassword, $admin->getRawOriginal('password'));
+        $this->assertSame($shop->id, $admin->shop_id);
+    }
+
+    public function test_update_shop_without_admin_does_not_fail(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $shop = Shop::factory()->create();
+
+        $response = $this->put(route('shops.update', $shop), [
+            'name' => '無管理員商店',
+            'email' => $shop->email,
+            'grade_id' => $shop->grade_id,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => '管理員',
+                'email' => 'no-admin@shop.com',
+            ],
+        ]);
+
+        $response->assertRedirect(route('shops.index'));
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('shops', ['id' => $shop->id, 'name' => '無管理員商店']);
+        $this->assertDatabaseMissing('shops_admin', ['shop_id' => $shop->id]);
+    }
+
+    public function test_per_page_form_preserves_uncertified_filter(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->get(route('shops.index', ['is_certified' => '0']));
+
+        $response->assertStatus(200);
+        $response->assertSee('name="is_certified" value="0"', false);
     }
 
     // ─── Certify endpoint ────────────────────────────────────────────────────
@@ -403,6 +713,17 @@ class ShopRuTest extends TestCase
         $response = $this->postJson(route('shops.certify', $shop), ['business_number' => '12345678']);
 
         $response->assertStatus(200);
+        $response->assertJson(['success' => false]);
+    }
+
+    public function test_certify_nonexistent_shop_returns_404_json(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->postJson(route('shops.certify', 99999), ['business_number' => '12345678']);
+
+        $response->assertStatus(404);
         $response->assertJson(['success' => false]);
     }
 

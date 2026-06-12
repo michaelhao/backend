@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Attributes\RequiresPermission;
 use App\Http\Requests\ShopCertifyRequest;
 use App\Http\Requests\ShopUpdateRequest;
-use App\Models\Shop;
 use App\Services\ShopService;
 use Illuminate\Http\Request;
 
@@ -16,13 +15,19 @@ class ShopController extends Controller
     #[RequiresPermission('Shop.index')]
     public function index(Request $request)
     {
-        return view('admin.shops.index', $this->shopService->getIndexData($request));
+        $perPage = in_array((int) $request->per_page, [50, 100, 150, 200])
+            ? (int) $request->per_page
+            : 50;
+
+        $filters = $request->only(['keyword', 'grade_id', 'business_number', 'is_certified']);
+
+        return view('admin.shops.index', $this->shopService->getIndexData($filters, $perPage));
     }
 
     #[RequiresPermission('Shop.update')]
     public function edit(int $id)
     {
-        $shop = Shop::find($id);
+        $shop = $this->shopService->findShopById($id);
         if (! $shop) {
             return redirect()->route('shops.index')->with('error', '找不到該商店');
         }
@@ -33,13 +38,13 @@ class ShopController extends Controller
     #[RequiresPermission('Shop.update')]
     public function update(ShopUpdateRequest $request, int $id)
     {
-        $shop = Shop::find($id);
+        $shop = $this->shopService->findShopById($id);
         if (! $shop) {
             return redirect()->route('shops.index')->with('error', '找不到該商店');
         }
 
-        $shopData = $request->only(['name', 'email', 'grade_id', 'status']);
-        $adminData = $request->input('admin');
+        $shopData = $request->safe()->only(['name', 'email', 'grade_id', 'status']);
+        $adminData = $request->validated()['admin'] ?? [];
 
         $this->shopService->updateShop($shop, $shopData, $adminData);
 
@@ -49,9 +54,9 @@ class ShopController extends Controller
     #[RequiresPermission('Shop.update')]
     public function certify(ShopCertifyRequest $request, int $id)
     {
-        $shop = Shop::find($id);
+        $shop = $this->shopService->findShopById($id);
         if (! $shop) {
-            return redirect()->route('shops.index')->with('error', '找不到該商店');
+            return response()->json(['success' => false, 'message' => '找不到該商店'], 404);
         }
 
         $result = $this->shopService->verifyCertification($request->business_number);

@@ -8,6 +8,11 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class ShopRepository
 {
+    public function getById(int $id): ?Shop
+    {
+        return Shop::find($id);
+    }
+
     /**
      * @param  array{keyword?: string, grade_id?: string, business_number?: string, is_certified?: string}  $filters
      */
