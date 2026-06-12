@@ -44,6 +44,13 @@ class UpdateBillRequest extends FormRequest
                 return;
             }
 
+            if ($currentStatus === BillPaymentStatus::Invalid
+                && $newStatusEnum !== BillPaymentStatus::Invalid) {
+                $validator->errors()->add('payment_status', '已失效的帳單無法變更狀態');
+
+                return;
+            }
+
             if ($newStatusEnum === BillPaymentStatus::Paid
                 && ! in_array($currentStatus, [
                     BillPaymentStatus::Pending,

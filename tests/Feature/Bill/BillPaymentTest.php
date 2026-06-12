@@ -207,6 +207,28 @@ class BillPaymentTest extends TestCase
         $this->assertEquals(BillPaymentStatus::Invalid, $bill->fresh()->payment_status);
     }
 
+    public function test_invalid_bill_is_terminal_and_cannot_be_reactivated(): void
+    {
+        $this->seedPermissions();
+        $user = $this->createAdminUser();
+        [$shop] = $this->createShopWithGrade($user);
+
+        $bill = Bill::factory()->create([
+            'shop_id' => $shop->id,
+            'creator_id' => $user->id,
+            'shop_sales_id' => $user->id,
+            'payment_status' => BillPaymentStatus::Invalid,
+        ]);
+
+        foreach ([BillPaymentStatus::Pending, BillPaymentStatus::Unpaid] as $target) {
+            $this->patchJson(route('bills.update', $bill->id), [
+                'payment_status' => $target->value,
+            ])->assertStatus(422);
+        }
+
+        $this->assertEquals(BillPaymentStatus::Invalid, $bill->fresh()->payment_status);
+    }
+
     public function test_update_to_paid_installs_details(): void
     {
         $this->seedPermissions();
