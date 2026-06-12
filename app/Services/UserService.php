@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\UserOperationException;
 use App\Models\User;
+use App\Repositories\BillRepository;
 use App\Repositories\RoleRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Database\Eloquent\Collection;
@@ -13,6 +14,7 @@ class UserService
     public function __construct(
         private UserRepository $userRepository,
         private RoleRepository $roleRepository,
+        private BillRepository $billRepository,
     ) {}
 
     /**
@@ -73,7 +75,7 @@ class UserService
     }
 
     /**
-     * @throws UserOperationException 刪除自己的帳號時拋出
+     * @throws UserOperationException 刪除自己的帳號或被帳單參照為業務時拋出
      */
     public function deleteUser(User $user, int $actingUserId): void
     {
@@ -81,6 +83,11 @@ class UserService
             throw new UserOperationException('無法刪除自己的帳號');
         }
 
+        if ($this->billRepository->existsByShopSalesUserId($user->id)) {
+            throw new UserOperationException('該使用者為帳單業務，無法刪除');
+        }
+
         $this->userRepository->delete($user);
+        $this->userRepository->deleteSessionsByUserId($user->id);
     }
 }

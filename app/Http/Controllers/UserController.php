@@ -78,7 +78,7 @@ class UserController extends Controller
     {
         $user = $this->userService->findUserById($id);
         if (! $user) {
-            return response()->json(['message' => '找不到該使用者'], 422);
+            return response()->json(['message' => '找不到該使用者'], 404);
         }
 
         try {

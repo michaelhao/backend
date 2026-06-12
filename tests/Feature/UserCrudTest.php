@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Bill;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -144,6 +146,55 @@ class UserCrudTest extends TestCase
         $response->assertOk();
         $response->assertExactJson(['message' => '使用者已刪除']);
         $this->assertDatabaseMissing('users', ['id' => $target->id]);
+    }
+
+    public function test_destroy_returns_404_for_missing_user(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+
+        $response = $this->delete(route('users.destroy', 99999));
+
+        $response->assertStatus(404);
+        $response->assertExactJson(['message' => '找不到該使用者']);
+    }
+
+    public function test_deleting_user_removes_their_sessions(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+        $role = Role::where('name', 'Viewer')->first();
+        $target = User::factory()->create(['role_id' => $role->id]);
+
+        DB::table('sessions')->insert([
+            'id' => 'target-session-id',
+            'user_id' => $target->id,
+            'payload' => '',
+            'last_activity' => now()->getTimestamp(),
+        ]);
+
+        $response = $this->delete(route('users.destroy', $target));
+
+        $response->assertOk();
+        $this->assertDatabaseMissing('sessions', ['user_id' => $target->id]);
+    }
+
+    public function test_cannot_delete_user_referenced_by_bills(): void
+    {
+        $this->seedPermissions();
+
+        $this->createUserWithRole('Admin');
+        $role = Role::where('name', 'Viewer')->first();
+        $target = User::factory()->create(['role_id' => $role->id]);
+        Bill::factory()->create(['shop_sales_id' => $target->id]);
+
+        $response = $this->delete(route('users.destroy', $target));
+
+        $response->assertStatus(422);
+        $response->assertExactJson(['message' => '該使用者為帳單業務，無法刪除']);
+        $this->assertDatabaseHas('users', ['id' => $target->id]);
     }
 
     public function test_admin_cannot_delete_self(): void
