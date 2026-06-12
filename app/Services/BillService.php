@@ -286,7 +286,8 @@ class BillService
                 $addon = Addon::findOrFail($d['addon_id']);
                 $unitPrice = (int) $addon->price;
                 $name = $addon->name;
-                $totalPrice = $this->calc->calculateDetailTotal($unitPrice, $startAt, $totalMonths);
+                // total_price = 單份期間金額 × quantity（與前端顯示一致）
+                $totalPrice = $this->calc->calculateDetailTotal($unitPrice, $startAt, $totalMonths) * (int) $d['quantity'];
             } elseif ($type === BillDetailType::UpgradeFeeDiff->value) {
                 $grade = Grade::findOrFail($d['grade_id']);
                 $unitPrice = (int) $grade->price;

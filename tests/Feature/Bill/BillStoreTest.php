@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Bill;
 
+use App\Enums\AddonType;
 use App\Enums\BillDetailType;
 use App\Enums\BillPaymentStatus;
 use App\Enums\GradeStatus;
+use App\Models\Addon;
 use App\Models\Bill;
 use App\Models\BillDetail;
 use App\Models\BillDiscount;
@@ -188,6 +190,32 @@ class BillStoreTest extends TestCase
         $this->assertNull($row->start_at);
         $this->assertNull($row->expired_at);
         $this->assertNull($row->total_months);
+    }
+
+    public function test_addon_detail_total_price_is_multiplied_by_quantity(): void
+    {
+        $user = $this->actingAsAdmin();
+        [$shop] = $this->makeShop($user);
+        $addon = Addon::factory()->create(['price' => 100, 'type' => AddonType::Quota]);
+
+        $startAt = today()->addMonth()->startOfMonth();
+
+        $this->post(route('bills.store'), [
+            'shop_id' => $shop->id,
+            'payment_method' => 2,
+            'details' => [[
+                'type' => BillDetailType::Addons->value,
+                'addon_id' => $addon->id,
+                'quantity' => 3,
+                'start_at' => $startAt->format('Y-m-d'),
+                'total_months' => 2,
+            ]],
+        ])->assertRedirect();
+
+        $detail = BillDetail::where('addon_id', $addon->id)->firstOrFail();
+        // 月初開始 2 個月，單份 100 × 2 = 200；quantity 3 → 600
+        $this->assertSame(600, $detail->total_price);
+        $this->assertSame(600, Bill::firstOrFail()->total_addons);
     }
 
     public function test_store_fails_when_detail_grade_id_is_inactive(): void
