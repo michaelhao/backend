@@ -114,7 +114,7 @@ class BillPaymentService
             // Pre-load the bill relation to avoid a lazy-load inside installDetail
             $detail->setRelation('bill', $bill);
 
-            if ($detail->start_at->toDateString() === $today) {
+            if ($detail->start_at->toDateString() <= $today) {
                 $this->installDetail($detail);
             } else {
                 $this->futureEffectRepository->createFromDetail($detail);
