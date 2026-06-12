@@ -5,7 +5,7 @@
 <style>
     @font-face {
         font-family: 'WQY';
-        src: url('{{ storage_path("fonts/wqy-microhei.ttf") }}') format('truetype');
+        src: url('{{ resource_path("fonts/wqy-microhei.ttf") }}') format('truetype');
         font-weight: normal;
         font-style: normal;
     }
