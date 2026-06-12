@@ -43,7 +43,7 @@ class GradeController extends Controller
     {
         $grade = $this->gradeService->findGradeById($id);
         if (! $grade) {
-            return redirect()->route('grades.index')->with('error', '找不到該方案');
+            return redirect()->route('grades.index')->with('error', '找不到該版本');
         }
 
         $data = $this->gradeService->getEditData($grade);
@@ -56,7 +56,7 @@ class GradeController extends Controller
     {
         $grade = $this->gradeService->findGradeById($id);
         if (! $grade) {
-            return redirect()->route('grades.index')->with('error', '找不到該方案');
+            return redirect()->route('grades.index')->with('error', '找不到該版本');
         }
 
         $this->gradeService->updateGrade(

@@ -306,4 +306,122 @@ class GradeCruTest extends TestCase
 
         $response->assertStatus(405);
     }
+
+    public function test_edit_nonexistent_grade_redirects_with_error(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->get(route('grades.edit', ['id' => 9999]));
+
+        $response->assertRedirect(route('grades.index'));
+        $response->assertSessionHas('error', '找不到該版本');
+    }
+
+    public function test_update_nonexistent_grade_redirects_with_error(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->put(route('grades.update', ['id' => 9999]), [
+            'code'   => 'grade_ghost',
+            'name'   => '幽靈版本',
+            'price'  => 2000,
+            'weight' => 66,
+            'status' => 1,
+        ]);
+
+        $response->assertRedirect(route('grades.index'));
+        $response->assertSessionHas('error', '找不到該版本');
+    }
+
+    public function test_toggle_nonexistent_grade_returns_422(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->patch(route('grades.toggle', ['id' => 9999]));
+
+        $response->assertStatus(422);
+        $response->assertJson(['message' => '找不到該版本']);
+    }
+
+    public function test_check_weight_returns_duplicate_for_taken_weight(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $grade = Grade::factory()->create(['weight' => 77]);
+
+        $response = $this->getJson(route('grades.check-weight', ['weight' => 77]));
+
+        $response->assertOk();
+        $response->assertJson([
+            'duplicate' => true,
+            'conflicting_grade' => [
+                'id'     => $grade->id,
+                'name'   => $grade->name,
+                'weight' => 77,
+            ],
+        ]);
+    }
+
+    public function test_check_weight_returns_no_duplicate_for_unused_weight(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $grade = Grade::factory()->create(['weight' => 77]);
+
+        $response = $this->getJson(route('grades.check-weight', ['weight' => 78]));
+
+        $response->assertOk();
+        $response->assertJson([
+            'duplicate' => false,
+            'conflicting_grade' => null,
+        ]);
+        $response->assertJsonFragment(['id' => $grade->id, 'name' => $grade->name, 'weight' => 77]);
+    }
+
+    public function test_check_weight_excludes_self_with_exclude_id(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $grade = Grade::factory()->create(['weight' => 77]);
+
+        $response = $this->getJson(route('grades.check-weight', [
+            'weight'     => 77,
+            'exclude_id' => $grade->id,
+        ]));
+
+        $response->assertOk();
+        $response->assertJson([
+            'duplicate' => false,
+            'conflicting_grade' => null,
+        ]);
+    }
+
+    public function test_check_weight_below_one_returns_empty(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        Grade::factory()->create(['weight' => 77]);
+
+        $response = $this->getJson(route('grades.check-weight', ['weight' => 0]));
+
+        $response->assertOk();
+        $response->assertExactJson([
+            'duplicate' => false,
+            'conflicting_grade' => null,
+            'grades' => [],
+        ]);
+    }
+
+    public function test_viewer_cannot_check_weight(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Viewer');
+
+        $response = $this->get(route('grades.check-weight', ['weight' => 77]));
+
+        $response->assertRedirect();
+    }
 }
