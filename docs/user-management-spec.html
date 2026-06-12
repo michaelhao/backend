@@ -425,11 +425,11 @@
 
 <!-- ============ 密碼政策 ============ -->
 <h2 class="section" style="--c:var(--purple)">密碼政策</h2>
-<p class="section-desc">全站政策集中於 <code>AppServiceProvider::boot()</code> 的 <code>Password::defaults()</code>，使用者管理與密碼重設（auth）共用。</p>
+<p class="section-desc">全站政策集中於 <code>app/Rules/PasswordPolicy.php</code> 的 <code>PasswordPolicy::default()</code>，由各 FormRequest 明確呼叫，使用者管理與密碼重設（auth）共用。</p>
 
 <section class="req" id="r4" style="--c:var(--purple)">
   <h3><span class="no">R4</span>密碼強度規則</h3>
-  <div class="body">使用者密碼 <span class="badge shall">SHALL</span> 符合 <code>Password::defaults()</code> 全站政策（定義於 <code>AppServiceProvider::boot()</code>）：最少 12 字元、含大小寫字母、數字與符號。系統 <span class="badge mustnot">MUST NOT</span> 使用 <code>Password::uncompromised()</code>（HIBP 外部 API）——正式環境無對外網際網路連線，外部呼叫必定失敗。</div>
+  <div class="body">使用者密碼 <span class="badge shall">SHALL</span> 符合 <code>PasswordPolicy::default()</code> 全站政策（定義於 <code>app/Rules/PasswordPolicy.php</code>，各 FormRequest 明確呼叫）：最少 12 字元、含大小寫字母、數字與符號。系統 <span class="badge mustnot">MUST NOT</span> 使用 <code>Password::uncompromised()</code>（HIBP 外部 API）——正式環境無對外網際網路連線，外部呼叫必定失敗。</div>
   <details class="scn"><summary>新增時弱密碼被拒<span class="testref">UserCrudTest::store_fails_with_weak_password</span></summary>
     <div class="scn-body">
       <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/users</code> 帶純小寫字母的密碼</span></div>

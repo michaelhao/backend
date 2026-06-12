@@ -77,7 +77,7 @@
 
 ### Requirement: 密碼強度規則
 
-使用者密碼 SHALL 符合 `Password::defaults()` 全站政策（定義於 `AppServiceProvider::boot()`）：最少 12 字元、含大小寫字母、數字與符號。系統 MUST NOT 使用 `Password::uncompromised()`（HIBP 外部 API）——正式環境無對外網際網路連線，外部呼叫必定失敗。
+使用者密碼 SHALL 符合 `PasswordPolicy::default()` 全站政策（定義於 `app/Rules/PasswordPolicy.php`，各 FormRequest 明確呼叫）：最少 12 字元、含大小寫字母、數字與符號。系統 MUST NOT 使用 `Password::uncompromised()`（HIBP 外部 API）——正式環境無對外網際網路連線，外部呼叫必定失敗。
 
 #### Scenario: 新增時弱密碼被拒
 - **WHEN** POST `/users` 帶純小寫字母的密碼
