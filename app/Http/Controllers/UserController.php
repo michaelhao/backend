@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Attributes\RequiresPermission;
+use App\Exceptions\UserOperationException;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
-use App\Models\User;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
 
@@ -42,7 +42,7 @@ class UserController extends Controller
     #[RequiresPermission('User.update')]
     public function edit(int $id)
     {
-        $user = User::find($id);
+        $user = $this->userService->findUserById($id);
         if (! $user) {
             return redirect()->route('users.index')->with('error', '找不到該使用者');
         }
@@ -55,18 +55,20 @@ class UserController extends Controller
     #[RequiresPermission('User.update')]
     public function update(UpdateUserRequest $request, int $id)
     {
-        $user = User::find($id);
+        $user = $this->userService->findUserById($id);
         if (! $user) {
             return redirect()->route('users.index')->with('error', '找不到該使用者');
         }
 
-        $data = $request->safe()->only(['name', 'email', 'password', 'role_id']);
-
-        if ($user->id === auth()->id() && isset($data['role_id']) && (int) $data['role_id'] !== $user->role_id) {
-            return redirect()->back()->with('error', '無法修改自己的角色');
+        try {
+            $this->userService->updateUser(
+                $user,
+                $request->safe()->only(['name', 'email', 'password', 'role_id']),
+                auth()->id(),
+            );
+        } catch (UserOperationException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
         }
-
-        $this->userService->updateUser($user, $data);
 
         return redirect()->route('users.index')->with('success', '使用者已更新');
     }
@@ -74,16 +76,16 @@ class UserController extends Controller
     #[RequiresPermission('User.delete')]
     public function destroy(int $id): JsonResponse
     {
-        $user = User::find($id);
+        $user = $this->userService->findUserById($id);
         if (! $user) {
             return response()->json(['message' => '找不到該使用者'], 422);
         }
 
-        if ($user->id === auth()->id()) {
-            return response()->json(['message' => '無法刪除自己的帳號'], 422);
+        try {
+            $this->userService->deleteUser($user, auth()->id());
+        } catch (UserOperationException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
-
-        $this->userService->deleteUser($user);
 
         return response()->json(['message' => '使用者已刪除']);
     }
