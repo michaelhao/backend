@@ -83,6 +83,45 @@ class BillPaymentTest extends TestCase
         $this->assertNull(BillDetail::find($detail->id)->applied_at);
     }
 
+    public function test_past_start_at_detail_installs_immediately_on_payment(): void
+    {
+        $this->seedPermissions();
+        $user = $this->createAdminUser();
+        [$shop, $grade] = $this->createShopWithGrade($user);
+
+        $bill = Bill::factory()->create([
+            'shop_id' => $shop->id,
+            'creator_id' => $user->id,
+            'shop_sales_id' => $user->id,
+            'payment_status' => BillPaymentStatus::Unpaid,
+        ]);
+
+        $pastDate = today()->subDays(3);
+        $detail = BillDetail::factory()->create([
+            'bill_id' => $bill->id,
+            'type' => BillDetailType::Grades,
+            'grade_id' => $grade->id,
+            'name' => $grade->name,
+            'start_at' => $pastDate,
+            'expired_at' => $pastDate->copy()->addMonth()->endOfMonth()->setTime(23, 59, 59),
+            'total_months' => 1,
+            'is_effective' => 1,
+        ]);
+
+        $this->patchJson(route('bills.update', $bill->id), [
+            'payment_status' => BillPaymentStatus::Paid->value,
+        ])->assertOk();
+
+        $this->assertNotNull(BillDetail::find($detail->id)->applied_at);
+        $this->assertDatabaseMissing('bills_future_effect', [
+            'bill_detail_id' => $detail->id,
+        ]);
+        $this->assertEquals(
+            $detail->expired_at->format('Y-m-d H:i:s'),
+            $shop->fresh()->expired_at->format('Y-m-d H:i:s')
+        );
+    }
+
     public function test_install_detail_is_idempotent(): void
     {
         $this->seedPermissions();
@@ -164,6 +203,28 @@ class BillPaymentTest extends TestCase
         $this->patchJson(route('bills.update', $bill->id), [
             'payment_status' => BillPaymentStatus::Paid->value,
         ])->assertStatus(422);
+
+        $this->assertEquals(BillPaymentStatus::Invalid, $bill->fresh()->payment_status);
+    }
+
+    public function test_invalid_bill_is_terminal_and_cannot_be_reactivated(): void
+    {
+        $this->seedPermissions();
+        $user = $this->createAdminUser();
+        [$shop] = $this->createShopWithGrade($user);
+
+        $bill = Bill::factory()->create([
+            'shop_id' => $shop->id,
+            'creator_id' => $user->id,
+            'shop_sales_id' => $user->id,
+            'payment_status' => BillPaymentStatus::Invalid,
+        ]);
+
+        foreach ([BillPaymentStatus::Pending, BillPaymentStatus::Unpaid] as $target) {
+            $this->patchJson(route('bills.update', $bill->id), [
+                'payment_status' => $target->value,
+            ])->assertStatus(422);
+        }
 
         $this->assertEquals(BillPaymentStatus::Invalid, $bill->fresh()->payment_status);
     }

@@ -19,6 +19,19 @@ class GradeRepository
         return Grade::find($id);
     }
 
+    public function getByIdOrFail(int $id): Grade
+    {
+        return Grade::findOrFail($id);
+    }
+
+    /**
+     * @param  string[]  $columns
+     */
+    public function getAllOrderedByWeight(array $columns = ['*']): Collection
+    {
+        return Grade::orderBy('weight')->get($columns);
+    }
+
     public function findByWeight(int $weight, ?int $excludeId): ?Grade
     {
         return Grade::where('weight', $weight)

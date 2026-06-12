@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bill-management Specification — 帳務管理</title>
+<style>
+  :root {
+    --ink: #1e293b;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --blue: #2563eb;   --blue-bg: #eff6ff;   --blue-line: #bfdbfe;
+    --amber: #d97706;  --amber-bg: #fffbeb;  --amber-line: #fde68a;
+    --green: #059669;  --green-bg: #ecfdf5;  --green-line: #a7f3d0;
+    --purple: #7c3aed; --purple-bg: #f5f3ff; --purple-line: #ddd6fe;
+    --teal: #0d9488;   --teal-bg: #f0fdfa;   --teal-line: #99f6e4;
+    --gray: #6b7280;   --gray-bg: #f3f4f6;   --gray-line: #d1d5db;
+    --red: #dc2626;    --red-bg: #fef2f2;
+    --sidebar-w: 264px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 0.86em;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+
+  /* ===== 版面 ===== */
+  .layout { display: flex; min-height: 100vh; }
+  nav.toc {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: sticky; top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: #0f172a;
+    color: #cbd5e1;
+    padding: 20px 0 32px;
+  }
+  main {
+    flex: 1;
+    min-width: 0;
+    max-width: 880px;
+    padding: 32px 40px 96px;
+  }
+
+  /* ===== 側欄 ===== */
+  .toc-title { padding: 0 20px 12px; font-weight: 700; color: #fff; font-size: 16px; }
+  .toc-title small { display: block; font-weight: 400; color: #94a3b8; font-size: 11px; margin-top: 2px; }
+  .toc-group { margin-top: 14px; }
+  .toc-group-label {
+    padding: 0 20px; font-size: 11px; letter-spacing: .08em;
+    color: #94a3b8; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .toc a {
+    display: block; padding: 5px 20px 5px 34px;
+    color: #cbd5e1; text-decoration: none; font-size: 13px;
+    border-left: 3px solid transparent;
+  }
+  .toc a:hover { color: #fff; background: rgba(255,255,255,.06); }
+  .toc a.active { color: #fff; background: rgba(255,255,255,.1); border-left-color: #60a5fa; }
+
+  /* ===== Header ===== */
+  header h1 { font-size: 26px; margin: 0 0 4px; }
+  header .sub { color: var(--muted); margin-bottom: 16px; }
+  .threat-banner {
+    background: var(--amber-bg); border: 1px solid var(--amber-line);
+    border-radius: 10px; padding: 12px 16px; font-size: 14px; margin-bottom: 12px;
+  }
+  .threat-banner strong { color: var(--amber); }
+  .meta { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; }
+  .meta span { white-space: nowrap; }
+  .truth-note { font-size: 12.5px; color: var(--muted); margin-bottom: 24px; }
+
+  /* ===== 工具列 ===== */
+  .toolbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: flex-end; padding: 8px 0; background: linear-gradient(var(--bg) 80%, transparent); }
+  .toolbar button {
+    font: inherit; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card);
+    border-radius: 8px; padding: 6px 14px; color: var(--ink);
+  }
+  .toolbar button:hover { border-color: #94a3b8; }
+
+  /* ===== 區段標題 ===== */
+  h2.section {
+    font-size: 19px; margin: 44px 0 6px;
+    padding-left: 12px; border-left: 5px solid var(--c, var(--blue));
+  }
+  .section-desc { color: var(--muted); font-size: 13.5px; margin: 0 0 18px 17px; }
+
+  /* ===== 流程圖 ===== */
+  .flow {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px 24px; margin-bottom: 18px; overflow-x: auto;
+  }
+  .flow h3 { margin: 0 0 16px; font-size: 15px; }
+  .frow { display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap; min-width: max-content; }
+  .fnode {
+    border: 1.5px solid var(--blue-line); background: var(--blue-bg);
+    border-radius: 8px; padding: 7px 12px; font-size: 13px;
+    display: flex; flex-direction: column; justify-content: center;
+    text-align: center; max-width: 190px;
+  }
+  .fnode small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+  .fnode.start { border-color: #94a3b8; background: #f1f5f9; font-weight: 600; }
+  .fnode.ok { border-color: var(--green-line); background: var(--green-bg); }
+  .fnode.fail { border-color: #fecaca; background: var(--red-bg); }
+  .fnode.gate { border-color: var(--amber-line); background: var(--amber-bg); }
+  .farrow {
+    align-self: center; padding: 0 8px; color: var(--muted);
+    font-size: 12px; text-align: center; flex-shrink: 0; line-height: 1.3;
+  }
+  .farrow::after { content: "→"; display: block; font-size: 16px; color: #94a3b8; }
+  .fbranches { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+  .fbranch { display: flex; align-items: center; }
+
+  /* ===== Requirement 卡片 ===== */
+  .req {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 5px solid var(--c, var(--blue));
+    border-radius: 12px; padding: 18px 22px 14px; margin-bottom: 16px;
+    scroll-margin-top: 56px;
+  }
+  .req h3 { margin: 0 0 8px; font-size: 16px; display: flex; align-items: baseline; gap: 10px; }
+  .req h3 .no { color: var(--muted); font-size: 13px; font-weight: 600; }
+  .req .body { font-size: 14.5px; margin-bottom: 12px; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    border-radius: 5px; padding: 0 7px; vertical-align: 1px;
+  }
+  .badge.shall { background: var(--blue); color: #fff; }
+  .badge.mustnot { background: var(--red); color: #fff; }
+  .note { font-size: 13px; color: var(--muted); background: var(--gray-bg); border-radius: 8px; padding: 8px 12px; margin-top: 8px; }
+
+  /* ===== Scenario ===== */
+  details.scn { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: #fcfdfe; }
+  details.scn summary {
+    cursor: pointer; padding: 9px 14px; font-size: 13.5px; font-weight: 600;
+    list-style: none; display: flex; align-items: center; gap: 8px;
+  }
+  details.scn summary::-webkit-details-marker { display: none; }
+  details.scn summary::before { content: "▸"; color: #94a3b8; transition: transform .15s; }
+  details.scn[open] summary::before { transform: rotate(90deg); }
+  .scn-body { padding: 2px 14px 12px 34px; }
+  .gwt { display: flex; gap: 10px; margin: 5px 0; font-size: 13.5px; align-items: baseline; }
+  .gwt .kw {
+    flex-shrink: 0; width: 56px; text-align: center; font-size: 11px; font-weight: 700;
+    border-radius: 5px; padding: 1px 0; letter-spacing: .05em;
+  }
+  .kw.given { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-line); }
+  .kw.when  { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-line); }
+  .kw.then  { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-line); }
+  .kw.and   { background: #fff; color: var(--muted); border: 1px dashed var(--gray-line); }
+  .testref {
+    margin-left: auto; font-size: 11px; font-weight: 400; color: var(--muted);
+    background: var(--gray-bg); border-radius: 99px; padding: 1px 10px; white-space: nowrap;
+  }
+  .testref.none { background: var(--amber-bg); color: var(--amber); }
+
+  /* ===== 刻意不做 ===== */
+  .req.excluded { border-left-color: var(--gray); background: #fafafa; }
+  .nots { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+  .not-card { border: 1px dashed var(--gray-line); border-radius: 10px; padding: 10px 14px; background: var(--card); font-size: 13.5px; }
+  .not-card .x { font-weight: 700; color: var(--gray); text-decoration: line-through; }
+  .not-card small { display: block; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+  footer { margin-top: 56px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+  @media (max-width: 860px) {
+    nav.toc { display: none; }
+    main { padding: 20px 18px 64px; }
+  }
+  @media print {
+    nav.toc, .toolbar { display: none; }
+    details.scn { open: true; }
+    .req { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <div class="toc-title">bill-management Specification<small>帳務管理</small></div>
+  <div class="toc-group">
+    <div class="toc-group-label">總覽</div>
+    <a href="#overview">行為流程圖</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--blue)"></span>列表與明細</div>
+    <a href="#r1">1. 帳單列表</a>
+    <a href="#r3">3. 列表搜尋篩選</a>
+    <a href="#r14">14. 帳單明細 Modal</a>
+    <a href="#r15">15. 匯出報價單</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--amber)"></span>存取控制</div>
+    <a href="#r2">2. 權限控管</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--green)"></span>建立與計價</div>
+    <a href="#r4">4. 建立帳單與伺服端重算</a>
+    <a href="#r5">5. Addon 數量計價</a>
+    <a href="#r6">6. 重複加購限制</a>
+    <a href="#r7">7. 版本變更開始日限制</a>
+    <a href="#r8">8. 折抵</a>
+    <a href="#r9">9. 金額計算規則</a>
+    <a href="#r10">10. 升級補差額</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--purple)"></span>AJAX 端點</div>
+    <a href="#r11">11. 商店搜尋</a>
+    <a href="#r12">12. 商店資訊</a>
+    <a href="#r13">13. 金額試算</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--teal)"></span>付款、銷帳與排程</div>
+    <a href="#r16">16. 編輯帳務與狀態流轉</a>
+    <a href="#r17">17. 付款安裝流程</a>
+    <a href="#r18">18. 付款並發鎖</a>
+    <a href="#r19">19. 銷帳</a>
+    <a href="#r20">20. 未來生效排程</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--gray)"></span>刻意設計與限制</div>
+    <a href="#r21">21. 帳單編號產生</a>
+    <a href="#r22">22. 無獨立付款端點</a>
+    <a href="#r23">23. 版本內含 addon 前端把關</a>
+    <a href="#r24">24. 保留欄位與已知限制</a>
+    <a href="#excluded">刻意不做的事</a>
+  </div>
+</nav>
+
+<main>
+<header>
+  <h1>bill-management Specification</h1>
+  <div class="sub">帳單建立與伺服端計價、列表、明細 Modal、報價單 PDF、編輯帳務、付款安裝、銷帳與未來生效排程的完整行為規格</div>
+  <div class="threat-banner">
+    <strong>威脅模型：</strong>內部後台、非公網暴露（brute-force 不在 scope）；能登入後台者即為受信任的內部人員。<strong>正式環境無對外網際網路連線</strong>——本功能不發出任何外部 HTTP 呼叫（R24）。
+  </div>
+  <div class="meta">
+    <span>來源：<code>openspec/specs/bill-management/spec.md</code></span>
+    <span>實作：<code>3fc327a</code>、<code>6a17210</code>、<code>a9c8f73</code>、<code>0f046ca</code>、<code>47811a8</code>、<code>17508e1</code>、<code>5380364</code>、<code>f4e923b</code></span>
+    <span>change：<code>2026-06-12-retrofit-bill-management-spec</code></span>
+  </div>
+  <div class="truth-note">本頁為人工同步的閱讀版；若與 <code>spec.md</code> 不一致，以 <code>spec.md</code> 為準。每個 Scenario 右側標註對應的自動化測試。</div>
+</header>
+
+<div class="toolbar"><button id="toggleAll" data-open="0">全部展開</button></div>
+
+<!-- ============ 總覽流程圖 ============ -->
+<h2 class="section" id="overview" style="--c:#94a3b8">行為流程圖</h2>
+<p class="section-desc">先看懂建立帳單與付款安裝兩條主流程，再讀下方逐項規格。</p>
+
+<div class="flow">
+  <h3>建立帳單流程（POST /bills）</h3>
+  <div class="frow">
+    <div class="fnode start">搜尋商店<small>shop-search：ID 精準／名稱模糊<br>上限 10 筆</small></div>
+    <div class="farrow"></div>
+    <div class="fnode gate">shop-info 驗證<small>商店存在、sales_id 非 null<br>回傳待處理帳單數警示</small></div>
+    <div class="farrow"></div>
+    <div class="fnode">設定項目<small>版本／addon／折抵<br>calculate 即時試算（僅預覽）</small></div>
+    <div class="farrow">送出</div>
+    <div class="fnode gate">伺服端重算<small>單價取 DB 定價、名稱快照<br>不信任前端金額</small></div>
+    <div class="farrow"></div>
+    <div class="fnode ok">建立 bills + details<small>payment_status = pending<br>寫入 status log</small></div>
+  </div>
+  <div class="frow" style="margin-top:12px">
+    <div class="fbranches">
+      <div class="fbranch"><div class="fnode fail">商店未設業務 → 422「此商店尚未設定負責業務」</div></div>
+      <div class="fbranch"><div class="fnode fail">同帳單重複 addon → 422 <code>details.{i}.addon_id</code></div></div>
+      <div class="fbranch"><div class="fnode fail">折抵 &gt; 小計 → 422 <code>discount_amount</code></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="flow">
+  <h3>付款安裝流程（PATCH /bills/{id} → paid）</h3>
+  <div class="frow">
+    <div class="fnode start">編輯帳務 Modal<small>需 Bill.pay 權限<br>狀態流轉驗證</small></div>
+    <div class="farrow"></div>
+    <div class="fnode gate">Cache::lock<small>bill_pay_{id}, 10s<br>取不到 → 429</small></div>
+    <div class="farrow"></div>
+    <div class="fnode">更新 + status log<small>payment_status / paid_at / invoice_no</small></div>
+    <div class="farrow">逐筆明細</div>
+    <div class="fnode ok">start_at ≤ 今日<br>立即安裝<small>lockForUpdate + applied_at 冪等</small></div>
+  </div>
+  <div class="frow" style="margin-top:12px">
+    <div class="fbranches">
+      <div class="fbranch"><div class="fnode">start_at &gt; 今日 → 寫入 bills_future_effect</div><div class="farrow">每日 00:05</div><div class="fnode ok">bills:process-future-effects<br>到期安裝、單筆失敗不中斷</div></div>
+      <div class="fbranch"><div class="fnode fail">paid／invalid 帳單變更狀態 → 422（終態保護）</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 列表與明細 ============ -->
+<h2 class="section" style="--c:var(--blue)">列表與明細</h2>
+
+<section class="req" id="r1" style="--c:var(--blue)">
+  <h3><span class="no">R1</span>帳單列表</h3>
+  <div class="body">系統 <span class="badge shall">SHALL</span> 在 <code>GET /bills</code>（需 <code>Bill.index</code> 權限）顯示帳單分頁列表，依建立時間新到舊排列、每頁 20 筆，並 eager load <code>shop</code> 與 <code>shopSales</code>。每筆 <span class="badge shall">SHALL</span> 含帳單編號（點擊開啟明細 Modal）、商店名稱、負責業務、總金額、付款方式、狀態 badge（中文 label 與 CSS class 由 <code>BillPaymentStatus::label()</code> / <code>badgeClass()</code> 提供）與建立時間；銷帳按鈕 <span class="badge shall">SHALL</span> 僅於 pending / unpaid 顯示，編輯帳務按鈕常駐顯示。</div>
+  <details class="scn"><summary>有權限者可見帳單列表<span class="testref">BillIndexTest::admin_can_access_bill_index</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>持有 <code>Bill.index</code> 權限的 Admin 使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200 並渲染帳單列表</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>Viewer 具列表權限可見帳單列表<span class="testref">BillIndexTest::viewer_can_access_bill_index</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>持有 Viewer 角色（含 <code>Bill.index</code>）的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200 並渲染帳單列表</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r3" style="--c:var(--blue)">
+  <h3><span class="no">R3</span>列表搜尋篩選</h3>
+  <div class="body">列表 <span class="badge shall">SHALL</span> 支援四個篩選條件且彼此交集：<code>no</code> 對帳單編號模糊比對（<code>LIKE %v%</code>）；<code>payment_method</code>、<code>payment_status</code>、<code>sales_id</code>（對 <code>shop_sales_id</code>）精準比對；留空 = 全部。篩選值 <span class="badge shall">SHALL</span> 於表單與分頁連結間保留。</div>
+  <details class="scn"><summary>帳單編號模糊比對<span class="testref">BillIndexTest::index_filters_by_no_partial_match</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>編號分別含 <code>2026A</code> 與 <code>2026B</code> 片段的兩張帳單</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills?no=2026A</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>列表僅含編號相符的帳單</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>付款狀態精準篩選<span class="testref">BillIndexTest::index_filters_by_payment_status</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一張待審核與一張已付款的帳單</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills?payment_status=1</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>列表僅含待審核帳單</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>付款方式精準篩選<span class="testref">BillIndexTest::index_filters_by_payment_method</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>付款方式分別為信用卡與轉帳的兩張帳單</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills?payment_method=1</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>列表僅含信用卡帳單</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>負責業務精準篩選<span class="testref">BillIndexTest::index_filters_by_sales_id</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>負責業務不同的兩張帳單</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills?sales_id={userId}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>列表僅含該業務的帳單</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>分頁連結保留篩選條件<span class="testref">BillIndexTest::index_pagination_preserves_filters</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>超過一頁的待審核帳單</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills?payment_status=1</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>分頁連結帶有 <code>payment_status=1</code></span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r14" style="--c:var(--blue)">
+  <h3><span class="no">R14</span>帳單明細 Modal</h3>
+  <div class="body"><code>GET /bills/{id}/detail</code>（需 <code>Bill.index</code> 權限）<span class="badge shall">SHALL</span> 回傳 JSON：bill 區塊含編號、商店名、建立人（無建立人顯示「—」）、狀態值與中文 label 及 badge class、金額欄位（total_grade / total_addons / discount_amount / total）、paid_at、invoice_no；details 區塊含全部明細（有效與作廢），每筆含類型值與中文 label、數量、單價、總價、起訖日與 <code>is_effective</code>。JSON 組裝 <span class="badge shall">SHALL</span> 由 Service 層完成，Controller 僅調用與回應。找不到帳單 <span class="badge shall">SHALL</span> 回 404 JSON。</div>
+  <details class="scn"><summary>回傳含有效與作廢明細的 JSON<span class="testref">BillEndpointsTest::detail_returns_bill_json_with_details</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一張含有效與作廢明細的帳單</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills/{id}/detail</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200，JSON 含 bill 基本資訊與全部明細</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>狀態與類型帶中文 label</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>帳單不存在回 404<span class="testref">BillEndpointsTest::detail_returns_404_for_missing_bill</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills/999999/detail</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 404 JSON</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r15" style="--c:var(--blue)">
+  <h3><span class="no">R15</span>匯出報價單</h3>
+  <div class="body"><code>GET /bills/{id}/quotation</code>（需 <code>Bill.index</code> 權限）<span class="badge shall">SHALL</span> 回傳 PDF 附件下載，檔名為 <code>{Y-m-d}_{商店名}_{帳單id}_報價單.pdf</code>（商店名中不安全字元以 <code>_</code> 取代）。內容 <span class="badge shall">SHALL</span> 僅含 <code>is_effective = 1</code> 的明細（作廢項目不匯出）；折抵列不顯示起訖日、金額不加負號；折抵金額僅 <code>discount_amount &gt; 0</code> 時顯示。PDF 以 <code>barryvdh/laravel-dompdf</code> 產生、中文字型採 WQY MicroHei。找不到帳單 <span class="badge shall">SHALL</span> 回 404。</div>
+  <details class="scn"><summary>下載 PDF 附件<span class="testref">BillEndpointsTest::quotation_downloads_pdf_attachment</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一張既有帳單</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills/{id}/quotation</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200，Content-Type 為 <code>application/pdf</code> 且 Content-Disposition 為附件下載</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>作廢明細不出現在報價單資料<span class="testref">BillEndpointsTest::quotation_excludes_ineffective_details</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一張含作廢明細的帳單</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>組裝報價單資料</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>輸出僅含有效明細</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>帳單不存在回 404<span class="testref">BillEndpointsTest::quotation_returns_404_for_missing_bill</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills/999999/quotation</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 404</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 存取控制 ============ -->
+<h2 class="section" style="--c:var(--amber)">存取控制</h2>
+
+<section class="req" id="r2" style="--c:var(--amber)">
+  <h3><span class="no">R2</span>權限控管</h3>
+  <div class="body">帳務路由 <span class="badge shall">SHALL</span> 受 <code>auth</code> middleware 與 <code>RequiresPermission</code> attribute 保護：列表 / 明細 / 報價單 / shop-search / shop-info 需 <code>Bill.index</code>、建立與試算需 <code>Bill.create</code>、編輯帳務需 <code>Bill.pay</code>、銷帳需 <code>Bill.writeoff</code>。未登入或無對應權限者 <span class="badge shall">SHALL</span> 被導離，且資料不得被變更。</div>
+  <details class="scn"><summary>未登入者被導向登入頁<span class="testref">BillIndexTest::guest_is_redirected_to_login</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>訪客 GET <code>/bills</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導向 <code>/login</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>無 create 權限者不可見建立頁<span class="testref">BillIndexTest::viewer_cannot_access_bill_create</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>僅持有 Viewer 角色權限的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills/create</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導離</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>無 writeoff 權限者不可銷帳<span class="testref">BillIndexTest::viewer_cannot_writeoff</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>僅持有 Viewer 角色權限的使用者與一張待審核帳單</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/bills/{id}/writeoff</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導離</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>明細的 <code>is_effective</code> 維持 1</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 建立與計價 ============ -->
+<h2 class="section" style="--c:var(--green)">建立與計價</h2>
+<p class="section-desc">單頁步驟式建立流程；金額一律伺服端重算，前端試算僅供預覽顯示。</p>
+
+<section class="req" id="r4" style="--c:var(--green)">
+  <h3><span class="no">R4</span>建立帳單與伺服端重算</h3>
+  <div class="body"><code>POST /bills</code>（需 <code>Bill.create</code> 權限）<span class="badge shall">SHALL</span> 在單一資料庫交易內建立 <code>bills</code>（payment_status = pending）與 <code>bills_details</code>，並寫入建立的 status log（from_status = null）。金額 <span class="badge shall">SHALL</span> 一律伺服端重算：明細只接受 identifiers 與排程輸入（type / grade_id / addon_id / quantity / start_at / total_months / payment_type / memo），單價取自 DB 當前定價、項目名稱快照自 DB，前端送來的金額與名稱 <span class="badge mustnot">MUST NOT</span> 被信任。<code>shop_sales_id</code> <span class="badge shall">SHALL</span> 於建立時快照自 <code>shops.sales_id</code>。<code>details.*.start_at</code> <span class="badge shall">SHALL</span> 不允許過去日期、<code>total_months</code> 介於 0–36。</div>
+  <details class="scn"><summary>明細名稱以 DB 為準<span class="testref">BillStoreTest::stored_detail_name_is_sourced_from_grade_not_client_payload</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>名稱為「進階版」的版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/bills</code> 的明細夾帶偽造的 name 欄位</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>bills_details.name</code> 為「進階版」而非前端值</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>停用版本不可購買<span class="testref">BillStoreTest::store_fails_when_detail_grade_id_is_inactive</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一個 Inactive 狀態的版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/bills</code> 明細指向該版本</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 422，errors 包含 <code>details.0.grade_id</code></span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r5" style="--c:var(--green)">
+  <h3><span class="no">R5</span>Addon 數量計價</h3>
+  <div class="body">type=3（加購功能）明細的 <code>total_price</code> <span class="badge shall">SHALL</span> 為「單份期間金額 × quantity」，其中單份期間金額依月份補齊規則以 addon 單價計算；版本類明細 quantity 恆為 1。</div>
+  <details class="scn"><summary>quantity 3 的 addon 總價為三倍<span class="testref">BillStoreTest::addon_detail_total_price_is_multiplied_by_quantity</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>月費 100 的 addon</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/bills</code> 帶 quantity=3、自當月 1 號起購買 2 個月的該 addon 明細</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>bills_details.total_price</code> 為 600</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span><code>bills.total_addons</code> 為 600</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r6" style="--c:var(--green)">
+  <h3><span class="no">R6</span>同帳單內不可重複加購相同功能</h3>
+  <div class="body">同一張帳單的明細中，同一 <code>addon_id</code> <span class="badge mustnot">MUST NOT</span> 出現於兩列以上（後端驗證，重複時對應 index 回 422）——同 addon 兩列會在安裝時互蓋 <code>shops_addons</code> 記錄。不同 addon 各一列 <span class="badge shall">SHALL</span> 允許。</div>
+  <details class="scn"><summary>重複 addon 被拒<span class="testref">BillStoreTest::duplicate_addon_in_same_bill_is_rejected</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/bills</code> 帶兩列相同 addon_id 的明細</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 422，errors 包含 <code>details.1.addon_id</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>兩個不同 addon 允許<span class="testref">BillStoreTest::two_different_addons_in_same_bill_are_accepted</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/bills</code> 帶兩列不同 addon_id 的明細</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>建立成功，帳單含兩筆 addon 明細</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r7" style="--c:var(--green)">
+  <h3><span class="no">R7</span>版本變更的開始日限制</h3>
+  <div class="body">升級（新版本 weight 高於現行）的開始日 <span class="badge shall">SHALL</span> 最早為今日；續約與降級的開始日 <span class="badge shall">SHALL</span> 不得早於 <code>shops.expired_at + 1 天</code>（後端於 <code>StoreBillRequest</code> 驗證；前端同步鎖定日期選擇器）。</div>
+  <details class="scn"><summary>降級開始日早於到期日次日被拒<span class="testref">BillStoreTest::downgrade_with_start_at_before_expiry_plus_one_is_rejected</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>合約尚未到期的商店</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/bills</code> 帶開始日早於 <code>expired_at + 1 天</code> 的降級明細</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 422，errors 包含 <code>details.0.start_at</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>升級今日生效允許<span class="testref">BillStoreTest::upgrade_with_start_at_today_is_accepted</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>合約尚未到期的商店與更高 weight 的版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/bills</code> 帶今日開始的升級明細</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>建立成功</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r8" style="--c:var(--green)">
+  <h3><span class="no">R8</span>折抵</h3>
+  <div class="body">折抵 <span class="badge shall">SHALL</span> 以 <code>bills_details</code> type=4 記錄：名稱快照自 <code>bills_discount.name</code>、金額以正數儲存於 <code>unit_price</code> / <code>total_price</code>、<code>payment_type</code> / <code>start_at</code> / <code>expired_at</code> / <code>total_months</code> 留 null。<code>discount_amount</code> <span class="badge mustnot">MUST NOT</span> 大於小計（後端驗證）；<code>discount_id</code> 必須存在於 <code>bills_discount</code> 且與金額成對出現。</div>
+  <details class="scn"><summary>折抵明細的期間欄位為 null<span class="testref">BillStoreTest::discount_detail_stored_with_null_start_expired_and_months</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/bills</code> 帶合法折抵（discount_id + discount_amount）</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>type=4 明細的 start_at / expired_at / total_months 皆為 null</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span><code>bills.discount_amount</code> 等於折抵金額、<code>bills.total</code> 已扣除折抵</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r9" style="--c:var(--green)">
+  <h3><span class="no">R9</span>金額計算規則</h3>
+  <div class="body">明細金額 <span class="badge shall">SHALL</span> 依月份補齊規則計算：<code>total_months = 0</code> 時為開始日到當月月底（到期日 = 開始月最後一天 23:59:59）；開始日為當月 1 號時該月算第 1 個月、無 partial（<code>unit_price × total_months</code>）；開始日非 1 號時補足本月剩餘天數再加完整月數（<code>partial_amount + unit_price × total_months</code>）。部分月份公式 <span class="badge shall">SHALL</span> 為 <code>round(monthly_price / days_in_start_month × remaining_days)</code>，其中 <code>days_in_start_month</code> 取開始月實際天數（閏年 2 月 = 29，實作必須使用 <code>Carbon::daysInMonth</code>）、<code>remaining_days</code> 含開始日。每筆明細 <span class="badge shall">SHALL</span> 各自四捨五入至整數；<code>bills.total</code> 為有效非折抵明細直接累加再扣折抵，不對總額二次捨入。</div>
+  <details class="scn"><summary>月底選項的到期日<span class="testref">BillCalculationTest::expired_at_when_total_months_zero</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>以 2026-04-02、total_months=0 計算</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>到期日為 2026-04-30 23:59:59</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>1 號起算 12 個月<span class="testref">BillCalculationTest::expired_at_when_start_is_first_of_month</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>以 2026-04-01、total_months=12 計算</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>到期日為 2027-03-31 23:59:59，金額為 <code>unit_price × 12</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>月中起算的 partial month<span class="testref">BillCalculationTest::partial_amount_april_17</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>以月費 3000、2026-04-17、total_months=12 計算</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>partial 為 <code>round(3000 / 30 × 14) = 1400</code>，到期日為 2027-04-30 23:59:59</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>閏年二月以 29 天計<span class="testref">BillCalculationTest::partial_amount_february_leap_year</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>以 2028-02-15 計算 partial</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>分母為 29 天</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r10" style="--c:var(--green)">
+  <h3><span class="no">R10</span>升級補差額</h3>
+  <div class="body"><code>start_at</code> 日期等於 <code>shops.expired_at</code> 日期（到期當天立即升級）時 <span class="badge shall">SHALL</span> 以 type=2 計算補差額：<code>diff_price = 新版本月費 − 現行版本月費</code>，partial 以 <code>diff_price</code> 計、完整月以新版本月費計。<code>current_grade_price</code> <span class="badge shall">SHALL</span> 取商店現行版本的定價（List Price），<span class="badge mustnot">MUST NOT</span> 考慮原始合約的實際成交折扣。<code>start_at</code> 晚於 <code>expired_at</code> 時補差額不存在，<span class="badge shall">SHALL</span> 直接以新版本價格按 type=1 規則計算。</div>
+  <details class="scn"><summary>補差額公式<span class="testref">BillCalculationTest::upgrade_diff_calculation</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>現行版本月費 1000、新版本月費 3000</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>以到期日當天為開始日、total_months=12 計算升級補差額</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>金額為 <code>round(2000 / 當月天數 × 剩餘天數) + 3000 × 12</code></span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ AJAX 端點 ============ -->
+<h2 class="section" style="--c:var(--purple)">AJAX 端點</h2>
+<p class="section-desc">建立頁的三個支援端點；試算僅供前端預覽，實際入帳以建單時伺服端重算為準。</p>
+
+<section class="req" id="r11" style="--c:var(--purple)">
+  <h3><span class="no">R11</span>AJAX 商店搜尋</h3>
+  <div class="body"><code>GET /bills/shop-search</code>（需 <code>Bill.index</code> 權限）<span class="badge shall">SHALL</span> 驗證 <code>keyword</code> 必填（空值回 422）：純數字 <span class="badge shall">SHALL</span> 對商店 ID 完全匹配、其餘對商店名稱模糊比對，結果上限 10 筆，每筆含 <code>{id} — {name}</code> 格式的 label。系統 <span class="badge mustnot">MUST NOT</span> 宣稱或實作「商店代碼」搜尋——shops 表沒有 code 欄位。</div>
+  <details class="scn"><summary>關鍵字必填<span class="testref">BillEndpointsTest::shop_search_requires_keyword</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills/shop-search</code>（不帶 keyword）</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 422</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>數字關鍵字精準匹配 ID<span class="testref">BillEndpointsTest::shop_search_numeric_keyword_matches_id_exactly</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>ID 不同的多家商店</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills/shop-search?keyword={id}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>結果僅含該 ID 的商店</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>文字關鍵字模糊匹配名稱<span class="testref">BillEndpointsTest::shop_search_text_keyword_matches_name_fuzzy</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>名稱含「旗艦」與不含的兩家商店</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills/shop-search?keyword=旗艦</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>結果僅含名稱相符的商店</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>結果上限 10 筆<span class="testref">BillEndpointsTest::shop_search_limits_results_to_ten</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>名稱相符的 12 家商店</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills/shop-search?keyword=...</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>結果為 10 筆</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r12" style="--c:var(--purple)">
+  <h3><span class="no">R12</span>AJAX 商店資訊</h3>
+  <div class="body"><code>GET /bills/shop-info?shop_id=</code>（需 <code>Bill.index</code> 權限）<span class="badge shall">SHALL</span> 驗證商店存在且 <code>sales_id</code> 非 null（任一不符回 422 與對應訊息），通過後回傳商店基本資訊（含版本與到期日）、該商店 pending / unpaid 帳單數（供前端警示）、grades 清單（依 weight 排序，含 price / weight）、addons 清單（依名稱排序，含 price / type）與商店已啟用的 addons（含到期日）。</div>
+  <details class="scn"><summary>商店不存在回 422<span class="testref">BillEndpointsTest::shop_info_fails_for_missing_shop</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills/shop-info?shop_id=999999</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 422，errors 包含 <code>shop_id</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>商店未設業務回 422<span class="testref">BillEndpointsTest::shop_info_fails_when_shop_has_no_sales</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span><code>sales_id</code> 為 null 的商店</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills/shop-info?shop_id={id}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 422，訊息為「此商店尚未設定負責業務，無法建立帳單」</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>回傳待處理帳單數<span class="testref">BillEndpointsTest::shop_info_returns_shop_with_pending_bill_count</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>有一張待審核帳單的商店</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills/shop-info?shop_id={id}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回應含 <code>pending_bill_count = 1</code> 與 grades / addons / shop_addons 清單</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r13" style="--c:var(--purple)">
+  <h3><span class="no">R13</span>AJAX 金額試算</h3>
+  <div class="body"><code>GET /bills/calculate</code>（需 <code>Bill.create</code> 權限）<span class="badge shall">SHALL</span> 驗證 <code>unit_price</code>（整數）、<code>start_at</code>（日期）、<code>total_months</code>（0–36）必填，依計算規則回傳 <code>total_price</code> 與 <code>expired_at</code>；type=2 且帶 <code>current_grade_price</code> 時改走升級補差額公式。此端點僅供前端預覽顯示，實際入帳金額以建立帳單時的伺服端重算為準。</div>
+  <details class="scn"><summary>缺少必填欄位回 422<span class="testref">BillEndpointsTest::calculate_validates_required_fields</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills/calculate</code>（不帶參數）</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 422</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>回傳試算金額與到期日<span class="testref">BillEndpointsTest::calculate_returns_total_price_and_expired_at</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/bills/calculate?unit_price=3000&amp;start_at=2026-07-01&amp;total_months=12</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回應 <code>total_price = 36000</code>、<code>expired_at = 2027-06-30 23:59:59</code> 格式的結果</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 付款、銷帳與排程 ============ -->
+<h2 class="section" style="--c:var(--teal)">付款、銷帳與排程</h2>
+<p class="section-desc">狀態流轉、付款安裝（含並發鎖與冪等）、銷帳重算與未來生效的每日排程。</p>
+
+<section class="req" id="r16" style="--c:var(--teal)">
+  <h3><span class="no">R16</span>編輯帳務與狀態流轉</h3>
+  <div class="body"><code>PATCH /bills/{id}</code>（需 <code>Bill.pay</code> 權限，AJAX JSON）<span class="badge shall">SHALL</span> 更新 <code>payment_status</code> / <code>paid_at</code> / <code>invoice_no</code>，狀態有變更時寫入 <code>bills_status_logs</code>（from / to / operator）。狀態流轉 <span class="badge shall">SHALL</span> 受限：paid 帳單 <span class="badge mustnot">MUST NOT</span> 變更為其他狀態（回 422「已付款的帳單無法變更狀態」）；invalid 為終態，<span class="badge mustnot">MUST NOT</span> 轉回任何其他狀態（回 422「已失效的帳單無法變更狀態」）。找不到帳單 <span class="badge shall">SHALL</span> 回 404 JSON。</div>
+  <details class="scn"><summary>已付款帳單不可降轉<span class="testref">BillPaymentTest::cannot_downgrade_paid_bill_status</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一張已付款帳單</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PATCH <code>/bills/{id}</code> 將狀態改為待付款</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 422，errors 包含 <code>payment_status</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>已失效帳單不可轉為已付款<span class="testref">BillPaymentTest::cannot_transition_invalid_bill_to_paid</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一張已失效帳單</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PATCH <code>/bills/{id}</code> 將狀態改為已付款</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 422</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>帳單狀態維持已失效</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>已失效帳單不可轉回任何狀態<span class="testref">BillPaymentTest::invalid_bill_is_terminal_and_cannot_be_reactivated</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一張已失效帳單</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PATCH <code>/bills/{id}</code> 分別將狀態改為待審核與待付款</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統皆回應 422，帳單狀態維持已失效</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r17" style="--c:var(--teal)">
+  <h3><span class="no">R17</span>付款安裝流程</h3>
+  <div class="body">狀態由非 paid 轉為 paid 時，系統 <span class="badge shall">SHALL</span> 於同一交易內逐筆處理有效非折抵明細：<code>start_at</code> 日期<strong>小於等於今日</strong> <span class="badge shall">SHALL</span> 立即安裝；大於今日 <span class="badge shall">SHALL</span> 寫入 <code>bills_future_effect</code>（execute_at 取 start_at 日期部分）等排程觸發。安裝（installDetail）<span class="badge shall">SHALL</span> 冪等——<code>applied_at</code> 已有值即跳過；更新 shops 前 <span class="badge shall">SHALL</span> <code>lockForUpdate()</code> 鎖定商店列，防止排程與手動付款並發互蓋。版本類安裝 <span class="badge shall">SHALL</span> 更新 <code>shops.grade_id</code> / <code>shops.expired_at</code> 並依新版本的 <code>grades_addons</code> 同步商店 addon（<code>ShopAddonSyncService</code> 交界）；加購類安裝 <span class="badge shall">SHALL</span> upsert <code>shops_addons</code>（source=Purchased、status=Enabled），<code>AddonType::Quota</code> 並同時寫入 <code>shop_addon_balances</code>（quantity、expired_at）。安裝完成 <span class="badge shall">SHALL</span> 寫入 <code>applied_at</code>。</div>
+  <details class="scn"><summary>轉已付款即安裝今日明細<span class="testref">BillPaymentTest::update_to_paid_installs_details</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一張待付款帳單，含今日生效的版本明細</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PATCH <code>/bills/{id}</code> 轉為已付款</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>shops.grade_id</code> 與 <code>expired_at</code> 已更新，明細 <code>applied_at</code> 已寫入</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>過去 start_at 明細立即安裝<span class="testref">BillPaymentTest::past_start_at_detail_installs_immediately_on_payment</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一張待付款帳單，含 start_at 為昨日的明細</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PATCH <code>/bills/{id}</code> 轉為已付款</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>明細立即安裝（<code>applied_at</code> 非 null）</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>不產生 <code>bills_future_effect</code> 記錄</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>未來明細寫入排程表<span class="testref">BillPaymentTest::future_detail_creates_future_effect_record</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一張待付款帳單，含 start_at 為未來日期的明細</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PATCH <code>/bills/{id}</code> 轉為已付款</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>產生 <code>bills_future_effect</code> 記錄（finished_at = null），明細未安裝</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>安裝具冪等性<span class="testref">BillPaymentTest::install_detail_is_idempotent</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆 <code>applied_at</code> 已有值的明細</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>再次對其執行 installDetail</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>商店狀態不變、不重複安裝</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r18" style="--c:var(--teal)">
+  <h3><span class="no">R18</span>付款並發鎖</h3>
+  <div class="body">轉為 paid 前系統 <span class="badge shall">SHALL</span> 取得 <code>Cache::lock("bill_pay_{帳單id}", 10)</code>；取不到鎖 <span class="badge shall">SHALL</span> 由 Service 層拋出 <code>BillPaymentLockedException</code>（domain exception，自帶 render 對應 429 JSON「付款處理中，請勿重複操作」），Service 層 <span class="badge mustnot">MUST NOT</span> 直接以 <code>abort()</code> 觸碰 HTTP 層。鎖 <span class="badge shall">SHALL</span> 於處理完成後釋放。</div>
+  <details class="scn"><summary>持鎖期間重複付款回 429<span class="testref">BillEndpointsTest::update_to_paid_returns_429_when_lock_is_held</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>他人已持有該帳單的付款鎖</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PATCH <code>/bills/{id}</code> 轉為已付款</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 429 JSON</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>帳單狀態未變更</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r19" style="--c:var(--teal)">
+  <h3><span class="no">R19</span>銷帳</h3>
+  <div class="body"><code>POST /bills/{id}/writeoff</code>（需 <code>Bill.writeoff</code> 權限）<span class="badge shall">SHALL</span> 僅允許 pending / unpaid 帳單（否則回 422「只有待審核或待付款的帳單可以銷帳」）；<code>detail_ids</code> 必填且每筆 <span class="badge shall">SHALL</span> 屬於該帳單（含他帳單明細回 422「部分明細不屬於此帳單」）。銷帳 <span class="badge shall">SHALL</span> 於同一交易內：將勾選明細 <code>is_effective</code> 設 0、寫入 <code>canceled_at</code> 與 <code>canceled_by</code>；重算 bills 三個金額欄位（僅有效非折抵明細）；重算後小計低於折抵金額時 <span class="badge shall">SHALL</span> 將 <code>discount_amount</code> 與折抵明細列同步縮減至等於小計；全部明細皆作廢時 <span class="badge shall">SHALL</span> 將帳單轉為 invalid 並寫入 status log（operator 記錄操作人）。</div>
+  <details class="scn"><summary>銷帳標記明細作廢<span class="testref">BillPaymentTest::writeoff_marks_detail_ineffective</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一張待審核帳單與其中一筆明細</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/bills/{id}/writeoff</code> 勾選該明細</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>明細 <code>is_effective = 0</code>、<code>canceled_at</code> 與 <code>canceled_by</code> 已寫入</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>帳單金額已重算</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>折抵自動縮減<span class="testref">BillStoreTest::writeoff_shrinks_discount_detail_row_when_subtotal_drops_below_discount</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>折抵 500、銷帳後小計僅 300 的帳單</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>銷帳使小計低於折抵</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>discount_amount</code> 縮減為 300，折抵明細列同步更新</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>全部作廢轉為已失效<span class="testref">BillEndpointsTest::writeoff_all_details_marks_bill_invalid_and_logs_status</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>僅一筆有效明細的待審核帳單</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/bills/{id}/writeoff</code> 勾選全部明細</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>帳單轉為 invalid</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span><code>bills_status_logs</code> 寫入該轉換與操作人</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>他帳單明細被拒<span class="testref">BillPaymentTest::writeoff_rejects_detail_from_other_bill</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/bills/{id}/writeoff</code> 夾帶他帳單的明細 id</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 422，errors 包含 <code>detail_ids</code></span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r20" style="--c:var(--teal)">
+  <h3><span class="no">R20</span>未來生效排程</h3>
+  <div class="body"><code>bills_future_effect</code> <span class="badge shall">SHALL</span> 為未來生效項目的唯一真相來源，由 Artisan 指令 <code>bills:process-future-effects</code> 每日 00:05 輪詢：撈取 <code>execute_at &lt;= today AND finished_at IS NULL</code>、依 <code>execute_at ASC, id ASC</code> 排序（確保同商店同日多筆依建立順序執行），逐筆呼叫 installDetail（各自包在交易內）後寫入 <code>finished_at</code>；單筆失敗 <span class="badge shall">SHALL</span> Log error 後跳過、不中斷其他筆，留待次日重試。指令 <span class="badge shall">SHALL</span> 可手動補跑（冪等保護由 <code>applied_at</code> 提供）。
+  <div class="note"><strong>架構假設</strong>：單一 Worker 執行；多伺服器部署須改為 Queue Job 搭配 SKIP LOCKED。</div></div>
+  <details class="scn"><summary>到期的未來生效項目被安裝<span class="testref">BillPaymentTest::process_future_effects_installs_past_due_detail</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆 execute_at 為今日、未完成的 future effect</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>執行 <code>bills:process-future-effects</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>對應明細已安裝、<code>finished_at</code> 已寫入</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>單筆失敗不中斷其他筆<span class="testref">BillEndpointsTest::process_future_effects_continues_after_single_failure</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>兩筆到期 future effect，其一指向不存在的商店</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>執行 <code>bills:process-future-effects</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>壞資料筆失敗留待重試（finished_at 維持 null）</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>另一筆正常安裝完成</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 刻意設計與限制 ============ -->
+<h2 class="section" style="--c:var(--gray)">刻意設計與已知限制（不是缺漏）</h2>
+<p class="section-desc">以下為刻意的設計決策與已知限制，避免後人誤判為待補項目或 bug。</p>
+
+<section class="req excluded" id="r21" style="--c:var(--gray)">
+  <h3><span class="no">R21</span>帳單編號產生（刻意設計）</h3>
+  <div class="body">帳單編號 <span class="badge shall">SHALL</span> 為 <code>b{Ymd}{His}{8 位亂數}</code> 格式並由 DB UNIQUE index 保證唯一。產生方式 <span class="badge shall">SHALL</span> 為一次產生 3 個候選、以單一查詢排除已存在者後取第一個可用值；3 個候選全部碰撞時拋出例外、由 DB unique 約束兜底。
+  <div class="note">與舊 spec「碰撞時重試 3 次」字面不同，為等價的既有實作（2026-06-13 裁示：照實記載、不改碼）。內部後台流量下三連撞機率可忽略。</div></div>
+  <details class="scn"><summary>建立帳單產生合規編號<span class="testref none">設計記載（無對應測試）</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/bills</code> 成功建立帳單</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>bills.no</code> 符合 <code>b{14 位日期時間}{8 位數字}</code> 格式且全表唯一</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req excluded" id="r22" style="--c:var(--gray)">
+  <h3><span class="no">R22</span>無獨立付款端點（刻意設計）</h3>
+  <div class="body">付款 <span class="badge shall">SHALL</span> 一律經由編輯帳務 Modal <code>PATCH /bills/{id}</code>（<code>Bill.pay</code> 權限）將狀態設為 paid 觸發；系統 <span class="badge mustnot">MUST NOT</span> 提供獨立的 <code>POST /bills/{id}/pay</code> 端點（舊 spec 殘留的該路由字樣為筆誤）。</div>
+  <details class="scn"><summary>無 pay 路由<span class="testref none">設計記載（無對應測試）</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/bills/{id}/pay</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 404（路由不存在）</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req excluded" id="r23" style="--c:var(--gray)">
+  <h3><span class="no">R23</span>版本內含 addon 的購買限制由前端把關（刻意設計）</h3>
+  <div class="body">「版本已包含的 addon 標記為不可購買」<span class="badge shall">SHALL</span> 由前端建立頁把關，後端 <span class="badge mustnot">MUST NOT</span> 重複驗證——誤買不破壞資料完整性（安裝為 upsert，僅多收費可人工銷帳），與「同帳單重複 addon」（R6）的後端強制驗證刻意區分。</div>
+  <details class="scn"><summary>後端不擋版本內含 addon<span class="testref none">設計記載（無對應測試）</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>商店現行版本已包含某 addon</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/bills</code> 加購該 addon</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>建立成功（由前端 UI 阻止此情境）</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req excluded" id="r24" style="--c:var(--gray)">
+  <h3><span class="no">R24</span>保留欄位與已知限制（刻意設計）</h3>
+  <div class="body"><code>payment_method</code> 於建單流程 <span class="badge shall">SHALL</span> 必填（in:1,2,3），DB 欄位保留 nullable（歷史資料相容）。<code>bills_status_logs.reason</code> 欄位 <span class="badge shall">SHALL</span> 保留於 schema，現行無任何寫入路徑（預留人工備註用途）。<code>bills_status_logs.operator_id</code> 為 null 時 <span class="badge shall">SHALL</span> 代表系統排程自動觸發。本功能 <span class="badge mustnot">MUST NOT</span> 發出任何對外 HTTP 呼叫（正式環境無對外網際網路連線）。</div>
+  <details class="scn"><summary>建單缺 payment_method 被拒<span class="testref none">設計記載（無對應測試）</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/bills</code> 不帶 payment_method</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 422，errors 包含 <code>payment_method</code></span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req excluded" id="excluded" style="--c:var(--gray)">
+  <h3><span class="no">—</span>刻意不做的事（彙整）</h3>
+  <div class="nots">
+    <div class="not-card"><span class="x">獨立 pay 端點</span><small>付款一律走編輯帳務 Modal <code>PATCH /bills/{id}</code>，舊 spec 的 <code>POST /bills/{id}/pay</code> 為筆誤（R22）</small></div>
+    <div class="not-card"><span class="x">商店「代碼」搜尋</span><small>shops 表沒有 code 欄位，shop-search 僅支援 ID 精準與名稱模糊（R11）</small></div>
+    <div class="not-card"><span class="x">版本內含 addon 的後端驗證</span><small>前端把關即可；誤買不破壞資料（安裝為 upsert），可人工銷帳（R23）</small></div>
+    <div class="not-card"><span class="x">status_logs.reason 寫入</span><small>欄位保留於 schema、現行無寫入路徑，預留人工備註用途（R24）</small></div>
+    <div class="not-card"><span class="x">對外 HTTP 呼叫</span><small>正式環境無對外網際網路連線，本功能零外部依賴（R24）</small></div>
+    <div class="not-card"><span class="x">多 Worker 排程</span><small>單一 Worker 假設；多伺服器部署須改 Queue Job + SKIP LOCKED（R20）</small></div>
+  </div>
+</section>
+
+<footer>
+  產生自 <code>openspec/specs/bill-management/spec.md</code>（change <code>2026-06-12-retrofit-bill-management-spec</code>）。24 項 Requirement、55 個 Scenario。
+  測試對應：<code>tests/Feature/Bill/</code>（BillIndexTest、BillStoreTest、BillPaymentTest、BillEndpointsTest，47 案例）＋ <code>tests/Unit/Bill/BillCalculationTest.php</code>（9 案例）。
+  本頁為人工同步版本，內容以 <code>spec.md</code> 為準。
+</footer>
+</main>
+</div>
+
+<script>
+// 全部展開 / 收合
+const btn = document.getElementById('toggleAll');
+btn.addEventListener('click', () => {
+  const open = btn.dataset.open !== '1';
+  document.querySelectorAll('details.scn').forEach(d => d.open = open);
+  btn.dataset.open = open ? '1' : '0';
+  btn.textContent = open ? '全部收合' : '全部展開';
+});
+
+// 側欄 scroll-spy
+const links = [...document.querySelectorAll('.toc a')];
+const targets = links
+  .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+  .filter(Boolean);
+const byId = Object.fromEntries(links.map(a => [a.getAttribute('href').slice(1), a]));
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(a => a.classList.remove('active'));
+      byId[e.target.id]?.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -75% 0px' });
+targets.forEach(t => observer.observe(t));
+</script>
+</body>
+</html>

@@ -3,12 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Attributes\RequiresPermission;
-use App\Enums\BillDetailType;
-use App\Enums\BillPaymentStatus;
 use App\Http\Requests\StoreBillRequest;
 use App\Http\Requests\UpdateBillRequest;
 use App\Http\Requests\WriteoffBillRequest;
-use App\Models\Bill;
 use App\Services\BillPaymentService;
 use App\Services\BillService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -120,57 +117,19 @@ class BillController extends Controller
     #[RequiresPermission('Bill.index')]
     public function detail(int $id): JsonResponse
     {
-        $bill = Bill::with(['shop', 'creator', 'details'])->find($id);
+        $data = $this->billService->getDetailData($id);
 
-        if (! $bill) {
+        if ($data === null) {
             return response()->json(['message' => '帳單不存在'], 404);
         }
 
-        $statusLabels = [
-            BillPaymentStatus::Pending->value  => ['label' => '待審核', 'class' => 'bg-yellow-100 text-yellow-800'],
-            BillPaymentStatus::Unpaid->value   => ['label' => '待付款', 'class' => 'bg-orange-100 text-orange-800'],
-            BillPaymentStatus::Paid->value     => ['label' => '已付款', 'class' => 'bg-green-100 text-green-800'],
-            BillPaymentStatus::Invalid->value  => ['label' => '已失效', 'class' => 'bg-gray-100 text-gray-500'],
-        ];
-
-        $statusDisplay = $statusLabels[$bill->payment_status->value] ?? ['label' => '未知', 'class' => 'bg-gray-100 text-gray-500'];
-        $typeLabels = $this->typeLabels();
-
-        return response()->json([
-            'bill' => [
-                'id'             => $bill->id,
-                'no'             => $bill->no,
-                'shop_name'      => $bill->shop->name,
-                'creator_name'   => $bill->creator?->name ?? '—',
-                'payment_status' => $bill->payment_status->value,
-                'status_label'   => $statusDisplay['label'],
-                'status_class'   => $statusDisplay['class'],
-                'total_grade'    => $bill->total_grade,
-                'total_addons'   => $bill->total_addons,
-                'discount_amount' => $bill->discount_amount,
-                'total'          => $bill->total,
-                'paid_at'        => $bill->paid_at?->format('Y-m-d'),
-                'invoice_no'     => $bill->invoice_no,
-            ],
-            'details' => $bill->details->map(fn ($d) => [
-                'id'           => $d->id,
-                'name'         => $d->name,
-                'type'         => $d->type->value,
-                'type_label'   => $typeLabels[$d->type->value] ?? '未知',
-                'quantity'     => $d->quantity,
-                'unit_price'   => $d->unit_price,
-                'total_price'  => $d->total_price,
-                'start_at'     => $d->start_at?->format('Y-m-d'),
-                'expired_at'   => $d->expired_at?->format('Y-m-d'),
-                'is_effective' => $d->is_effective,
-            ]),
-        ]);
+        return response()->json($data);
     }
 
     #[RequiresPermission('Bill.pay')]
     public function update(UpdateBillRequest $request, int $id): JsonResponse
     {
-        $bill = Bill::find($id);
+        $bill = $this->billService->getById($id);
 
         if (! $bill) {
             return response()->json(['message' => '帳單不存在'], 404);
@@ -184,7 +143,7 @@ class BillController extends Controller
     #[RequiresPermission('Bill.index')]
     public function quotation(int $id)
     {
-        $data = $this->billService->getQuotationData($id, $this->typeLabels());
+        $data = $this->billService->getQuotationData($id);
 
         if ($data === null) {
             abort(404);
@@ -199,7 +158,7 @@ class BillController extends Controller
     #[RequiresPermission('Bill.writeoff')]
     public function writeoff(WriteoffBillRequest $request, int $id): JsonResponse
     {
-        $bill = Bill::find($id);
+        $bill = $this->billService->getById($id);
 
         if (! $bill) {
             return response()->json(['message' => '帳單不存在'], 404);
@@ -212,15 +171,5 @@ class BillController extends Controller
         );
 
         return response()->json(['message' => '銷帳成功']);
-    }
-
-    private function typeLabels(): array
-    {
-        return [
-            BillDetailType::Grades->value        => '版本',
-            BillDetailType::UpgradeFeeDiff->value => '升級補差額',
-            BillDetailType::Addons->value         => '加購功能',
-            BillDetailType::Discount->value       => '折抵',
-        ];
     }
 }

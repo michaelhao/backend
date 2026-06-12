@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Enums\AddonStatus;
 use App\Models\Addon;
 use App\Models\AddonImage;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -23,6 +24,24 @@ class AddonRepository
             ->when($filters['grade_id'] ?? null, fn ($q, $v) => $q->whereHas('grades', fn ($q2) => $q2->where('grades.id', $v)))
             ->orderBy('id')
             ->paginate($perPage);
+    }
+
+    public function getById(int $id): ?Addon
+    {
+        return Addon::find($id);
+    }
+
+    public function getByIdOrFail(int $id): Addon
+    {
+        return Addon::findOrFail($id);
+    }
+
+    /**
+     * @param  string[]  $columns
+     */
+    public function getAllOrderedByName(array $columns = ['*']): Collection
+    {
+        return Addon::orderBy('name')->get($columns);
     }
 
     public function create(array $data): Addon

@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Bill;
 
+use App\Enums\AddonType;
 use App\Enums\BillDetailType;
 use App\Enums\BillPaymentStatus;
 use App\Enums\GradeStatus;
+use App\Models\Addon;
 use App\Models\Bill;
 use App\Models\BillDetail;
 use App\Models\BillDiscount;
@@ -188,6 +190,108 @@ class BillStoreTest extends TestCase
         $this->assertNull($row->start_at);
         $this->assertNull($row->expired_at);
         $this->assertNull($row->total_months);
+    }
+
+    public function test_addon_detail_total_price_is_multiplied_by_quantity(): void
+    {
+        $user = $this->actingAsAdmin();
+        [$shop] = $this->makeShop($user);
+        $addon = Addon::factory()->create(['price' => 100, 'type' => AddonType::Quota]);
+
+        $startAt = today()->addMonth()->startOfMonth();
+
+        $this->post(route('bills.store'), [
+            'shop_id' => $shop->id,
+            'payment_method' => 2,
+            'details' => [[
+                'type' => BillDetailType::Addons->value,
+                'addon_id' => $addon->id,
+                'quantity' => 3,
+                'start_at' => $startAt->format('Y-m-d'),
+                'total_months' => 2,
+            ]],
+        ])->assertRedirect();
+
+        $detail = BillDetail::where('addon_id', $addon->id)->firstOrFail();
+        // 月初開始 2 個月，單份 100 × 2 = 200；quantity 3 → 600
+        $this->assertSame(600, $detail->total_price);
+        $this->assertSame(600, Bill::firstOrFail()->total_addons);
+    }
+
+    public function test_duplicate_addon_in_same_bill_is_rejected(): void
+    {
+        $user = $this->actingAsAdmin();
+        [$shop] = $this->makeShop($user);
+        $addon = Addon::factory()->create(['price' => 100]);
+
+        $detailRow = [
+            'type' => BillDetailType::Addons->value,
+            'addon_id' => $addon->id,
+            'quantity' => 1,
+            'start_at' => today()->format('Y-m-d'),
+            'total_months' => 1,
+        ];
+
+        $response = $this->post(route('bills.store'), [
+            'shop_id' => $shop->id,
+            'payment_method' => 2,
+            'details' => [$detailRow, $detailRow],
+        ]);
+
+        $response->assertSessionHasErrors('details.1.addon_id');
+        $this->assertDatabaseCount('bills', 0);
+    }
+
+    public function test_two_different_addons_in_same_bill_are_accepted(): void
+    {
+        $user = $this->actingAsAdmin();
+        [$shop] = $this->makeShop($user);
+        [$addonA, $addonB] = Addon::factory()->count(2)->create(['price' => 100]);
+
+        $this->post(route('bills.store'), [
+            'shop_id' => $shop->id,
+            'payment_method' => 2,
+            'details' => [
+                [
+                    'type' => BillDetailType::Addons->value,
+                    'addon_id' => $addonA->id,
+                    'quantity' => 1,
+                    'start_at' => today()->format('Y-m-d'),
+                    'total_months' => 1,
+                ],
+                [
+                    'type' => BillDetailType::Addons->value,
+                    'addon_id' => $addonB->id,
+                    'quantity' => 1,
+                    'start_at' => today()->format('Y-m-d'),
+                    'total_months' => 1,
+                ],
+            ],
+        ])->assertRedirect(route('bills.index'));
+
+        $this->assertDatabaseCount('bills', 1);
+    }
+
+    public function test_grade_detail_with_quantity_above_one_is_rejected(): void
+    {
+        $user = $this->actingAsAdmin();
+        [$shop] = $this->makeShop($user);
+        $newGrade = Grade::factory()->create(['price' => 2000, 'weight' => 20]);
+
+        $response = $this->post(route('bills.store'), [
+            'shop_id' => $shop->id,
+            'payment_method' => 2,
+            'details' => [[
+                'type' => BillDetailType::Grades->value,
+                'grade_id' => $newGrade->id,
+                'quantity' => 2,
+                'start_at' => today()->format('Y-m-d'),
+                'total_months' => 12,
+            ]],
+        ]);
+
+        $response->assertSessionHasErrors('details.0.quantity');
+        $this->assertDatabaseCount('bills', 0);
     }
 
     public function test_store_fails_when_detail_grade_id_is_inactive(): void

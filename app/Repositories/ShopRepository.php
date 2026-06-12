@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\Shop;
 use App\Models\ShopAdmin;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class ShopRepository
@@ -11,6 +12,41 @@ class ShopRepository
     public function getById(int $id): ?Shop
     {
         return Shop::find($id);
+    }
+
+    public function getByIdWithGradeOrFail(int $id): Shop
+    {
+        return Shop::with('grade')->findOrFail($id);
+    }
+
+    public function getByIdWithGradeAndSales(int $id): ?Shop
+    {
+        return Shop::with(['grade', 'sales'])->find($id);
+    }
+
+    /**
+     * Lock the shop row for update inside the surrounding transaction.
+     */
+    public function getByIdForUpdate(int $id): Shop
+    {
+        return Shop::lockForUpdate()->findOrFail($id);
+    }
+
+    /**
+     * Numeric keyword matches id exactly; otherwise fuzzy-match name.
+     */
+    public function searchByIdOrName(string $keyword, int $limit): Collection
+    {
+        return Shop::query()
+            ->where(function ($q) use ($keyword) {
+                if (is_numeric($keyword)) {
+                    $q->where('id', (int) $keyword);
+                } else {
+                    $q->where('name', 'like', "%{$keyword}%");
+                }
+            })
+            ->limit($limit)
+            ->get();
     }
 
     /**
