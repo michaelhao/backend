@@ -48,6 +48,11 @@ class BillRepository
         $bill->update(['payment_status' => $status]);
     }
 
+    public function existsByShopSalesUserId(int $userId): bool
+    {
+        return Bill::where('shop_sales_id', $userId)->exists();
+    }
+
     public function getPendingOrUnpaidCountForShop(int $shopId): int
     {
         return Bill::where('shop_id', $shopId)

@@ -2,16 +2,20 @@
 
 namespace App\Services;
 
+use App\Exceptions\UserOperationException;
 use App\Models\User;
+use App\Repositories\BillRepository;
 use App\Repositories\RoleRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class UserService
 {
     public function __construct(
         private UserRepository $userRepository,
         private RoleRepository $roleRepository,
+        private BillRepository $billRepository,
     ) {}
 
     /**
@@ -45,13 +49,25 @@ class UserService
         ];
     }
 
+    public function findUserById(int $id): ?User
+    {
+        return $this->userRepository->getById($id);
+    }
+
     public function createUser(array $data): User
     {
         return $this->userRepository->create($data);
     }
 
-    public function updateUser(User $user, array $data): void
+    /**
+     * @throws UserOperationException 修改自己的角色時拋出
+     */
+    public function updateUser(User $user, array $data, int $actingUserId): void
     {
+        if ($user->id === $actingUserId && isset($data['role_id']) && (int) $data['role_id'] !== $user->role_id) {
+            throw new UserOperationException('無法修改自己的角色');
+        }
+
         if (empty($data['password'])) {
             unset($data['password']);
         }
@@ -59,8 +75,22 @@ class UserService
         $this->userRepository->update($user, $data);
     }
 
-    public function deleteUser(User $user): void
+    /**
+     * @throws UserOperationException 刪除自己的帳號或被帳單參照為業務時拋出
+     */
+    public function deleteUser(User $user, int $actingUserId): void
     {
-        $this->userRepository->delete($user);
+        if ($user->id === $actingUserId) {
+            throw new UserOperationException('無法刪除自己的帳號');
+        }
+
+        if ($this->billRepository->existsByShopSalesUserId($user->id)) {
+            throw new UserOperationException('該使用者為帳單業務，無法刪除');
+        }
+
+        DB::transaction(function () use ($user): void {
+            $this->userRepository->delete($user);
+            $this->userRepository->deleteSessionsByUserId($user->id);
+        });
     }
 }

@@ -13,6 +13,11 @@ class UserRepository
         return User::with('role')->latest()->get();
     }
 
+    public function getById(int $id): ?User
+    {
+        return User::find($id);
+    }
+
     public function getOrderedByName(): Collection
     {
         return User::orderBy('name')->get(['id', 'name']);
