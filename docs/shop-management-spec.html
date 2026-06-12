@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>shop-management Specification — 商店管理</title>
+<style>
+  :root {
+    --ink: #1e293b;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --blue: #2563eb;   --blue-bg: #eff6ff;   --blue-line: #bfdbfe;
+    --amber: #d97706;  --amber-bg: #fffbeb;  --amber-line: #fde68a;
+    --green: #059669;  --green-bg: #ecfdf5;  --green-line: #a7f3d0;
+    --purple: #7c3aed; --purple-bg: #f5f3ff; --purple-line: #ddd6fe;
+    --gray: #6b7280;   --gray-bg: #f3f4f6;   --gray-line: #d1d5db;
+    --red: #dc2626;    --red-bg: #fef2f2;
+    --sidebar-w: 264px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 0.86em;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+
+  /* ===== 版面 ===== */
+  .layout { display: flex; min-height: 100vh; }
+  nav.toc {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: sticky; top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: #0f172a;
+    color: #cbd5e1;
+    padding: 20px 0 32px;
+  }
+  main {
+    flex: 1;
+    min-width: 0;
+    max-width: 880px;
+    padding: 32px 40px 96px;
+  }
+
+  /* ===== 側欄 ===== */
+  .toc-title { padding: 0 20px 12px; font-weight: 700; color: #fff; font-size: 16px; }
+  .toc-title small { display: block; font-weight: 400; color: #94a3b8; font-size: 11px; margin-top: 2px; }
+  .toc-group { margin-top: 14px; }
+  .toc-group-label {
+    padding: 0 20px; font-size: 11px; letter-spacing: .08em;
+    color: #94a3b8; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .toc a {
+    display: block; padding: 5px 20px 5px 34px;
+    color: #cbd5e1; text-decoration: none; font-size: 13px;
+    border-left: 3px solid transparent;
+  }
+  .toc a:hover { color: #fff; background: rgba(255,255,255,.06); }
+  .toc a.active { color: #fff; background: rgba(255,255,255,.1); border-left-color: #60a5fa; }
+
+  /* ===== Header ===== */
+  header h1 { font-size: 26px; margin: 0 0 4px; }
+  header .sub { color: var(--muted); margin-bottom: 16px; }
+  .threat-banner {
+    background: var(--amber-bg); border: 1px solid var(--amber-line);
+    border-radius: 10px; padding: 12px 16px; font-size: 14px; margin-bottom: 12px;
+  }
+  .threat-banner strong { color: var(--amber); }
+  .meta { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; }
+  .meta span { white-space: nowrap; }
+  .truth-note { font-size: 12.5px; color: var(--muted); margin-bottom: 24px; }
+
+  /* ===== 工具列 ===== */
+  .toolbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: flex-end; padding: 8px 0; background: linear-gradient(var(--bg) 80%, transparent); }
+  .toolbar button {
+    font: inherit; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card);
+    border-radius: 8px; padding: 6px 14px; color: var(--ink);
+  }
+  .toolbar button:hover { border-color: #94a3b8; }
+
+  /* ===== 區段標題 ===== */
+  h2.section {
+    font-size: 19px; margin: 44px 0 6px;
+    padding-left: 12px; border-left: 5px solid var(--c, var(--blue));
+  }
+  .section-desc { color: var(--muted); font-size: 13.5px; margin: 0 0 18px 17px; }
+
+  /* ===== 流程圖 ===== */
+  .flow {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px 24px; margin-bottom: 18px; overflow-x: auto;
+  }
+  .flow h3 { margin: 0 0 16px; font-size: 15px; }
+  .frow { display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap; min-width: max-content; }
+  .fnode {
+    border: 1.5px solid var(--blue-line); background: var(--blue-bg);
+    border-radius: 8px; padding: 7px 12px; font-size: 13px;
+    display: flex; flex-direction: column; justify-content: center;
+    text-align: center; max-width: 190px;
+  }
+  .fnode small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+  .fnode.start { border-color: #94a3b8; background: #f1f5f9; font-weight: 600; }
+  .fnode.ok { border-color: var(--green-line); background: var(--green-bg); }
+  .fnode.fail { border-color: #fecaca; background: var(--red-bg); }
+  .fnode.gate { border-color: var(--amber-line); background: var(--amber-bg); }
+  .farrow {
+    align-self: center; padding: 0 8px; color: var(--muted);
+    font-size: 12px; text-align: center; flex-shrink: 0; line-height: 1.3;
+  }
+  .farrow::after { content: "→"; display: block; font-size: 16px; color: #94a3b8; }
+  .fbranches { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+  .fbranch { display: flex; align-items: center; }
+
+  /* ===== Requirement 卡片 ===== */
+  .req {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 5px solid var(--c, var(--blue));
+    border-radius: 12px; padding: 18px 22px 14px; margin-bottom: 16px;
+    scroll-margin-top: 56px;
+  }
+  .req h3 { margin: 0 0 8px; font-size: 16px; display: flex; align-items: baseline; gap: 10px; }
+  .req h3 .no { color: var(--muted); font-size: 13px; font-weight: 600; }
+  .req .body { font-size: 14.5px; margin-bottom: 12px; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    border-radius: 5px; padding: 0 7px; vertical-align: 1px;
+  }
+  .badge.shall { background: var(--blue); color: #fff; }
+  .badge.mustnot { background: var(--red); color: #fff; }
+  .note { font-size: 13px; color: var(--muted); background: var(--gray-bg); border-radius: 8px; padding: 8px 12px; margin-top: 8px; }
+
+  /* ===== Scenario ===== */
+  details.scn { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: #fcfdfe; }
+  details.scn summary {
+    cursor: pointer; padding: 9px 14px; font-size: 13.5px; font-weight: 600;
+    list-style: none; display: flex; align-items: center; gap: 8px;
+  }
+  details.scn summary::-webkit-details-marker { display: none; }
+  details.scn summary::before { content: "▸"; color: #94a3b8; transition: transform .15s; }
+  details.scn[open] summary::before { transform: rotate(90deg); }
+  .scn-body { padding: 2px 14px 12px 34px; }
+  .gwt { display: flex; gap: 10px; margin: 5px 0; font-size: 13.5px; align-items: baseline; }
+  .gwt .kw {
+    flex-shrink: 0; width: 56px; text-align: center; font-size: 11px; font-weight: 700;
+    border-radius: 5px; padding: 1px 0; letter-spacing: .05em;
+  }
+  .kw.given { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-line); }
+  .kw.when  { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-line); }
+  .kw.then  { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-line); }
+  .kw.and   { background: #fff; color: var(--muted); border: 1px dashed var(--gray-line); }
+  .testref {
+    margin-left: auto; font-size: 11px; font-weight: 400; color: var(--muted);
+    background: var(--gray-bg); border-radius: 99px; padding: 1px 10px; white-space: nowrap;
+  }
+  .testref.none { background: var(--amber-bg); color: var(--amber); }
+
+  /* ===== 刻意不做 ===== */
+  .req.excluded { border-left-color: var(--gray); background: #fafafa; }
+  .nots { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+  .not-card { border: 1px dashed var(--gray-line); border-radius: 10px; padding: 10px 14px; background: var(--card); font-size: 13.5px; }
+  .not-card .x { font-weight: 700; color: var(--gray); text-decoration: line-through; }
+  .not-card small { display: block; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+  footer { margin-top: 56px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+  @media (max-width: 860px) {
+    nav.toc { display: none; }
+    main { padding: 20px 18px 64px; }
+  }
+  @media print {
+    nav.toc, .toolbar { display: none; }
+    details.scn { open: true; }
+    .req { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <div class="toc-title">shop-management Specification<small>商店管理</small></div>
+  <div class="toc-group">
+    <div class="toc-group-label">總覽</div>
+    <a href="#overview">行為流程圖</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--blue)"></span>列表與搜尋</div>
+    <a href="#r1">1. 商店列表</a>
+    <a href="#r3">3. 列表搜尋篩選</a>
+    <a href="#r4">4. 分頁與每頁筆數</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--amber)"></span>存取控制</div>
+    <a href="#r2">2. 權限控管</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--green)"></span>編輯與更新</div>
+    <a href="#r5">5. 編輯表單與資料遮蔽</a>
+    <a href="#r6">6. 更新商店</a>
+    <a href="#r7">7. 表單欄位白名單</a>
+    <a href="#r9">9. 版本變更規則</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--purple)"></span>統編認證</div>
+    <a href="#r10">10. 儲存時伺服端重驗</a>
+    <a href="#r11">11. 認證端點</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--gray)"></span>刻意設計與限制</div>
+    <a href="#r8">8. email 加密與應用層唯一性</a>
+    <a href="#r12">12. 找不到 id 的處理</a>
+    <a href="#r13">13. 無新增與刪除</a>
+    <a href="#r14">14. 政府 API 與無對外連線</a>
+    <a href="#excluded">刻意不做的事</a>
+  </div>
+</nav>
+
+<main>
+<header>
+  <h1>shop-management Specification</h1>
+  <div class="sub">商店列表搜尋分頁、編輯更新、統一編號認證與儲存時伺服端重驗的完整行為規格</div>
+  <div class="threat-banner">
+    <strong>威脅模型：</strong>內部後台、非公網暴露（brute-force 不在 scope）；能登入後台者即為受信任的內部人員。<strong>正式環境無對外網際網路連線</strong>——政府商工登記 API 為全站唯一外部呼叫，於正式環境必定失敗（已知限制，R14）。
+  </div>
+  <div class="meta">
+    <span>來源：<code>openspec/specs/shop-management/spec.md</code></span>
+    <span>實作：<code>615c876</code>、<code>40a5388</code>、<code>6c22dc4</code>、<code>21c9517</code></span>
+    <span>change：<code>2026-06-12-retrofit-shops-spec</code></span>
+  </div>
+  <div class="truth-note">本頁為人工同步的閱讀版；若與 <code>spec.md</code> 不一致，以 <code>spec.md</code> 為準。每個 Scenario 右側標註對應的自動化測試。</div>
+</header>
+
+<div class="toolbar"><button id="toggleAll" data-open="0">全部展開</button></div>
+
+<!-- ============ 總覽流程圖 ============ -->
+<h2 class="section" id="overview" style="--c:#94a3b8">行為流程圖</h2>
+<p class="section-desc">先看懂更新與認證兩條主流程，再讀下方逐項規格。</p>
+
+<div class="flow">
+  <h3>商店更新流程（PUT /shops/{id}）</h3>
+  <div class="frow">
+    <div class="fnode start">表單送出<small>需 Shop.update 權限</small></div>
+    <div class="farrow"></div>
+    <div class="fnode">ShopUpdateRequest 驗證<small>name max:50／email unique<br>grade 限 Active／status enum<br>統編 8 位數字</small></div>
+    <div class="farrow"></div>
+    <div class="fnode gate">應用層檢查<small>admin email 解密比對唯一性<br>統編變更 → 伺服端重驗</small></div>
+    <div class="farrow">通過</div>
+    <div class="fnode">交易寫入<small>shops + shops_admin<br>grade 變更觸發 addon 同步</small></div>
+    <div class="farrow"></div>
+    <div class="fnode ok">302 → /shops<br>success flash</div>
+  </div>
+  <div class="frow" style="margin-top:12px">
+    <div class="fbranches">
+      <div class="fbranch"><div class="fnode fail">id 不存在 → 302 → /shops + error flash「找不到該商店」</div></div>
+      <div class="fbranch"><div class="fnode fail">admin email 衝突 → 驗證錯誤 <code>admin.email</code>「此 email 已被使用」</div></div>
+      <div class="fbranch"><div class="fnode fail">統編重驗失敗 → 驗證錯誤 <code>admin.business_number</code>「統一編號認證失敗」</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="flow">
+  <h3>統編認證流程（POST /shops/{id}/certify，前端預覽用）</h3>
+  <div class="frow">
+    <div class="fnode start">認證 Modal 送出<small>需 Shop.update 權限</small></div>
+    <div class="farrow"></div>
+    <div class="fnode">驗證統編<small>必填、8 位數字<br>否則 422</small></div>
+    <div class="farrow"></div>
+    <div class="fnode gate">政府商工 API<small>data.gcis.nat.gov.tw<br>timeout 10s、try/catch</small></div>
+    <div class="farrow">查得</div>
+    <div class="fnode ok">{"success": true,<br>"company_name": "…"}<small>JS 填入表單，儲存時伺服端重驗</small></div>
+  </div>
+  <div class="frow" style="margin-top:12px">
+    <div class="fbranches">
+      <div class="fbranch"><div class="fnode fail">商店不存在 → 404 JSON「找不到該商店」</div></div>
+      <div class="fbranch"><div class="fnode fail">查無資料／連線失敗 → {"success": false}（不拋 500）</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 列表與搜尋 ============ -->
+<h2 class="section" style="--c:var(--blue)">列表與搜尋</h2>
+
+<section class="req" id="r1" style="--c:var(--blue)">
+  <h3><span class="no">R1</span>商店列表</h3>
+  <div class="body">系統 <span class="badge shall">SHALL</span> 在 <code>GET /shops</code>（需 <code>Shop.index</code> 權限）顯示商店分頁列表，依 id 升冪排列並 eager load <code>admin</code> 與 <code>grade</code>，每筆 <span class="badge shall">SHALL</span> 含商店名稱、版本名稱（無版本顯示「-」）、狀態 badge（中文 label 由 <code>ShopStatus::label()</code> 提供）與認證狀態。已認證（<code>business_number</code> 非 NULL）<span class="badge shall">SHALL</span> 顯示可點擊 badge，點擊開啟顯示統一編號與公司名稱的詳情 Modal；未認證 <span class="badge shall">SHALL</span> 顯示不可點擊的灰色 badge。</div>
+  <details class="scn"><summary>有權限者可見商店列表<span class="testref">ShopRuTest::admin_can_access_shop_index</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>持有 <code>Shop.index</code> 權限的 Admin 使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/shops</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200 並渲染商店列表</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>Viewer 具列表權限可見商店列表<span class="testref">ShopRuTest::viewer_can_access_shop_index</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>持有 Viewer 角色（含 <code>Shop.index</code>）的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/shops</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200 並渲染商店列表</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r3" style="--c:var(--blue)">
+  <h3><span class="no">R3</span>列表搜尋篩選</h3>
+  <div class="body">列表 <span class="badge shall">SHALL</span> 支援四個篩選條件且彼此<strong>交集</strong>：<code>keyword</code> 對商店名稱模糊比對（<code>LIKE %v%</code>）；<code>grade_id</code> 精準比對；<code>business_number</code> 對管理員統一編號精準比對；<code>is_certified</code> 為 <code>'1'</code> 時篩選統一編號非 NULL、<code>'0'</code> 時篩選統一編號為 NULL。篩選值 <span class="badge shall">SHALL</span> 於表單與分頁連結間保留。</div>
+  <details class="scn"><summary>關鍵字模糊比對商店名稱<span class="testref">ShopRuTest::index_filters_by_keyword_with_partial_match</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>名稱分別為「正品旗艦店」與「精選商行」的兩家商店</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/shops?keyword=旗艦</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>列表僅含「正品旗艦店」</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>版本精準篩選<span class="testref">ShopRuTest::index_filters_by_grade_id</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>隸屬不同版本的兩家商店</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/shops?grade_id={id}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>列表僅含該版本的商店</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>統一編號精準篩選<span class="testref">ShopRuTest::index_filters_by_exact_business_number</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>管理員統編分別為 12345678 與 87654321 的兩家商店</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/shops?business_number=12345678</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>列表僅含統編完全相符的商店</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>認證狀態篩選<span class="testref">ShopRuTest::index_filters_by_certification_status</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一家已認證（統編非 NULL）與一家未認證的商店</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/shops?is_certified=1</code>（或 <code>=0</code>）</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>列表僅含對應認證狀態的商店</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>多條件交集<span class="testref">ShopRuTest::index_combined_filters_intersect</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>多家商店僅其一同時滿足 keyword 與 grade_id 條件</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/shops?keyword=...&amp;grade_id=...</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>列表僅含同時滿足所有條件的商店</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r4" style="--c:var(--blue)">
+  <h3><span class="no">R4</span>分頁與每頁筆數</h3>
+  <div class="body">列表 <span class="badge shall">SHALL</span> 分頁，<code>per_page</code> 僅接受白名單 <code>[50, 100, 150, 200]</code>，未帶或非法值 <span class="badge shall">SHALL</span> 回退 50。切換每頁筆數的隱藏表單 <span class="badge shall">SHALL</span> 帶上所有現存篩選值——判斷依據為「非 null 且非空字串」，falsy 但有意義的 <code>is_certified=0</code> <span class="badge mustnot">MUST NOT</span> 被遺漏。</div>
+  <details class="scn"><summary>合法 per_page 生效<span class="testref">ShopRuTest::index_accepts_valid_per_page</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/shops?per_page=100</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>每頁筆數為 100 且選單顯示 100 為選取狀態</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>非法 per_page 回退 50<span class="testref">ShopRuTest::index_invalid_per_page_falls_back_to_50</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/shops?per_page=999</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>每頁筆數為 50</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>切換每頁筆數保留未認證篩選<span class="testref">ShopRuTest::per_page_form_preserves_uncertified_filter</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/shops?is_certified=0</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>每頁筆數表單含 <code>name="is_certified" value="0"</code> 的隱藏欄位</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 存取控制 ============ -->
+<h2 class="section" style="--c:var(--amber)">存取控制</h2>
+
+<section class="req" id="r2" style="--c:var(--amber)">
+  <h3><span class="no">R2</span>權限控管</h3>
+  <div class="body">四條商店管理路由 <span class="badge shall">SHALL</span> 受 <code>auth</code> middleware 與 <code>RequiresPermission</code> attribute 保護：index 需 <code>Shop.index</code>、edit/update/certify 需 <code>Shop.update</code>。未登入或無對應權限者 <span class="badge shall">SHALL</span> 被導離，且資料不得被變更。</div>
+  <details class="scn"><summary>未登入者被導向登入頁<span class="testref">ShopRuTest::guest_is_redirected_to_login</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>訪客 GET <code>/shops</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導向 <code>/login</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>無 update 權限者不可見編輯頁<span class="testref">ShopRuTest::viewer_cannot_access_shop_edit</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>僅持有 Viewer 角色權限的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/shops/{id}/edit</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導離</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 編輯與更新 ============ -->
+<h2 class="section" style="--c:var(--green)">編輯與更新</h2>
+<p class="section-desc">單一表單分商店／管理員兩區塊；敏感欄位遮蔽顯示，更新走欄位白名單與資料庫交易。</p>
+
+<section class="req" id="r5" style="--c:var(--green)">
+  <h3><span class="no">R5</span>編輯表單與資料遮蔽</h3>
+  <div class="body"><code>GET /shops/{id}/edit</code>（需 <code>Shop.update</code> 權限）<span class="badge shall">SHALL</span> 渲染單一表單、分「商店基本資料」與「商店管理員基本資料」兩區塊。管理員 email <span class="badge shall">SHALL</span> 解密後以 <code>Mask::email()</code> 遮蔽顯示（點「修改」才切換為可輸入）；統一編號 <span class="badge shall">SHALL</span> 以 <code>Mask::string()</code> 遮蔽顯示於 readonly 欄位；公司名稱為 readonly。狀態下拉 <span class="badge shall">SHALL</span> 由 <code>ShopStatus::cases()</code> 渲染並以 <code>label()</code> 顯示中文。</div>
+  <details class="scn"><summary>編輯表單預填並遮蔽敏感欄位<span class="testref">ShopRuTest::admin_can_access_shop_edit</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>既有商店與其管理員</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/shops/{id}/edit</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200，表單含商店 name、email、grade、status 與管理員 name</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>管理員 email 以遮蔽形式顯示</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r6" style="--c:var(--green)">
+  <h3><span class="no">R6</span>更新商店</h3>
+  <div class="body"><code>PUT /shops/{id}</code>（需 <code>Shop.update</code> 權限）<span class="badge shall">SHALL</span> 以 <code>ShopUpdateRequest</code> 驗證：<code>name</code> 必填、最長 50 字元；<code>email</code> 必填、email 格式且不得與其他商店重複（<code>unique</code> 排除自身 <code>ignore($this-&gt;route('id'))</code>）；<code>grade_id</code> 必填且須存在（變更時限 Active，見 R9）；<code>status</code> 必填且須為合法 <code>ShopStatus</code> 值；<code>admin.name</code> 必填、最長 20 字元；<code>admin.email</code> 必填、email 格式；<code>admin.business_number</code> 選填、8 位數字；<code>admin.company_name</code> 選填。商店與管理員的更新 <span class="badge shall">SHALL</span> 在同一資料庫交易內完成；商店無管理員記錄時 <span class="badge shall">SHALL</span> 僅更新商店本身、不得出錯。成功 <span class="badge shall">SHALL</span> 302 導向 <code>/shops</code> 並帶 success flash「商店已更新」。</div>
+  <details class="scn"><summary>成功更新商店與管理員<span class="testref">ShopRuTest::admin_can_update_shop</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>持有 <code>Shop.update</code> 權限的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/shops/{id}</code> 帶合法的商店與管理員欄位</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導向 <code>/shops</code> 並帶 success flash</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>shops 與 shops_admin 資料已更新</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>商店 email 與他店重複被拒<span class="testref">ShopRuTest::update_fails_with_duplicate_shop_email</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>兩家既有商店</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT 更新其中一家的 email 為另一家的 email</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>email</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>商店 email 維持自身值允許<span class="testref">ShopRuTest::update_allows_same_shop_email_for_self</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>既有商店</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/shops/{id}</code> 帶與自身相同的 email</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>更新成功、無驗證錯誤</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>status 非法值被拒<span class="testref">ShopRuTest::update_fails_with_invalid_status</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/shops/{id}</code> 帶不在 ShopStatus 內的 status</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>status</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>grade_id 不存在被拒<span class="testref">ShopRuTest::update_fails_with_nonexistent_grade_id</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/shops/{id}</code> 帶不存在的 grade_id</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>grade_id</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>無管理員的商店仍可更新<span class="testref">ShopRuTest::update_shop_without_admin_does_not_fail</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一家沒有 shops_admin 記錄的商店</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/shops/{id}</code> 更新商店基本資料</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 並帶 success flash</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>商店資料已更新</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r7" style="--c:var(--green)">
+  <h3><span class="no">R7</span>表單欄位白名單</h3>
+  <div class="body">更新 <span class="badge shall">SHALL</span> 僅寫入通過驗證的欄位：商店欄位取 <code>$request-&gt;safe()-&gt;only(['name','email','grade_id','status'])</code>、管理員欄位取 <code>validated()['admin']</code>。未在驗證規則內的欄位（如 <code>admin[password]</code>、<code>admin[shop_id]</code>）<span class="badge mustnot">MUST NOT</span> 經此表單寫入資料庫。</div>
+  <details class="scn"><summary>未驗證欄位被忽略<span class="testref">ShopRuTest::update_ignores_unvalidated_admin_fields</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>既有商店管理員</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/shops/{id}</code> 額外夾帶 <code>admin[password]</code> 與 <code>admin[shop_id]</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>更新成功</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>管理員的 password 雜湊值與 shop_id 維持原值</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r9" style="--c:var(--green)">
+  <h3><span class="no">R9</span>版本變更規則</h3>
+  <div class="body">變更 <code>grade_id</code> 時 <span class="badge shall">SHALL</span> 僅允許指向 Active 狀態的版本；維持原 grade（即使該版本已停用）<span class="badge shall">SHALL</span> 允許送出，否則表單將永遠無法儲存。grade 實際變更時系統 <span class="badge shall">SHALL</span> 觸發商店 addon 同步（<code>ShopAddonSyncService</code>，同步規則屬 addons 範疇，本 spec 僅規範此交界）。</div>
+  <details class="scn"><summary>指派停用版本被拒<span class="testref">ShopRuTest::update_fails_when_assigning_inactive_grade</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一個 Inactive 狀態的版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/shops/{id}</code> 將 grade_id 變更為該版本</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>grade_id</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>維持原有的停用版本允許<span class="testref">ShopRuTest::update_allows_keeping_existing_inactive_grade</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>商店現有版本已被停用</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/shops/{id}</code> 帶原本的 grade_id</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>更新成功、無驗證錯誤</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 統編認證 ============ -->
+<h2 class="section" style="--c:var(--purple)">統編認證</h2>
+<p class="section-desc">certify 端點僅供前端預覽公司名稱；實際寫入以儲存時的伺服端重驗為準，表單送來的公司名稱不被信任。</p>
+
+<section class="req" id="r10" style="--c:var(--purple)">
+  <h3><span class="no">R10</span>儲存時伺服端重驗認證</h3>
+  <div class="body">認證資料 <span class="badge shall">SHALL</span> 以伺服端為準，表單送來的 <code>admin[company_name]</code> <span class="badge mustnot">MUST NOT</span> 被直接信任寫入。儲存時依 <code>admin[business_number]</code> 分流：未帶該欄位 → 兩欄皆不異動；為空值 → <code>business_number</code> 與 <code>company_name</code> 一併存 NULL；與 DB 現值相同 → <code>company_name</code> 取 DB 現值、不發認證 API；有變更 → 伺服端重新呼叫認證 API，失敗 <span class="badge shall">SHALL</span> 拋 <code>ValidationException</code>（errors 含 <code>admin.business_number</code>，訊息「統一編號認證失敗，請重新進行認證」），成功 <span class="badge shall">SHALL</span> 以 <strong>API 回傳的公司名稱</strong>寫入。</div>
+  <details class="scn"><summary>認證後儲存寫入 DB<span class="testref">ShopRuTest::certification_data_saved_to_db</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>認證 API 回傳成功（Http fake）</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/shops/{id}</code> 帶新的 <code>admin[business_number]</code> 與 <code>admin[company_name]</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>shops_admin 的 business_number 與 company_name 已寫入</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>統編變更時重驗並採用 API 公司名稱<span class="testref">ShopRuTest::update_reverifies_changed_business_number_and_uses_api_company_name</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>認證 API 回傳公司名稱「API 正確公司」（Http fake）</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/shops/{id}</code> 變更統編且表單夾帶偽造的 <code>admin[company_name]</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>shops_admin 的 company_name 為「API 正確公司」而非表單值</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>統編重驗失敗被拒<span class="testref">ShopRuTest::update_rejects_business_number_that_fails_verification</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>認證 API 回傳空結果（Http fake）</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/shops/{id}</code> 變更統編</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>admin.business_number</code></span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>shops_admin 的統編維持原值</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>統編未變更不發認證 API<span class="testref">ShopRuTest::update_unchanged_business_number_keeps_company_name_without_api_call</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>既有已認證的商店管理員</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/shops/{id}</code> 帶與 DB 相同的統編</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>未發出任何 HTTP 請求</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>company_name 維持 DB 現值</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r11" style="--c:var(--purple)">
+  <h3><span class="no">R11</span>統一編號認證端點</h3>
+  <div class="body"><code>POST /shops/{id}/certify</code>（需 <code>Shop.update</code> 權限，fetch JSON 請求）<span class="badge shall">SHALL</span> 以 <code>ShopCertifyRequest</code> 驗證 <code>business_number</code> 必填且為 8 位數字，不合法回 422。通過後 <span class="badge shall">SHALL</span> 呼叫政府商工登記 API 查詢：查得 <span class="badge shall">SHALL</span> 回 JSON <code>{"success": true, "company_name": "..."}</code>；查無資料 <span class="badge shall">SHALL</span> 回 <code>{"success": false}</code>。找不到商店 <span class="badge shall">SHALL</span> 回 404 與 JSON <code>{"success": false, "message": "找不到該商店"}</code>。
+  <div class="note">此端點僅供前端預覽公司名稱；實際寫入以儲存時的伺服端重驗（R10）為準。</div></div>
+  <details class="scn"><summary>缺少統一編號回 422<span class="testref">ShopRuTest::certify_missing_business_number_returns_422</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/shops/{id}/certify</code> 不帶 business_number</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 422 驗證錯誤</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>統一編號格式錯誤回 422<span class="testref">ShopRuTest::certify_invalid_business_number_returns_422</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/shops/{id}/certify</code> 帶非 8 位數字（含字母或位數不符）</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 422 驗證錯誤</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>認證成功回傳公司名稱<span class="testref">ShopRuTest::certify_success_returns_company_name</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>政府 API 回傳該統編的公司資料（Http fake）</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/shops/{id}/certify</code> 帶合法統編</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 JSON <code>{"success": true, "company_name": "..."}</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>查無資料回傳失敗<span class="testref">ShopRuTest::certify_empty_response_returns_failure</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>政府 API 回傳空陣列（Http fake）</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/shops/{id}/certify</code> 帶合法統編</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 JSON <code>{"success": false}</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>認證不存在的商店<span class="testref">ShopRuTest::certify_nonexistent_shop_returns_404_json</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/shops/99999/certify</code> 帶合法統編</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 404 與 JSON <code>{"success": false, "message": "找不到該商店"}</code></span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 刻意設計與限制 ============ -->
+<h2 class="section" style="--c:var(--gray)">刻意設計與已知限制（不是缺漏）</h2>
+<p class="section-desc">以下為刻意的設計決策與已知限制，避免後人誤判為待補項目或 bug。</p>
+
+<section class="req excluded" id="r8" style="--c:var(--gray)">
+  <h3><span class="no">R8</span>管理員 email 加密與應用層唯一性（刻意設計）</h3>
+  <div class="body">管理員 email <span class="badge shall">SHALL</span> 以 <code>encrypted</code> cast 加密儲存（密碼為 <code>hashed</code> cast）；DB 層 <span class="badge mustnot">MUST NOT</span> 對該欄位加 unique index——加密值不可比對。唯一性 <span class="badge shall">SHALL</span> 由 <code>ShopService</code> 於寫入前解密逐筆比對（排除自身），衝突時拋 <code>ValidationException</code>，errors 包含 <code>admin.email</code>（訊息「此 email 已被使用」）。
+  <div class="note">O(n) 解密比對為 encrypted cast 的必然取捨，內部後台 shops_admin 筆數有限，可接受。</div></div>
+  <details class="scn"><summary>管理員 email 與他店管理員重複被拒<span class="testref">ShopRuTest::update_fails_with_duplicate_admin_email</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>兩家商店各有管理員</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT 更新其中一位管理員的 email 為另一位的 email</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>admin.email</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>管理員 email 維持自身值允許<span class="testref">ShopRuTest::update_allows_same_admin_email_for_self</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>既有商店管理員</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/shops/{id}</code> 帶與自身相同的 <code>admin[email]</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>更新成功、無驗證錯誤</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req excluded" id="r12" style="--c:var(--gray)">
+  <h3><span class="no">R12</span>找不到 id 的處理（刻意設計）</h3>
+  <div class="body">路由 <span class="badge shall">SHALL</span> 採手動 <code>{id}</code> 查詢（<code>ShopService::findShopById()</code> 經 <code>ShopRepository::getById()</code>），<span class="badge mustnot">MUST NOT</span> 使用 route model binding——找不到時以應用語意回應而非空白 404 頁（源自 spec/7 的設計決策）：edit 與 update <span class="badge shall">SHALL</span> 302 導回 <code>/shops</code> 並帶 error flash「找不到該商店」；certify（fetch JSON 請求）<span class="badge shall">SHALL</span> 回 404 JSON（見 R11）。
+  <div class="note">certify 原為 302 redirect，會被 fetch 靜默跟隨、json() 解析失敗而誤顯示「認證失敗」；2026-06-12 設計 review 修正為 404 JSON，commit <code>40a5388</code>。</div></div>
+  <details class="scn"><summary>編輯不存在的商店<span class="testref">ShopRuTest::edit_nonexistent_shop_redirects_with_error</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/shops/99999/edit</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導向 <code>/shops</code> 並帶 error flash「找不到該商店」</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>更新不存在的商店<span class="testref">ShopRuTest::update_nonexistent_shop_redirects_with_error</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/shops/99999</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導向 <code>/shops</code> 並帶 error flash「找不到該商店」</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req excluded" id="r13" style="--c:var(--gray)">
+  <h3><span class="no">R13</span>無新增與刪除（刻意設計）</h3>
+  <div class="body">本功能僅支援列表（R）與編輯（U）。系統 <span class="badge mustnot">MUST NOT</span> 提供商店的新增（create/store）與刪除（destroy）路由——商店帳號由商店端系統開立，後台僅管理既有商店。<code>sales_id</code> 與 <code>expired_at</code> <span class="badge mustnot">MUST NOT</span> 在本 UI 編輯（屬 bills 範疇）。</div>
+  <details class="scn"><summary>無新增路由<span class="testref">ShopRuTest::store_route_does_not_exist</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/shops</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 405（Method Not Allowed）</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>無刪除路由<span class="testref">ShopRuTest::delete_route_does_not_exist</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>DELETE <code>/shops/{id}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 405（Method Not Allowed）</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req excluded" id="r14" style="--c:var(--gray)">
+  <h3><span class="no">R14</span>已知限制——政府 API 與無對外連線環境</h3>
+  <div class="body">統編認證 <span class="badge shall">SHALL</span> 呼叫政府商工登記 API（<code>http://data.gcis.nat.gov.tw/od/data/api/5F64D864-61CB-4D0D-8AD9-492047CC1EA6</code>，timeout 10 秒），此為全站唯一的外部 HTTP 呼叫。呼叫 <span class="badge shall">SHALL</span> 以 try/catch 包裹，任何連線失敗 <span class="badge shall">SHALL</span> 回 <code>{"success": false}</code>、<span class="badge mustnot">MUST NOT</span> 拋出 500。
+  <div class="note"><strong>已知限制</strong>：正式環境無對外網際網路連線，certify 與儲存時重驗在正式環境必回失敗、認證資料無法於正式環境經此流程寫入（2026-06-12 裁示：不改程式碼、僅記載；功能於可連外的開發/測試環境正常運作）。</div></div>
+  <details class="scn"><summary>連線失敗回傳失敗而非 500<span class="testref">ShopRuTest::certify_connection_exception_returns_failure</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>對政府 API 的連線拋出 ConnectionException（Http fake）</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/shops/{id}/certify</code> 帶合法統編</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 JSON <code>{"success": false}</code></span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req excluded" id="excluded" style="--c:var(--gray)">
+  <h3><span class="no">—</span>刻意不做的事（彙整）</h3>
+  <div class="nots">
+    <div class="not-card"><span class="x">商店新增／刪除</span><small>商店帳號由商店端系統開立，後台僅管理既有商店；POST/DELETE 回 405（R13）</small></div>
+    <div class="not-card"><span class="x">Route model binding</span><small>保留 <code>{id}</code> + redirect-with-flash UX，certify 走 404 JSON（R12）</small></div>
+    <div class="not-card"><span class="x">admin email 的 DB unique index</span><small><code>encrypted</code> cast 加密值不可比對，唯一性由應用層解密比對（R8）</small></div>
+    <div class="not-card"><span class="x">信任表單的 company_name</span><small>認證資料以伺服端為準，公司名稱一律採 API 回傳值或 DB 現值（R10）</small></div>
+    <div class="not-card"><span class="x">sales_id／expired_at 編輯</span><small>屬 bills 範疇，不在本 UI（R13）</small></div>
+    <div class="not-card"><span class="x">addon 同步規則</span><small>grade 變更僅觸發 <code>ShopAddonSyncService</code>，同步規則屬 addons capability（R9）</small></div>
+  </div>
+</section>
+
+<footer>
+  產生自 <code>openspec/specs/shop-management/spec.md</code>（change <code>2026-06-12-retrofit-shops-spec</code>）。14 項 Requirement、38 個 Scenario。
+  測試對應：<code>tests/Feature/ShopRuTest.php</code>（38 案例）。
+  本頁為人工同步版本，內容以 <code>spec.md</code> 為準。
+</footer>
+</main>
+</div>
+
+<script>
+// 全部展開 / 收合
+const btn = document.getElementById('toggleAll');
+btn.addEventListener('click', () => {
+  const open = btn.dataset.open !== '1';
+  document.querySelectorAll('details.scn').forEach(d => d.open = open);
+  btn.dataset.open = open ? '1' : '0';
+  btn.textContent = open ? '全部收合' : '全部展開';
+});
+
+// 側欄 scroll-spy
+const links = [...document.querySelectorAll('.toc a')];
+const targets = links
+  .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+  .filter(Boolean);
+const byId = Object.fromEntries(links.map(a => [a.getAttribute('href').slice(1), a]));
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(a => a.classList.remove('active'));
+      byId[e.target.id]?.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -75% 0px' });
+targets.forEach(t => observer.observe(t));
+</script>
+</body>
+</html>
