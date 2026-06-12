@@ -65,6 +65,116 @@ class ShopRuTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_guest_is_redirected_to_login(): void
+    {
+        $response = $this->get(route('shops.index'));
+
+        $response->assertRedirect(route('login'));
+    }
+
+    // ─── Index filters & pagination ──────────────────────────────────────────
+
+    public function test_index_filters_by_keyword_with_partial_match(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $this->createShopWithAdmin(['name' => '旗艦咖啡商店']);
+        $this->createShopWithAdmin(['name' => '無關五金行']);
+
+        $response = $this->get(route('shops.index', ['keyword' => '咖啡']));
+
+        $response->assertStatus(200);
+        $response->assertSee('旗艦咖啡商店');
+        $response->assertDontSee('無關五金行');
+    }
+
+    public function test_index_filters_by_grade_id(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $gradeA = Grade::factory()->create();
+        $gradeB = Grade::factory()->create();
+        $this->createShopWithAdmin(['name' => 'A版本商店', 'grade_id' => $gradeA->id]);
+        $this->createShopWithAdmin(['name' => 'B版本商店', 'grade_id' => $gradeB->id]);
+
+        $response = $this->get(route('shops.index', ['grade_id' => $gradeA->id]));
+
+        $response->assertStatus(200);
+        $response->assertSee('A版本商店');
+        $response->assertDontSee('B版本商店');
+    }
+
+    public function test_index_filters_by_exact_business_number(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $this->createShopWithAdmin(['name' => '已認證商店甲'], ['business_number' => '12345678']);
+        $this->createShopWithAdmin(['name' => '已認證商店乙'], ['business_number' => '12345670']);
+
+        $response = $this->get(route('shops.index', ['business_number' => '12345678']));
+
+        $response->assertStatus(200);
+        $response->assertSee('已認證商店甲');
+        $response->assertDontSee('已認證商店乙');
+    }
+
+    public function test_index_filters_by_certification_status(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $this->createShopWithAdmin(['name' => '已認證商店'], ['business_number' => '12345678']);
+        $this->createShopWithAdmin(['name' => '未認證商店'], ['business_number' => null]);
+
+        $certified = $this->get(route('shops.index', ['is_certified' => '1']));
+        $certified->assertSee('已認證商店');
+        $certified->assertDontSee('未認證商店');
+
+        $uncertified = $this->get(route('shops.index', ['is_certified' => '0']));
+        $uncertified->assertSee('未認證商店');
+        $uncertified->assertDontSee('已認證商店');
+    }
+
+    public function test_index_combined_filters_intersect(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $grade = Grade::factory()->create();
+        $this->createShopWithAdmin(['name' => '目標咖啡商店', 'grade_id' => $grade->id], ['business_number' => '12345678']);
+        $this->createShopWithAdmin(['name' => '別版咖啡商店'], ['business_number' => '12345670']);
+
+        $response = $this->get(route('shops.index', [
+            'keyword' => '咖啡',
+            'grade_id' => $grade->id,
+            'is_certified' => '1',
+        ]));
+
+        $response->assertStatus(200);
+        $response->assertSee('目標咖啡商店');
+        $response->assertDontSee('別版咖啡商店');
+    }
+
+    public function test_index_accepts_valid_per_page(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->get(route('shops.index', ['per_page' => 100]));
+
+        $response->assertStatus(200);
+        $response->assertSee('value="100" selected', false);
+    }
+
+    public function test_index_invalid_per_page_falls_back_to_50(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->get(route('shops.index', ['per_page' => 999]));
+
+        $response->assertStatus(200);
+        $response->assertSee('value="50" selected', false);
+    }
+
     // ─── Edit form ────────────────────────────────────────────────────────────
 
     public function test_admin_can_access_shop_edit(): void
