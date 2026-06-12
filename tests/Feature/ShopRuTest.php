@@ -301,6 +301,12 @@ class ShopRuTest extends TestCase
         $this->createUserWithRole('Admin');
         $shop = $this->createShopWithAdmin();
 
+        Http::fake([
+            '*' => Http::response([
+                ['Company_Name' => '測試股份有限公司'],
+            ], 200),
+        ]);
+
         $response = $this->put(route('shops.update', $shop), [
             'name' => $shop->name,
             'email' => $shop->email,
@@ -319,6 +325,106 @@ class ShopRuTest extends TestCase
             'shop_id' => $shop->id,
             'business_number' => '12345678',
             'company_name' => '測試股份有限公司',
+        ]);
+    }
+
+    public function test_update_reverifies_changed_business_number_and_uses_api_company_name(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $shop = $this->createShopWithAdmin();
+
+        Http::fake([
+            '*' => Http::response([
+                ['Company_Name' => '政府登記公司'],
+            ], 200),
+        ]);
+
+        $response = $this->put(route('shops.update', $shop), [
+            'name' => $shop->name,
+            'email' => $shop->email,
+            'grade_id' => $shop->grade_id,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => $shop->admin->name,
+                'email' => $shop->admin->email,
+                'business_number' => '87654321',
+                'company_name' => '偽造公司名稱',
+            ],
+        ]);
+
+        $response->assertRedirect(route('shops.index'));
+        $this->assertDatabaseHas('shops_admin', [
+            'shop_id' => $shop->id,
+            'business_number' => '87654321',
+            'company_name' => '政府登記公司',
+        ]);
+    }
+
+    public function test_update_rejects_business_number_that_fails_verification(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $shop = $this->createShopWithAdmin(
+            [],
+            ['business_number' => '11111111', 'company_name' => '原始公司'],
+        );
+
+        Http::fake([
+            '*' => Http::response([], 200),
+        ]);
+
+        $response = $this->put(route('shops.update', $shop), [
+            'name' => $shop->name,
+            'email' => $shop->email,
+            'grade_id' => $shop->grade_id,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => $shop->admin->name,
+                'email' => $shop->admin->email,
+                'business_number' => '87654321',
+                'company_name' => '偽造公司名稱',
+            ],
+        ]);
+
+        $response->assertSessionHasErrors('admin.business_number');
+        $this->assertDatabaseHas('shops_admin', [
+            'shop_id' => $shop->id,
+            'business_number' => '11111111',
+            'company_name' => '原始公司',
+        ]);
+    }
+
+    public function test_update_unchanged_business_number_keeps_company_name_without_api_call(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $shop = $this->createShopWithAdmin(
+            [],
+            ['business_number' => '11111111', 'company_name' => '原始公司'],
+        );
+
+        Http::fake();
+
+        $response = $this->put(route('shops.update', $shop), [
+            'name' => $shop->name,
+            'email' => $shop->email,
+            'grade_id' => $shop->grade_id,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => $shop->admin->name,
+                'email' => $shop->admin->email,
+                'business_number' => '11111111',
+                'company_name' => '偽造公司名稱',
+            ],
+        ]);
+
+        $response->assertRedirect(route('shops.index'));
+        Http::assertNothingSent();
+        $this->assertDatabaseHas('shops_admin', [
+            'shop_id' => $shop->id,
+            'business_number' => '11111111',
+            'company_name' => '原始公司',
         ]);
     }
 

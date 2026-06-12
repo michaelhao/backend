@@ -67,6 +67,8 @@ class ShopService
             if ($conflict) {
                 throw ValidationException::withMessages(['admin.email' => '此 email 已被使用']);
             }
+
+            $adminData = $this->resolveCertificationData($admin, $adminData);
         }
 
         $gradeChanging = isset($shopData['grade_id'])
@@ -85,6 +87,48 @@ class ShopService
                 $this->syncShopAddonsOnGradeChange($shopId, $newGradeId);
             }
         });
+    }
+
+    /**
+     * 認證資料以伺服端為準：business_number 變更時重新呼叫認證 API，
+     * company_name 一律採 API 回傳值或 DB 現值，不信任表單送來的值。
+     *
+     * @param  array{business_number?: ?string, company_name?: ?string}  $adminData
+     */
+    private function resolveCertificationData(ShopAdmin $admin, array $adminData): array
+    {
+        if (! array_key_exists('business_number', $adminData)) {
+            unset($adminData['company_name']);
+
+            return $adminData;
+        }
+
+        $businessNumber = $adminData['business_number'];
+
+        if ($businessNumber === null || $businessNumber === '') {
+            $adminData['business_number'] = null;
+            $adminData['company_name'] = null;
+
+            return $adminData;
+        }
+
+        if ($businessNumber === $admin->business_number) {
+            $adminData['company_name'] = $admin->company_name;
+
+            return $adminData;
+        }
+
+        $result = $this->verifyCertification($businessNumber);
+
+        if (! $result['success']) {
+            throw ValidationException::withMessages([
+                'admin.business_number' => '統一編號認證失敗，請重新進行認證',
+            ]);
+        }
+
+        $adminData['company_name'] = $result['company_name'];
+
+        return $adminData;
     }
 
     private function syncShopAddonsOnGradeChange(int $shopId, int $newGradeId): void
