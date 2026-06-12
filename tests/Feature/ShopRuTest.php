@@ -322,6 +322,100 @@ class ShopRuTest extends TestCase
         ]);
     }
 
+    public function test_edit_nonexistent_shop_redirects_with_error(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->get(route('shops.edit', 99999));
+
+        $response->assertRedirect(route('shops.index'));
+        $response->assertSessionHas('error');
+    }
+
+    public function test_update_nonexistent_shop_redirects_with_error(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $grade = Grade::factory()->create();
+
+        $response = $this->put(route('shops.update', 99999), [
+            'name' => '不存在的商店',
+            'email' => 'ghost@shop.com',
+            'grade_id' => $grade->id,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => '管理員',
+                'email' => 'ghost-admin@shop.com',
+            ],
+        ]);
+
+        $response->assertRedirect(route('shops.index'));
+        $response->assertSessionHas('error');
+    }
+
+    public function test_update_ignores_unvalidated_admin_fields(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $shop = $this->createShopWithAdmin();
+        $otherShop = Shop::factory()->create();
+        $originalPassword = $shop->admin->getRawOriginal('password');
+
+        $response = $this->put(route('shops.update', $shop), [
+            'name' => $shop->name,
+            'email' => $shop->email,
+            'grade_id' => $shop->grade_id,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => $shop->admin->name,
+                'email' => $shop->admin->email,
+                'password' => 'hacked-password',
+                'shop_id' => $otherShop->id,
+            ],
+        ]);
+
+        $response->assertRedirect(route('shops.index'));
+
+        $admin = $shop->admin->fresh();
+        $this->assertSame($originalPassword, $admin->getRawOriginal('password'));
+        $this->assertSame($shop->id, $admin->shop_id);
+    }
+
+    public function test_update_shop_without_admin_does_not_fail(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $shop = Shop::factory()->create();
+
+        $response = $this->put(route('shops.update', $shop), [
+            'name' => '無管理員商店',
+            'email' => $shop->email,
+            'grade_id' => $shop->grade_id,
+            'status' => ShopStatus::Active->value,
+            'admin' => [
+                'name' => '管理員',
+                'email' => 'no-admin@shop.com',
+            ],
+        ]);
+
+        $response->assertRedirect(route('shops.index'));
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('shops', ['id' => $shop->id, 'name' => '無管理員商店']);
+        $this->assertDatabaseMissing('shops_admin', ['shop_id' => $shop->id]);
+    }
+
+    public function test_per_page_form_preserves_uncertified_filter(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->get(route('shops.index', ['is_certified' => '0']));
+
+        $response->assertStatus(200);
+        $response->assertSee('name="is_certified" value="0"', false);
+    }
+
     // ─── Certify endpoint ────────────────────────────────────────────────────
 
     public function test_certify_missing_business_number_returns_422(): void
@@ -403,6 +497,17 @@ class ShopRuTest extends TestCase
         $response = $this->postJson(route('shops.certify', $shop), ['business_number' => '12345678']);
 
         $response->assertStatus(200);
+        $response->assertJson(['success' => false]);
+    }
+
+    public function test_certify_nonexistent_shop_returns_404_json(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->postJson(route('shops.certify', 99999), ['business_number' => '12345678']);
+
+        $response->assertStatus(404);
         $response->assertJson(['success' => false]);
     }
 

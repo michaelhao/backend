@@ -67,7 +67,7 @@
     {{-- Hidden per-page form (submits per_page + existing filters) --}}
     <form id="per-page-form" method="GET" action="{{ route('shops.index') }}">
         @foreach ($filters as $key => $value)
-            @if ($value)
+            @if ($value !== null && $value !== '')
                 <input type="hidden" name="{{ $key }}" value="{{ $value }}">
             @endif
         @endforeach

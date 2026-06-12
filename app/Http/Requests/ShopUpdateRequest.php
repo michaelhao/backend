@@ -23,7 +23,7 @@ class ShopUpdateRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:50'],
-            'email' => ['required', 'email', Rule::unique('shops', 'email')->ignore($shop->id)],
+            'email' => ['required', 'email', Rule::unique('shops', 'email')->ignore($this->route('id'))],
             'grade_id' => ['required', 'integer', $this->gradeIdExistsRule($shop)],
             'status' => ['required', new Enum(ShopStatus::class)],
             'admin.name' => ['required', 'string', 'max:20'],

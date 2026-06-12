@@ -43,8 +43,8 @@ class ShopController extends Controller
             return redirect()->route('shops.index')->with('error', '找不到該商店');
         }
 
-        $shopData = $request->only(['name', 'email', 'grade_id', 'status']);
-        $adminData = $request->input('admin');
+        $shopData = $request->safe()->only(['name', 'email', 'grade_id', 'status']);
+        $adminData = $request->validated()['admin'] ?? [];
 
         $this->shopService->updateShop($shop, $shopData, $adminData);
 
@@ -56,7 +56,7 @@ class ShopController extends Controller
     {
         $shop = $this->shopService->findShopById($id);
         if (! $shop) {
-            return redirect()->route('shops.index')->with('error', '找不到該商店');
+            return response()->json(['success' => false, 'message' => '找不到該商店'], 404);
         }
 
         $result = $this->shopService->verifyCertification($request->business_number);

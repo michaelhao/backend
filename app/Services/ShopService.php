@@ -57,12 +57,16 @@ class ShopService
 
     public function updateShop(Shop $shop, array $shopData, array $adminData): void
     {
-        $conflict = ShopAdmin::where('id', '!=', $shop->admin->id)
-            ->get()
-            ->first(fn ($a) => $a->email === $adminData['email']);
+        $admin = $shop->admin;
 
-        if ($conflict) {
-            throw ValidationException::withMessages(['admin.email' => '此 email 已被使用']);
+        if ($admin) {
+            $conflict = ShopAdmin::where('id', '!=', $admin->id)
+                ->get()
+                ->first(fn ($a) => $a->email === $adminData['email']);
+
+            if ($conflict) {
+                throw ValidationException::withMessages(['admin.email' => '此 email 已被使用']);
+            }
         }
 
         $gradeChanging = isset($shopData['grade_id'])
@@ -70,9 +74,12 @@ class ShopService
         $newGradeId = $gradeChanging ? (int) $shopData['grade_id'] : null;
         $shopId = $shop->id;
 
-        DB::transaction(function () use ($shop, $shopData, $adminData, $gradeChanging, $newGradeId, $shopId) {
+        DB::transaction(function () use ($shop, $admin, $shopData, $adminData, $gradeChanging, $newGradeId, $shopId) {
             $this->shopRepository->update($shop, $shopData);
-            $this->shopRepository->updateAdmin($shop->admin, $adminData);
+
+            if ($admin) {
+                $this->shopRepository->updateAdmin($admin, $adminData);
+            }
 
             if ($gradeChanging) {
                 $this->syncShopAddonsOnGradeChange($shopId, $newGradeId);
