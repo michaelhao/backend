@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>grade-management Specification — 版本管理</title>
+<style>
+  :root {
+    --ink: #1e293b;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --blue: #2563eb;   --blue-bg: #eff6ff;   --blue-line: #bfdbfe;
+    --amber: #d97706;  --amber-bg: #fffbeb;  --amber-line: #fde68a;
+    --green: #059669;  --green-bg: #ecfdf5;  --green-line: #a7f3d0;
+    --purple: #7c3aed; --purple-bg: #f5f3ff; --purple-line: #ddd6fe;
+    --gray: #6b7280;   --gray-bg: #f3f4f6;   --gray-line: #d1d5db;
+    --red: #dc2626;    --red-bg: #fef2f2;
+    --sidebar-w: 264px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 0.86em;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+
+  /* ===== 版面 ===== */
+  .layout { display: flex; min-height: 100vh; }
+  nav.toc {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: sticky; top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: #0f172a;
+    color: #cbd5e1;
+    padding: 20px 0 32px;
+  }
+  main {
+    flex: 1;
+    min-width: 0;
+    max-width: 880px;
+    padding: 32px 40px 96px;
+  }
+
+  /* ===== 側欄 ===== */
+  .toc-title { padding: 0 20px 12px; font-weight: 700; color: #fff; font-size: 16px; }
+  .toc-title small { display: block; font-weight: 400; color: #94a3b8; font-size: 11px; margin-top: 2px; }
+  .toc-group { margin-top: 14px; }
+  .toc-group-label {
+    padding: 0 20px; font-size: 11px; letter-spacing: .08em;
+    color: #94a3b8; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .toc a {
+    display: block; padding: 5px 20px 5px 34px;
+    color: #cbd5e1; text-decoration: none; font-size: 13px;
+    border-left: 3px solid transparent;
+  }
+  .toc a:hover { color: #fff; background: rgba(255,255,255,.06); }
+  .toc a.active { color: #fff; background: rgba(255,255,255,.1); border-left-color: #60a5fa; }
+
+  /* ===== Header ===== */
+  header h1 { font-size: 26px; margin: 0 0 4px; }
+  header .sub { color: var(--muted); margin-bottom: 16px; }
+  .threat-banner {
+    background: var(--amber-bg); border: 1px solid var(--amber-line);
+    border-radius: 10px; padding: 12px 16px; font-size: 14px; margin-bottom: 12px;
+  }
+  .threat-banner strong { color: var(--amber); }
+  .meta { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; }
+  .meta span { white-space: nowrap; }
+  .truth-note { font-size: 12.5px; color: var(--muted); margin-bottom: 24px; }
+
+  /* ===== 工具列 ===== */
+  .toolbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: flex-end; padding: 8px 0; background: linear-gradient(var(--bg) 80%, transparent); }
+  .toolbar button {
+    font: inherit; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card);
+    border-radius: 8px; padding: 6px 14px; color: var(--ink);
+  }
+  .toolbar button:hover { border-color: #94a3b8; }
+
+  /* ===== 區段標題 ===== */
+  h2.section {
+    font-size: 19px; margin: 44px 0 6px;
+    padding-left: 12px; border-left: 5px solid var(--c, var(--blue));
+  }
+  .section-desc { color: var(--muted); font-size: 13.5px; margin: 0 0 18px 17px; }
+
+  /* ===== 流程圖 ===== */
+  .flow {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px 24px; margin-bottom: 18px; overflow-x: auto;
+  }
+  .flow h3 { margin: 0 0 16px; font-size: 15px; }
+  .frow { display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap; min-width: max-content; }
+  .fnode {
+    border: 1.5px solid var(--blue-line); background: var(--blue-bg);
+    border-radius: 8px; padding: 7px 12px; font-size: 13px;
+    display: flex; flex-direction: column; justify-content: center;
+    text-align: center; max-width: 190px;
+  }
+  .fnode small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+  .fnode.start { border-color: #94a3b8; background: #f1f5f9; font-weight: 600; }
+  .fnode.ok { border-color: var(--green-line); background: var(--green-bg); }
+  .fnode.fail { border-color: #fecaca; background: var(--red-bg); }
+  .fnode.gate { border-color: var(--amber-line); background: var(--amber-bg); }
+  .farrow {
+    align-self: center; padding: 0 8px; color: var(--muted);
+    font-size: 12px; text-align: center; flex-shrink: 0; line-height: 1.3;
+  }
+  .farrow::after { content: "→"; display: block; font-size: 16px; color: #94a3b8; }
+  .fbranches { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+  .fbranch { display: flex; align-items: center; }
+
+  /* ===== Requirement 卡片 ===== */
+  .req {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 5px solid var(--c, var(--blue));
+    border-radius: 12px; padding: 18px 22px 14px; margin-bottom: 16px;
+    scroll-margin-top: 56px;
+  }
+  .req h3 { margin: 0 0 8px; font-size: 16px; display: flex; align-items: baseline; gap: 10px; }
+  .req h3 .no { color: var(--muted); font-size: 13px; font-weight: 600; }
+  .req .body { font-size: 14.5px; margin-bottom: 12px; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    border-radius: 5px; padding: 0 7px; vertical-align: 1px;
+  }
+  .badge.shall { background: var(--blue); color: #fff; }
+  .badge.mustnot { background: var(--red); color: #fff; }
+  .note { font-size: 13px; color: var(--muted); background: var(--gray-bg); border-radius: 8px; padding: 8px 12px; margin-top: 8px; }
+
+  /* ===== Scenario ===== */
+  details.scn { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: #fcfdfe; }
+  details.scn summary {
+    cursor: pointer; padding: 9px 14px; font-size: 13.5px; font-weight: 600;
+    list-style: none; display: flex; align-items: center; gap: 8px;
+  }
+  details.scn summary::-webkit-details-marker { display: none; }
+  details.scn summary::before { content: "▸"; color: #94a3b8; transition: transform .15s; }
+  details.scn[open] summary::before { transform: rotate(90deg); }
+  .scn-body { padding: 2px 14px 12px 34px; }
+  .gwt { display: flex; gap: 10px; margin: 5px 0; font-size: 13.5px; align-items: baseline; }
+  .gwt .kw {
+    flex-shrink: 0; width: 56px; text-align: center; font-size: 11px; font-weight: 700;
+    border-radius: 5px; padding: 1px 0; letter-spacing: .05em;
+  }
+  .kw.given { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-line); }
+  .kw.when  { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-line); }
+  .kw.then  { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-line); }
+  .kw.and   { background: #fff; color: var(--muted); border: 1px dashed var(--gray-line); }
+  .testref {
+    margin-left: auto; font-size: 11px; font-weight: 400; color: var(--muted);
+    background: var(--gray-bg); border-radius: 99px; padding: 1px 10px; white-space: nowrap;
+  }
+  .testref.none { background: var(--amber-bg); color: var(--amber); }
+
+  /* ===== 刻意不做 ===== */
+  .req.excluded { border-left-color: var(--gray); background: #fafafa; }
+  .nots { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+  .not-card { border: 1px dashed var(--gray-line); border-radius: 10px; padding: 10px 14px; background: var(--card); font-size: 13.5px; }
+  .not-card .x { font-weight: 700; color: var(--gray); text-decoration: line-through; }
+  .not-card small { display: block; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+  footer { margin-top: 56px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+  @media (max-width: 860px) {
+    nav.toc { display: none; }
+    main { padding: 20px 18px 64px; }
+  }
+  @media print {
+    nav.toc, .toolbar { display: none; }
+    details.scn { open: true; }
+    .req { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <div class="toc-title">grade-management Specification<small>版本管理</small></div>
+  <div class="toc-group">
+    <div class="toc-group-label">總覽</div>
+    <a href="#overview">行為流程圖</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--blue)"></span>版本 CRU</div>
+    <a href="#r1">1. 版本列表</a>
+    <a href="#r2">2. 新增版本</a>
+    <a href="#r3">3. 編輯版本</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--amber)"></span>權重系統</div>
+    <a href="#r5">5. 權重即時檢查端點</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--green)"></span>狀態切換與停用</div>
+    <a href="#r4">4. 狀態切換</a>
+    <a href="#r6">6. 停用版本引用規則</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--purple)"></span>UI 與 Seeder</div>
+    <a href="#r7">7. UI 權限顯示控制</a>
+    <a href="#r8">8. 預設版本 Seeder</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--gray)"></span>刻意設計</div>
+    <a href="#r9">9. 無刪除功能</a>
+    <a href="#excluded">刻意不做的事</a>
+  </div>
+</nav>
+
+<main>
+<header>
+  <h1>grade-management Specification</h1>
+  <div class="sub">版本 CRU、權重排序與唯一性、狀態切換及停用後引用規則的完整行為規格</div>
+  <div class="threat-banner">
+    <strong>威脅模型：</strong>內部後台、非公網暴露；能登入後台者即為受信任的內部人員。<strong>版本不支援刪除</strong>——生命週期終結以停用（status）表達，確保 shop / bill / addon 的參照穩定性。
+  </div>
+  <div class="meta">
+    <span>來源：<code>openspec/specs/grade-management/spec.md</code></span>
+    <span>實作：<code>934c2c1</code>、<code>9129b44</code>、<code>16890c1</code>、<code>e92d71f</code></span>
+    <span>change：<code>2026-06-12-retrofit-grades-spec</code></span>
+  </div>
+  <div class="truth-note">本頁為人工同步的閱讀版；若與 <code>spec.md</code> 不一致，以 <code>spec.md</code> 為準。每個 Scenario 右側標註對應的自動化測試。</div>
+</header>
+
+<div class="toolbar"><button id="toggleAll" data-open="0">全部展開</button></div>
+
+<!-- ============ 總覽流程圖 ============ -->
+<h2 class="section" id="overview" style="--c:#94a3b8">行為流程圖</h2>
+<p class="section-desc">先看懂版本寫入與停用引用兩條主流程，再讀下方逐項規格。</p>
+
+<div class="flow">
+  <h3>版本寫入流程（POST /grades、PUT /grades/{id}）</h3>
+  <div class="frow">
+    <div class="fnode start">表單送出<small>輸入 weight 時前端先打<br>check-weight 即時提示</small></div>
+    <div class="farrow"></div>
+    <div class="fnode">GradeRequest 驗證<small>code/name 中英數底線+unique<br>price min:2／status enum</small></div>
+    <div class="farrow"></div>
+    <div class="fnode gate">weight 三層唯一性<small>unique 規則（ignore 自身）<br>+ DB unique index 兜底</small></div>
+    <div class="farrow">通過</div>
+    <div class="fnode">寫入 grades<small>Service → Repository</small></div>
+    <div class="farrow"></div>
+    <div class="fnode ok">302 → /grades<br>success flash</div>
+  </div>
+  <div class="frow" style="margin-top:12px">
+    <div class="fnode fail">驗證失敗：欄位錯誤</div>
+    <div class="farrow"></div>
+    <div class="fnode fail">id 不存在（edit/update）：302 → /grades + error flash「找不到該版本」</div>
+    <div class="farrow"></div>
+    <div class="fnode fail">toggle id 不存在：422 JSON「找不到該版本」</div>
+  </div>
+</div>
+
+<div class="flow">
+  <h3>停用版本引用規則（status = Inactive 後）</h3>
+  <div class="frow">
+    <div class="fnode start">版本被停用<small>PATCH /grades/{id}/toggle</small></div>
+    <div class="farrow"></div>
+    <div class="fnode ok">既有引用維持原樣<small>shop / bill detail / addon<br>不回頭驗證、不清空</small></div>
+    <div class="farrow">新指派</div>
+    <div class="fbranches">
+      <div class="fbranch"><div class="fnode fail">Shop 變更為停用版本 → 422<small>維持原版本（即使已停用）→ 允許</small></div></div>
+      <div class="fbranch"><div class="fnode fail">新 Bill 使用停用版本 → 422<small>無豁免</small></div></div>
+      <div class="fbranch"><div class="fnode fail">Addon 新關聯停用版本 → 422<small>既有關聯保留 → 允許</small></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 版本 CRU ============ -->
+<h2 class="section" style="--c:var(--blue)">版本 CRU</h2>
+
+<section class="req" id="r1" style="--c:var(--blue)">
+  <h3><span class="no">R1</span>版本列表</h3>
+  <div class="body">系統 <span class="badge shall">SHALL</span> 在 <code>GET /grades</code>（需 <code>Grade.index</code> 權限）顯示所有版本，依 <code>weight</code> 降序排列（數值越高等級越高），每筆 <span class="badge shall">SHALL</span> 含代碼、名稱、權重、價格與狀態。</div>
+  <details class="scn"><summary>有權限者可見版本列表<span class="testref">GradeCruTest::admin_can_access_grade_index</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>持有 <code>Grade.index</code> 權限的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/grades</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200 並渲染版本列表</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>依權重降序排列<span class="testref">GradeCruTest::index_lists_grades_by_weight_descending</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>權重分別為 10、90、50 的三個版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/grades</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>列表依 90、50、10 的順序呈現</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r2" style="--c:var(--blue)">
+  <h3><span class="no">R2</span>新增版本</h3>
+  <div class="body"><code>POST /grades</code>（需 <code>Grade.create</code> 權限）<span class="badge shall">SHALL</span> 以 <code>GradeRequest</code> 驗證：<code>code</code> 與 <code>name</code> 必填、最長 30 字元、僅限中英數與底線（regex）、各自於 grades 表內唯一；<code>price</code> 必填整數且不可小於 2；<code>weight</code> 必填整數、不可小於 1 且唯一（DB 層另有 unique index 防繞過，欄位無 default 值）；<code>status</code> 必填且須為 <code>GradeStatus</code> enum（1=啟用、0=關閉）。成功 <span class="badge shall">SHALL</span> 302 導向 <code>/grades</code> 並帶 success flash「版本已建立」。</div>
+  <details class="scn"><summary>成功建立版本<span class="testref">GradeCruTest::admin_can_create_grade</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>持有 <code>Grade.create</code> 權限的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/grades</code> 帶合法的 code、name、price、weight、status</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導向 <code>/grades</code> 並帶 success flash</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>版本已存在於資料庫</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>code 重複<span class="testref">GradeCruTest::store_fails_with_duplicate_code</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>已存在 code 相同的版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/grades</code> 帶重複 code</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>code</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>name 重複<span class="testref">GradeCruTest::store_fails_with_duplicate_name</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>已存在 name 相同的版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/grades</code> 帶重複 name</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>name</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>weight 重複<span class="testref">GradeCruTest::store_fails_with_duplicate_weight</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>已存在 weight 相同的版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/grades</code> 帶重複 weight</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>weight</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>code 或 name 含特殊字元<span class="testref">GradeCruTest::store_fails_with_invalid_code_characters / invalid_name_characters</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/grades</code> 的 code 或 name 含 <code>!@#</code> 等中英數與底線以外的字元</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含對應欄位</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>price 低於下限<span class="testref">GradeCruTest::store_fails_with_price_too_low / negative_price</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/grades</code> 帶 <code>price=1</code> 或負數</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>price</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>weight 缺失或低於 1<span class="testref">GradeCruTest::store_fails_without_weight / weight_zero</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/grades</code> 未帶 weight，或帶 <code>weight=0</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>weight</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>status 非法值<span class="testref">GradeCruTest::store_fails_with_invalid_status</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/grades</code> 帶 <code>status=99</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>status</code></span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r3" style="--c:var(--blue)">
+  <h3><span class="no">R3</span>編輯版本</h3>
+  <div class="body"><code>GET /grades/{id}/edit</code> 與 <code>PUT /grades/{id}</code>（皆需 <code>Grade.update</code> 權限）<span class="badge shall">SHALL</span> 提供版本編輯，編輯表單 <span class="badge shall">SHALL</span> 預填既有值。驗證規則同新增（code / name / weight 的 unique 排除自身）。id 不存在時 <span class="badge shall">SHALL</span> 302 導向 <code>/grades</code> 並帶 error flash「找不到該版本」。
+  <div class="note">redirect-with-flash UX，刻意不採 route model binding 的 404（源自 spec/7 設計）。錯誤文案原為「找不到該方案」，2026-06-12 設計 review 統一為「找不到該版本」。</div></div>
+  <details class="scn"><summary>成功更新版本<span class="testref">GradeCruTest::admin_can_edit_grade</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>持有 <code>Grade.update</code> 權限的使用者與既有版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/grades/{id}</code> 帶合法欄位（含 status 變更）</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導向 <code>/grades</code></span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>版本資料已更新</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>編輯表單預填既有值<span class="testref">GradeCruTest::edit_form_loads_with_existing_values</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>既有版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/grades/{id}/edit</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200，表單含該版本的 code、name、price</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>unique 驗證排除自身<span class="testref">GradeCruTest::update_allows_same_code_and_name_for_self / same_weight_for_self</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>既有版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/grades/{id}</code> 帶與自身相同的 code、name、weight</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>驗證通過，無 session errors</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>編輯不存在的版本<span class="testref">GradeCruTest::edit_nonexistent_grade_redirects_with_error</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/grades/99999/edit</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導向 <code>/grades</code></span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>session 含 error flash「找不到該版本」</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>更新不存在的版本<span class="testref">GradeCruTest::update_nonexistent_grade_redirects_with_error</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/grades/99999</code> 帶合法欄位</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導向 <code>/grades</code></span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>session 含 error flash「找不到該版本」</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 權重系統 ============ -->
+<h2 class="section" style="--c:var(--amber)">權重系統</h2>
+<p class="section-desc">weight 決定等級高低（數值越高等級越高）；唯一性三層保證——FormRequest unique 規則、check-weight 即時檢查（UX）、DB unique index（防繞過）。</p>
+
+<section class="req" id="r5" style="--c:var(--amber)">
+  <h3><span class="no">R5</span>權重即時檢查端點</h3>
+  <div class="body"><code>GET /grades/check-weight</code>（需 <code>Grade.update</code> 權限，供新增/編輯表單即時驗證與位置預覽）<span class="badge shall">SHALL</span> 回應 JSON：<code>duplicate</code>（該 weight 是否已被使用）、<code>conflicting_grade</code>（衝突版本的 id / name / weight，無衝突為 null）、<code>grades</code>（全部版本的 id / name / weight，依 weight 降序）。帶 <code>exclude_id</code> 時 <span class="badge shall">SHALL</span> 豁免該 id 自身；<code>weight</code> 小於 1 時 <span class="badge shall">SHALL</span> 直接回應 <code>duplicate=false</code>、<code>grades=[]</code>，不查詢資料庫。</div>
+  <details class="scn"><summary>權重已被使用<span class="testref">GradeCruTest::check_weight_returns_duplicate_for_taken_weight</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>已存在 weight=77 的版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/grades/check-weight?weight=77</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回應 <code>duplicate=true</code> 且 <code>conflicting_grade</code> 為該版本</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>權重未被使用<span class="testref">GradeCruTest::check_weight_returns_no_duplicate_for_unused_weight</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>已存在 weight=77 的版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/grades/check-weight?weight=78</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回應 <code>duplicate=false</code>、<code>conflicting_grade=null</code>，<code>grades</code> 含既有版本</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>exclude_id 豁免自身<span class="testref">GradeCruTest::check_weight_excludes_self_with_exclude_id</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>weight=77 的版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/grades/check-weight?weight=77&amp;exclude_id={自身 id}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回應 <code>duplicate=false</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>weight 低於 1 回空結果<span class="testref">GradeCruTest::check_weight_below_one_returns_empty</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/grades/check-weight?weight=0</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回應 <code>duplicate=false</code>、<code>conflicting_grade=null</code>、<code>grades=[]</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>無權限者被擋<span class="testref">GradeCruTest::viewer_cannot_check_weight</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>Viewer 角色（無 <code>Grade.update</code>）</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/grades/check-weight?weight=77</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302（導向 default_route）</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 狀態切換與停用 ============ -->
+<h2 class="section" style="--c:var(--green)">狀態切換與停用</h2>
+<p class="section-desc">停用＝「不再賣這個版本」：只擋新指派、保留既有引用，否則管理員僅修改其他欄位也會被驗證擋住。</p>
+
+<section class="req" id="r4" style="--c:var(--green)">
+  <h3><span class="no">R4</span>狀態切換</h3>
+  <div class="body"><code>PATCH /grades/{id}/toggle</code>（需 <code>Grade.update</code> 權限，前端以 axios + 確認 modal 呼叫）<span class="badge shall">SHALL</span> 回應 JSON：成功時切換 <code>status</code>（Active ↔ Inactive）並回應 200 與訊息「版本狀態已更新」；id 不存在時回應 422 與訊息「找不到該版本」。
+  <div class="note">舊 spec/5 原設計為 form POST + redirect flash，後續比照 spec/10 的 axios + 自訂 modal 模式改版，免整頁 reload。</div></div>
+  <details class="scn"><summary>啟用版本切換為關閉<span class="testref">GradeCruTest::admin_can_toggle_active_grade_to_inactive</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>啟用中的版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PATCH <code>/grades/{id}/toggle</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200，版本 status 變為 Inactive</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>關閉版本切換為啟用<span class="testref">GradeCruTest::admin_can_toggle_inactive_grade_to_active</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>關閉中的版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PATCH <code>/grades/{id}/toggle</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200，版本 status 變為 Active</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>切換不存在的版本<span class="testref">GradeCruTest::toggle_nonexistent_grade_returns_422</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>PATCH <code>/grades/99999/toggle</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 422 JSON「找不到該版本」</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>無權限者不可切換<span class="testref">GradeCruTest::viewer_cannot_toggle_grade_status</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>Viewer 角色（無 <code>Grade.update</code>）</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PATCH <code>/grades/{id}/toggle</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302（導向 default_route）</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>版本 status 不變</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r6" style="--c:var(--green)">
+  <h3><span class="no">R6</span>停用版本引用規則</h3>
+  <div class="body">停用版本 <span class="badge mustnot">MUST NOT</span> 影響既有引用：已關聯該版本的 shop / bill detail / addon <span class="badge shall">SHALL</span> 維持原樣，不被回頭驗證或自動清空。新建立的引用 <span class="badge shall">SHALL</span> 被擋下，豁免邊界依功能而異：<code>ShopUpdateRequest</code> 變更為停用版本 → 422，維持原版本（即使已停用）→ 允許；<code>StoreBillRequest</code> 任何停用版本 → 422，無豁免；<code>AddonRequest</code> 新關聯停用版本 → 422，既有關聯保留 → 允許。</div>
+  <details class="scn"><summary>Shop 變更為停用版本被拒<span class="testref">ShopRuTest::update_fails_when_assigning_inactive_grade</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一個停用版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/shops/{id}</code> 將 <code>grade_id</code> 變更為該版本</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 包含 <code>grade_id</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>Shop 維持原（已停用）版本允許<span class="testref">ShopRuTest::update_allows_keeping_existing_inactive_grade</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>shop 既有版本已被停用</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/shops/{id}</code> 維持原 <code>grade_id</code> 並修改其他欄位</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>驗證通過，更新成功</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>新 Bill 使用停用版本被拒<span class="testref">BillStoreTest::store_fails_when_detail_grade_id_is_inactive</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一個停用版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST bill 的 <code>details.*.grade_id</code> 含該版本</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>驗證失敗，bill 未建立</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>Addon 新關聯停用版本被拒、既有關聯保留允許<span class="testref">AddonCrudTest::store_fails_when_grade_ids_contains_inactive_grade / update_allows_keeping_existing_inactive_grade_link</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一個停用版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>addon 的 <code>grade_ids</code> 新增該版本 → 驗證失敗；addon 既有關聯的版本後來被停用，更新時保留該關聯 → 驗證通過</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>僅新指派被擋，既有關聯不受影響</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ UI 與 Seeder ============ -->
+<h2 class="section" style="--c:var(--purple)">UI 與 Seeder</h2>
+
+<section class="req" id="r7" style="--c:var(--purple)">
+  <h3><span class="no">R7</span>UI 權限顯示控制</h3>
+  <div class="body">版本列表 <span class="badge shall">SHALL</span> 依登入者權限控制操作入口：「新增版本」以 <code>&lt;x-permission name="Grade.create"&gt;</code>、「編輯」以 <code>&lt;x-permission name="Grade.update"&gt;</code> 包裹；狀態切換鈕以 <code>hasPermissionTo('Grade.update')</code> 判斷——有權限渲染可點擊 toggle switch，無權限渲染純狀態 badge。無 <code>Grade.create</code> 權限者存取 <code>GET /grades/create</code> <span class="badge shall">SHALL</span> 被 302 導向其 default_route。
+  <div class="note"><code>&lt;x-permission&gt;</code> 無 else slot，toggle 鈕需無權限時的 badge fallback，故用 <code>@if hasPermissionTo</code>——此為顯示替代內容的刻意作法，非規範疏漏。</div></div>
+  <details class="scn"><summary>Viewer 不可存取新增頁<span class="testref">GradeCruTest::viewer_cannot_access_create_page</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>Viewer 角色（僅 index 權限）</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/grades/create</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302（導向 default_route）</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>無權限者見純狀態 badge<span class="testref none">無直接測試 — 目視確認 grades/index.blade.php</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>Viewer 角色檢視版本列表</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>渲染狀態欄</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>顯示不可點擊的狀態 badge，不渲染 toggle switch 與「新增」「編輯」入口（視圖層行為，由 blade template 保證）</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r8" style="--c:var(--purple)">
+  <h3><span class="no">R8</span>預設版本 Seeder</h3>
+  <div class="body"><code>GradeSeeder</code> <span class="badge shall">SHALL</span> 以 <code>code</code> 為唯一鍵 <code>updateOrCreate</code> 建立 6 個預設版本（版本S <code>grade_s</code> 10000/100、版本A <code>grade_a</code> 9000/85、版本B <code>grade_b</code> 8000/70、版本C <code>grade_c</code> 7000/55、版本D <code>grade_d</code> 6000/40、版本E <code>grade_e</code> 5000/25，皆為啟用），並 <span class="badge shall">SHALL</span> 可重複執行（冪等）。</div>
+  <details class="scn"><summary>重複執行 seeder 收斂<span class="testref none">無直接測試 — updateOrCreate 冪等（同 PermissionSeeder 模式）</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>已執行過 seeder 的資料庫</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>再次執行 <code>GradeSeeder</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>版本不重複建立，name / price / weight 被重新同步為預設值</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 刻意設計 ============ -->
+<h2 class="section" style="--c:var(--gray)">刻意設計（不是缺漏）</h2>
+<p class="section-desc">以下為刻意排除的功能，避免後人誤判為待補項目。</p>
+
+<section class="req excluded" id="r9" style="--c:var(--gray)">
+  <h3><span class="no">R9</span>無刪除功能（刻意設計）</h3>
+  <div class="body">系統 <span class="badge mustnot">MUST NOT</span> 提供版本刪除：無 <code>DELETE /grades/{id}</code> 路由、Controller 無 <code>destroy</code> 方法、權限模組 <span class="badge mustnot">MUST NOT</span> 包含 <code>Grade.delete</code> action（<code>PermissionSeeder</code> 的 Grade 模組僅 index / create / update）。此為刻意設計：版本被 shop / bill detail / addon 引用，刪除會破壞參照穩定性（spec/5 原始決策）；生命週期終結以停用（status=Inactive）表達。</div>
+  <details class="scn"><summary>DELETE 路由不存在<span class="testref">GradeCruTest::delete_route_does_not_exist</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>Admin 使用者與既有版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>DELETE <code>/grades/{id}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 405 Method Not Allowed</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req excluded" id="excluded" style="--c:var(--gray)">
+  <h3><span class="no">—</span>刻意不做的事（彙整）</h3>
+  <div class="nots">
+    <div class="not-card"><span class="x">刪除版本</span><small>shop / bill / addon 引用的參照穩定性；以停用（status）表達生命週期終結（R9）</small></div>
+    <div class="not-card"><span class="x">Grade.delete 權限</span><small>PermissionSeeder 的 Grade 模組僅 index / create / update（R9）</small></div>
+    <div class="not-card"><span class="x">回頭驗證既有引用</span><small>停用不清空、不重驗既有 shop / bill / addon 引用，否則改個名稱也會被擋（R6）</small></div>
+    <div class="not-card"><span class="x">Route model binding</span><small>保留 <code>{id}</code> + redirect-with-flash UX，找不到版本回列表頁而非 404（R3/R4）</small></div>
+    <div class="not-card"><span class="x">check-weight race 防護</span><small>即時檢查與送出間的 TOCTOU 由 FormRequest unique + DB unique index 兜底（R2/R5）</small></div>
+    <div class="not-card"><span class="x">x-permission else slot</span><small>toggle 鈕的 badge fallback 用 <code>@if hasPermissionTo</code>，component 不擴充（R7）</small></div>
+  </div>
+</section>
+
+<footer>
+  產生自 <code>openspec/specs/grade-management/spec.md</code>（change <code>2026-06-12-retrofit-grades-spec</code>）。9 項 Requirement、32 個 Scenario。
+  測試對應：<code>tests/Feature/GradeCruTest.php</code>（30 案例）、<code>ShopRuTest</code> / <code>Bill/BillStoreTest</code> / <code>AddonCrudTest</code>（停用引用規則）。
+  本頁為人工同步版本，內容以 <code>spec.md</code> 為準。
+</footer>
+</main>
+</div>
+
+<script>
+// 全部展開 / 收合
+const btn = document.getElementById('toggleAll');
+btn.addEventListener('click', () => {
+  const open = btn.dataset.open !== '1';
+  document.querySelectorAll('details.scn').forEach(d => d.open = open);
+  btn.dataset.open = open ? '1' : '0';
+  btn.textContent = open ? '全部收合' : '全部展開';
+});
+
+// 側欄 scroll-spy
+const links = [...document.querySelectorAll('.toc a')];
+const targets = links
+  .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+  .filter(Boolean);
+const byId = Object.fromEntries(links.map(a => [a.getAttribute('href').slice(1), a]));
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(a => a.classList.remove('active'));
+      byId[e.target.id]?.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -75% 0px' });
+targets.forEach(t => observer.observe(t));
+</script>
+</body>
+</html>
