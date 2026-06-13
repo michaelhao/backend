@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>admin-layout Specification — 後台共用版型</title>
+<style>
+  :root {
+    --ink: #1e293b;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --blue: #2563eb;   --blue-bg: #eff6ff;   --blue-line: #bfdbfe;
+    --amber: #d97706;  --amber-bg: #fffbeb;  --amber-line: #fde68a;
+    --green: #059669;  --green-bg: #ecfdf5;  --green-line: #a7f3d0;
+    --gray: #6b7280;   --gray-bg: #f3f4f6;   --gray-line: #d1d5db;
+    --red: #dc2626;    --red-bg: #fef2f2;
+    --sidebar-w: 264px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 0.86em;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+
+  /* ===== 版面 ===== */
+  .layout { display: flex; min-height: 100vh; }
+  nav.toc {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: sticky; top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: #0f172a;
+    color: #cbd5e1;
+    padding: 20px 0 32px;
+  }
+  main {
+    flex: 1;
+    min-width: 0;
+    max-width: 880px;
+    padding: 32px 40px 96px;
+  }
+
+  /* ===== 側欄 ===== */
+  .toc-title { padding: 0 20px 12px; font-weight: 700; color: #fff; font-size: 16px; }
+  .toc-title small { display: block; font-weight: 400; color: #94a3b8; font-size: 11px; margin-top: 2px; }
+  .toc-group { margin-top: 14px; }
+  .toc-group-label {
+    padding: 0 20px; font-size: 11px; letter-spacing: .08em;
+    color: #94a3b8; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .toc a {
+    display: block; padding: 5px 20px 5px 34px;
+    color: #cbd5e1; text-decoration: none; font-size: 13px;
+    border-left: 3px solid transparent;
+  }
+  .toc a:hover { color: #fff; background: rgba(255,255,255,.06); }
+  .toc a.active { color: #fff; background: rgba(255,255,255,.1); border-left-color: #60a5fa; }
+
+  /* ===== Header ===== */
+  header h1 { font-size: 26px; margin: 0 0 4px; }
+  header .sub { color: var(--muted); margin-bottom: 16px; }
+  .threat-banner {
+    background: var(--amber-bg); border: 1px solid var(--amber-line);
+    border-radius: 10px; padding: 12px 16px; font-size: 14px; margin-bottom: 12px;
+  }
+  .threat-banner strong { color: var(--amber); }
+  .meta { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; }
+  .meta span { white-space: nowrap; }
+  .truth-note { font-size: 12.5px; color: var(--muted); margin-bottom: 24px; }
+
+  /* ===== 工具列 ===== */
+  .toolbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: flex-end; padding: 8px 0; background: linear-gradient(var(--bg) 80%, transparent); }
+  .toolbar button {
+    font: inherit; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card);
+    border-radius: 8px; padding: 6px 14px; color: var(--ink);
+  }
+  .toolbar button:hover { border-color: #94a3b8; }
+
+  /* ===== 區段標題 ===== */
+  h2.section {
+    font-size: 19px; margin: 44px 0 6px;
+    padding-left: 12px; border-left: 5px solid var(--c, var(--blue));
+  }
+  .section-desc { color: var(--muted); font-size: 13.5px; margin: 0 0 18px 17px; }
+
+  /* ===== 流程圖 ===== */
+  .flow {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px 24px; margin-bottom: 18px; overflow-x: auto;
+  }
+  .flow h3 { margin: 0 0 16px; font-size: 15px; }
+  .frow { display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap; min-width: max-content; }
+  .fnode {
+    border: 1.5px solid var(--blue-line); background: var(--blue-bg);
+    border-radius: 8px; padding: 7px 12px; font-size: 13px;
+    display: flex; flex-direction: column; justify-content: center;
+    text-align: center; max-width: 200px;
+  }
+  .fnode small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+  .fnode.start { border-color: #94a3b8; background: #f1f5f9; font-weight: 600; }
+  .fnode.ok { border-color: var(--green-line); background: var(--green-bg); }
+  .fnode.fail { border-color: #fecaca; background: var(--red-bg); }
+  .fnode.gate { border-color: var(--amber-line); background: var(--amber-bg); }
+  .farrow {
+    align-self: center; padding: 0 8px; color: var(--muted);
+    font-size: 12px; text-align: center; flex-shrink: 0; line-height: 1.3;
+  }
+  .farrow::after { content: "→"; display: block; font-size: 16px; color: #94a3b8; }
+
+  /* ===== Requirement 卡片 ===== */
+  .req {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 5px solid var(--c, var(--blue));
+    border-radius: 12px; padding: 18px 22px 14px; margin-bottom: 16px;
+    scroll-margin-top: 56px;
+  }
+  .req h3 { margin: 0 0 8px; font-size: 16px; display: flex; align-items: baseline; gap: 10px; }
+  .req h3 .no { color: var(--muted); font-size: 13px; font-weight: 600; }
+  .req .body { font-size: 14.5px; margin-bottom: 12px; }
+  .req ul { margin: 8px 0 12px; padding-left: 20px; font-size: 14px; }
+  .req ul li { margin: 3px 0; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    border-radius: 5px; padding: 0 7px; vertical-align: 1px;
+  }
+  .badge.shall { background: var(--blue); color: #fff; }
+  .badge.mustnot { background: var(--red); color: #fff; }
+  .note { font-size: 13px; color: var(--muted); background: var(--gray-bg); border-radius: 8px; padding: 8px 12px; margin-top: 8px; }
+
+  /* ===== Scenario ===== */
+  details.scn { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: #fcfdfe; }
+  details.scn summary {
+    cursor: pointer; padding: 9px 14px; font-size: 13.5px; font-weight: 600;
+    list-style: none; display: flex; align-items: center; gap: 8px;
+  }
+  details.scn summary::-webkit-details-marker { display: none; }
+  details.scn summary::before { content: "▸"; color: #94a3b8; transition: transform .15s; }
+  details.scn[open] summary::before { transform: rotate(90deg); }
+  .scn-body { padding: 2px 14px 12px 34px; }
+  .gwt { display: flex; gap: 10px; margin: 5px 0; font-size: 13.5px; align-items: baseline; }
+  .gwt .kw {
+    flex-shrink: 0; width: 56px; text-align: center; font-size: 11px; font-weight: 700;
+    border-radius: 5px; padding: 1px 0; letter-spacing: .05em;
+  }
+  .kw.given { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-line); }
+  .kw.when  { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-line); }
+  .kw.then  { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-line); }
+  .kw.and   { background: #fff; color: var(--muted); border: 1px dashed var(--gray-line); }
+  .testref {
+    margin-left: auto; font-size: 11px; font-weight: 400; color: var(--muted);
+    background: var(--gray-bg); border-radius: 99px; padding: 1px 10px; white-space: nowrap;
+  }
+  .testref.none { background: var(--amber-bg); color: var(--amber); }
+
+  /* ===== 刻意不做 ===== */
+  .req.excluded { border-left-color: var(--gray); background: #fafafa; }
+  .nots { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+  .not-card { border: 1px dashed var(--gray-line); border-radius: 10px; padding: 10px 14px; background: var(--card); font-size: 13.5px; }
+  .not-card .x { font-weight: 700; color: var(--gray); text-decoration: line-through; }
+  .not-card small { display: block; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+  footer { margin-top: 56px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+  @media (max-width: 860px) {
+    nav.toc { display: none; }
+    main { padding: 20px 18px 64px; }
+  }
+  @media print {
+    nav.toc, .toolbar { display: none; }
+    .req { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <div class="toc-title">admin-layout Specification<small>後台共用版型</small></div>
+  <div class="toc-group">
+    <div class="toc-group-label">總覽</div>
+    <a href="#overview">行為流程圖</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--blue)"></span>版型結構與導覽</div>
+    <a href="#r1">1. 後台版型外殼</a>
+    <a href="#r2">2. 權限導向側邊欄導覽</a>
+    <a href="#r3">3. 頂部列與登出</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--amber)"></span>視覺與互動</div>
+    <a href="#r4">4. Sidebar 視覺主題</a>
+    <a href="#r5">5. Session 倒數計時器</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--green)"></span>輔助頁面</div>
+    <a href="#r6">6. 無角色 fallback 頁</a>
+    <a href="#r7">7. 訪客版型</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--gray)"></span>刻意設計</div>
+    <a href="#excluded">8. 刻意不做的事</a>
+  </div>
+</nav>
+
+<main>
+<header>
+  <h1>admin-layout Specification</h1>
+  <div class="sub">後台共用版型外殼、權限導向導覽、頂部列登出、session 倒數計時器、無角色頁與訪客版型的完整行為規格</div>
+  <div class="threat-banner">
+    <strong>威脅模型：</strong>內部後台、非公網暴露（brute-force 不在 scope）；正式環境<strong>無對外網際網路連線</strong>（版型零外部資源依賴）。
+  </div>
+  <div class="meta">
+    <span>來源：<code>openspec/specs/admin-layout/spec.md</code></span>
+    <span>實作：<code>f0d8bdc</code>、<code>5ea8aa7</code></span>
+    <span>change：<code>2026-06-13-retrofit-admin-layout-spec</code></span>
+  </div>
+  <div class="truth-note">本頁為人工同步的閱讀版；若與 <code>spec.md</code> 不一致，以 <code>spec.md</code> 為準。每個 Scenario 右側標註對應的自動化測試（版型多屬視圖／前端行為，部分無專屬測試）。</div>
+</header>
+
+<div class="toolbar"><button id="toggleAll" data-open="0">全部展開</button></div>
+
+<!-- ============ 總覽流程圖 ============ -->
+<h2 class="section" id="overview" style="--c:#94a3b8">行為流程圖</h2>
+<p class="section-desc">先看懂版型如何承載請求與 session 計時器兩條流程，再讀下方逐項規格。</p>
+
+<div class="flow">
+  <h3>後台頁面請求生命週期</h3>
+  <div class="frow">
+    <div class="fnode start">GET 後台路由</div>
+    <div class="farrow"></div>
+    <div class="fnode gate">auth middleware<small>未登入 → <code>/login</code></small></div>
+    <div class="farrow">已登入</div>
+    <div class="fnode gate">permission middleware<small>無角色 → <code>/no-role</code><br>無權限 → default_route</small></div>
+    <div class="farrow">通過</div>
+    <div class="fnode ok">渲染 <code>layouts.admin</code><small>sidebar（依權限 gating）<br>+ 頂部列 + 內容區</small></div>
+  </div>
+</div>
+
+<div class="flow">
+  <h3>Session 倒數計時器（前端）</h3>
+  <div class="frow">
+    <div class="fnode start">頁面載入</div>
+    <div class="farrow"></div>
+    <div class="fnode">讀 <code>session-lifetime</code> meta<small>lifetime &times; 60 秒</small></div>
+    <div class="farrow"></div>
+    <div class="fnode">每秒倒數<small><code>HH:MM:SS</code></small></div>
+    <div class="farrow">剩餘 &le; 300s</div>
+    <div class="fnode gate">變紅<small><code>text-red-500</code></small></div>
+    <div class="farrow">歸零</div>
+    <div class="fnode fail">導向 <code>/login</code></div>
+  </div>
+</div>
+
+<!-- ============ 版型結構與導覽 ============ -->
+<h2 class="section" style="--c:var(--blue)">版型結構與導覽</h2>
+
+<section class="req" id="r1" style="--c:var(--blue)">
+  <h3><span class="no">R1</span>後台版型外殼</h3>
+  <div class="body">所有後台頁面 <span class="badge shall">SHALL</span> 繼承 <code>layouts/admin.blade.php</code>，由其提供固定左側 sidebar（<code>w-64</code>）+ 頂部列 + 主內容區的三段式骨架。版型外殼 <span class="badge shall">SHALL</span> 提供：</div>
+  <ul>
+    <li><code>@yield('content')</code> 主內容插槽</li>
+    <li><code>@yield('page-title', 'Dashboard')</code> 同時用於 <code>&lt;title&gt;</code> 與頂部列標題</li>
+    <li><code>@stack('scripts')</code> 供子頁面注入頁面層級 JS</li>
+    <li><code>&lt;head&gt;</code> 內 <code>csrf-token</code> 與 <code>session-lifetime</code>（值 = <code>config('session.lifetime') * 60</code> 秒）兩個 meta</li>
+    <li>透過 <code>@vite</code> 載入 <code>app.css</code>、<code>app.js</code>、<code>layouts/admin.js</code></li>
+  </ul>
+  <details class="scn"><summary>後台頁面套用版型外殼<span class="testref">DashboardTest::test_admin_can_access_dashboard</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>已登入且具 <code>Dashboard.index</code> 權限的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200 並渲染 <code>admin.dashboard</code> 視圖（繼承 <code>layouts.admin</code>）</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>回應含 sidebar、頂部列與主內容區</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>session-lifetime meta 以秒注入<span class="testref none">無直接測試 — 目視 admin.blade.php</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>已登入使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>開啟任一後台頁面</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>&lt;head&gt;</code> 含 <code>&lt;meta name="session-lifetime"&gt;</code>，其值等於 <code>config('session.lifetime') * 60</code></span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r2" style="--c:var(--blue)">
+  <h3><span class="no">R2</span>權限導向的側邊欄導覽</h3>
+  <div class="body">sidebar 每個選單連結 <span class="badge shall">SHALL</span> 以 <code>&lt;x-permission name="{Module}.index"&gt;</code> 元件包裹，僅在當前使用者持有該權限時渲染。<code>Permission::shouldRender()</code> <span class="badge shall">SHALL</span> 回傳 <code>Auth::check() &amp;&amp; hasPermissionTo($name)</code>，權限來源為登入時載入的 <code>session('auth.permissions')</code>。active 標示 <span class="badge shall">SHALL</span> 以 <code>request()-&gt;routeIs('{module}.*')</code> 判斷。</div>
+  <details class="scn"><summary>有權限者可見對應選單<span class="testref none">無直接測試 — 元件 shouldRender 邏輯</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>持有 <code>Shop.index</code> 權限的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>開啟後台頁面</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>sidebar 顯示「商店管理」連結</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>無權限者不見對應選單<span class="testref none">無直接測試 — 元件 shouldRender 邏輯</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>未持有 <code>Shop.index</code> 權限的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>開啟後台頁面</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>sidebar 不渲染「商店管理」連結</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>未登入時元件不渲染<span class="testref none">無直接測試 — 元件 shouldRender 邏輯</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>未通過認證的請求情境</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span><code>&lt;x-permission&gt;</code> 嘗試渲染</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>shouldRender()</code> 因 <code>Auth::check()</code> 為 false 而回傳 false，不渲染 slot</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r3" style="--c:var(--blue)">
+  <h3><span class="no">R3</span>頂部列使用者識別與登出</h3>
+  <div class="body">頂部列 <span class="badge shall">SHALL</span> 顯示當前頁面標題、<code>Auth::user()-&gt;name</code>、session 倒數計時器，以及一個 POST 至 <code>route('logout')</code> 的登出表單（含 <code>@csrf</code>）。</div>
+  <details class="scn"><summary>顯示登入者姓名<span class="testref none">無直接測試 — 目視 admin.blade.php</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>名為「王小明」的已登入使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>開啟後台頁面</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>頂部列顯示「王小明」</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>登出表單以 POST 提交<span class="testref none">無直接測試 — 目視 admin.blade.php</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>渲染頂部列</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>含 <code>method="POST"</code> 且 <code>action</code> 指向 <code>route('logout')</code> 的表單與 CSRF token</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 視覺與互動 ============ -->
+<h2 class="section" style="--c:var(--amber)">視覺與互動</h2>
+
+<section class="req" id="r4" style="--c:var(--amber)">
+  <h3><span class="no">R4</span>Admin Sidebar 視覺主題</h3>
+  <div class="body"><code>layouts/admin.blade.php</code> 的 sidebar <span class="badge shall">SHALL</span> 採用淺色 + 藍品牌主題：</div>
+  <ul>
+    <li>容器：白底 + 右側細邊框（<code>bg-white border-r border-slate-200</code>）</li>
+    <li>Logo block：藍色品牌色站名（<code>text-blue-600</code>）；不留 <code>border-b</code></li>
+    <li>active 樣式：藍色淺底（<code>bg-blue-50</code>）+ 藍色文字（<code>text-blue-600</code>），字重 <code>font-medium</code></li>
+    <li>非 active：<code>text-slate-500 hover:bg-slate-100 hover:text-slate-700</code></li>
+    <li>頂部列與 session 計時器（<code>admin.js</code>）灰階 token <span class="badge shall">SHALL</span> 統一 <code>slate-*</code>（不用 <code>gray-*</code>）</li>
+    <li>8 個既有選單 <span class="badge shall">SHALL</span> 全部保留；早期「文章管理」（<code>Post.index</code>）佔位連結已移除（權限不存在故永不渲染）</li>
+  </ul>
+  <details class="scn"><summary>進入儀表板時 active 樣式<span class="testref none">無直接測試 — 目視 admin.blade.php</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>使用者 GET <code>/</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>sidebar 中「儀表板」連結含 <code>text-blue-600</code> 樣式</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>切到其他頁面時 sidebar 樣式仍為淺色<span class="testref none">無直接測試 — 目視 admin.blade.php</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>使用者 GET <code>/users</code>、<code>/shops</code> 等任一頁面</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>sidebar 維持白底淺色藍品牌</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>該頁面對應選單為 active 藍色樣式</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>8 個選單全保留<span class="testref none">無直接測試 — 目視 admin.blade.php</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>admin 角色使用者開啟 admin 頁面</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>sidebar 顯示全部 8 項既有選單（儀表板、使用者管理、角色管理、版本管理、商店管理、加購功能管理、帳務管理、說明會管理）</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>不再出現「文章管理」佔位連結</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r5" style="--c:var(--amber)">
+  <h3><span class="no">R5</span>Session 倒數計時器</h3>
+  <div class="body"><code>resources/js/layouts/admin.js</code> <span class="badge shall">SHALL</span> 讀取 <code>session-lifetime</code> meta 作為起始秒數，於頂部列以 <code>HH:MM:SS</code> 每秒遞減顯示。剩餘 &le; 300 秒時 <span class="badge shall">SHALL</span> 由 <code>text-slate-400</code> 切換為 <code>text-red-500</code>；歸零時 <span class="badge shall">SHALL</span> 導向 <code>/login</code>。顏色 class <span class="badge shall">SHALL</span> 與 markup 一致採 <code>slate-*</code>（修正先前 <code>text-gray-400</code> 的 no-op remove 死碼）。</div>
+  <div class="note">此為純前端視覺提示，伺服器端 session 失效仍由 Laravel session middleware 權威處理。</div>
+  <details class="scn"><summary>倒數歸零導向登入頁<span class="testref none">無直接測試 — 前端行為</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>後台頁面載入且計時器啟動</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>剩餘秒數遞減至 0</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>瀏覽器導向 <code>/login</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>進入警示門檻變紅<span class="testref none">無直接測試 — 前端行為</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>計時器運作中</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>剩餘秒數 &le; 300</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>計時文字移除 <code>text-slate-400</code> 並加上 <code>text-red-500</code></span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 輔助頁面 ============ -->
+<h2 class="section" style="--c:var(--green)">輔助頁面</h2>
+
+<section class="req" id="r6" style="--c:var(--green)">
+  <h3><span class="no">R6</span>無角色 fallback 頁</h3>
+  <div class="body"><code>GET /no-role</code>（route name <code>no-role</code>）<span class="badge shall">SHALL</span> 渲染無角色提示頁，繼承 <code>layouts.admin</code> 並提供 POST 登出表單。此路由 <span class="badge shall">SHALL</span> 受 <code>auth</code> 保護但 <strong>不</strong> 進入 <code>permission</code> middleware 群組（避免無角色者被反覆導向）。當已登入使用者 <code>role_id</code> 為 null 時，<code>permission</code> middleware <span class="badge shall">SHALL</span> 將其導向此頁。</div>
+  <details class="scn"><summary>無角色使用者被導向 no-role 頁<span class="testref">PermissionTest::test_user_without_role_is_redirected_to_no_role_page</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>已登入但 <code>role_id</code> 為 null 的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統 302 導向 <code>route('no-role')</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>no-role 頁提供登出<span class="testref none">無直接測試 — 目視 no-role.blade.php</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>渲染 <code>/no-role</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>頁面含 POST 至 <code>route('logout')</code> 的登出表單</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r7" style="--c:var(--green)">
+  <h3><span class="no">R7</span>訪客版型</h3>
+  <div class="body">登入、忘記密碼、重設密碼等 guest 頁面 <span class="badge shall">SHALL</span> 繼承 <code>layouts/app.blade.php</code>——置中、無 sidebar、僅載入 <code>app.css</code> 與 <code>app.js</code> 的精簡骨架，與後台 <code>layouts.admin</code> 分離。</div>
+  <details class="scn"><summary>登入頁使用訪客版型<span class="testref">LoginTest::login_screen_can_be_rendered</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>訪客 GET <code>/login</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>頁面以 <code>layouts.app</code> 渲染（置中、無 sidebar）</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 刻意設計 ============ -->
+<h2 class="section" style="--c:var(--gray)">刻意設計（不是缺漏）</h2>
+<p class="section-desc">以下為依威脅模型與簡化考量刻意排除的功能，避免後人誤判為待補項目。</p>
+
+<section class="req excluded" id="excluded" style="--c:var(--gray)">
+  <h3><span class="no">R8</span>刻意不做的範圍界線</h3>
+  <div class="body">基於內部後台、非公網暴露的威脅模型與簡化考量，本版型 <span class="badge shall">SHALL</span> 明確界定下列刻意不實作的範圍：</div>
+  <div class="nots">
+    <div class="not-card"><span class="x">Session 活動式重置 / heartbeat</span><small>計時器為單純倒數，<span class="badge mustnot">MUST NOT</span> 因使用者操作而重置（伺服器端到期仍由 Laravel session 處理）</small></div>
+    <div class="not-card"><span class="x">RWD 行動 sidebar 收合</span><small>sidebar 固定 <code>w-64</code>，<span class="badge mustnot">MUST NOT</span> 提供漢堡選單 / 收合控制；僅針對桌面內部後台</small></div>
+  </div>
+  <details class="scn"><summary>計時器不因操作重置<span class="testref none">無直接測試 — 前端行為</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>後台頁面開啟且計時器運作中</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>使用者在頁面內持續操作（未換頁）</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>計時器持續倒數，不重置回起始值</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>無行動裝置 sidebar 切換<span class="testref none">無直接測試 — 目視 admin.blade.php</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>檢視版型 markup</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>不存在 sidebar 收合 / 漢堡選單的切換控制</span></div>
+    </div>
+  </details>
+</section>
+
+<footer>
+  產生自 <code>openspec/specs/admin-layout/spec.md</code>（change <code>2026-06-13-retrofit-admin-layout-spec</code>）。8 項 Requirement、17 個 Scenario。
+  間接測試對應：<code>tests/Feature/DashboardTest.php</code>、<code>tests/Feature/PermissionTest.php</code>、<code>tests/Feature/Auth/LoginTest.php</code>。
+  本頁為人工同步版本，內容以 <code>spec.md</code> 為準。
+</footer>
+</main>
+</div>
+
+<script>
+// 全部展開 / 收合
+const btn = document.getElementById('toggleAll');
+btn.addEventListener('click', () => {
+  const open = btn.dataset.open !== '1';
+  document.querySelectorAll('details.scn').forEach(d => d.open = open);
+  btn.dataset.open = open ? '1' : '0';
+  btn.textContent = open ? '全部收合' : '全部展開';
+});
+
+// 側欄 scroll-spy
+const links = [...document.querySelectorAll('.toc a')];
+const targets = links
+  .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+  .filter(Boolean);
+const byId = Object.fromEntries(links.map(a => [a.getAttribute('href').slice(1), a]));
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(a => a.classList.remove('active'));
+      byId[e.target.id]?.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -75% 0px' });
+targets.forEach(t => observer.observe(t));
+</script>
+</body>
+</html>
