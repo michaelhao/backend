@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Attributes\RequiresPermission;
 use App\Http\Requests\ConferenceRequest;
-use App\Models\Conference;
 use App\Services\ConferenceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +16,13 @@ class ConferenceController extends Controller
     #[RequiresPermission('Conference.index')]
     public function index(Request $request): View
     {
-        return view('admin.conferences.index', $this->conferenceService->getIndexData($request));
+        $perPage = in_array((int) $request->per_page, [50, 100, 150, 200])
+            ? (int) $request->per_page
+            : 50;
+
+        $filters = $request->only(['keyword', 'status']);
+
+        return view('admin.conferences.index', $this->conferenceService->getIndexData($filters, $perPage));
     }
 
     #[RequiresPermission('Conference.create')]
@@ -37,7 +42,7 @@ class ConferenceController extends Controller
     #[RequiresPermission('Conference.update')]
     public function edit(int $id): View|RedirectResponse
     {
-        $conference = Conference::find($id);
+        $conference = $this->conferenceService->findConferenceById($id);
         if (! $conference) {
             return redirect()->route('conferences.index')->with('error', '找不到該說明會');
         }
@@ -48,7 +53,7 @@ class ConferenceController extends Controller
     #[RequiresPermission('Conference.update')]
     public function update(ConferenceRequest $request, int $id): RedirectResponse
     {
-        $conference = Conference::find($id);
+        $conference = $this->conferenceService->findConferenceById($id);
         if (! $conference) {
             return redirect()->route('conferences.index')->with('error', '找不到該說明會');
         }

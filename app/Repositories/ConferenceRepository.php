@@ -18,6 +18,11 @@ class ConferenceRepository
             ->paginate($perPage);
     }
 
+    public function getById(int $id): ?Conference
+    {
+        return Conference::find($id);
+    }
+
     public function create(array $data): Conference
     {
         return Conference::create($data);
