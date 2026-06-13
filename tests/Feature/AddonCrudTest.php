@@ -17,11 +17,14 @@ use App\Models\Shop;
 use App\Models\ShopAdmin;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Bus\Batch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
 use Tests\TestCase;
 
 class AddonCrudTest extends TestCase
@@ -505,6 +508,57 @@ class AddonCrudTest extends TestCase
 
         $addon->refresh();
         $this->assertEquals(AddonSyncing::Syncing, $addon->syncing);
+    }
+
+    public function test_grade_sync_batch_resets_syncing_on_success(): void
+    {
+        Bus::fake();
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $grade = Grade::factory()->create();
+        $addon = Addon::factory()->create();
+
+        $this->put(route('addons.update', $addon), $this->validAddonData([
+            'grade_ids' => [$grade->id],
+        ]));
+
+        $this->assertEquals(AddonSyncing::Syncing, $addon->fresh()->syncing);
+
+        // 模擬 batch 全部 Job 成功，執行 then callback
+        $pendingBatch = Bus::batched(fn () => true)->firstOrFail();
+        $fakeBatch = Mockery::mock(Batch::class);
+        foreach ($pendingBatch->thenCallbacks() as $callback) {
+            $callback($fakeBatch);
+        }
+
+        $this->assertEquals(AddonSyncing::Done, $addon->fresh()->syncing);
+    }
+
+    public function test_grade_sync_batch_resets_syncing_and_logs_on_failure(): void
+    {
+        Bus::fake();
+        Log::spy();
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $grade = Grade::factory()->create();
+        $addon = Addon::factory()->create();
+
+        $this->put(route('addons.update', $addon), $this->validAddonData([
+            'grade_ids' => [$grade->id],
+        ]));
+
+        // 模擬 batch 有 Job 失敗，執行 catch callback
+        $pendingBatch = Bus::batched(fn () => true)->firstOrFail();
+        $fakeBatch = Mockery::mock(Batch::class);
+        $fakeBatch->id = 'test-batch-id';
+        foreach ($pendingBatch->catchCallbacks() as $callback) {
+            $callback($fakeBatch, new \RuntimeException('sync failed'));
+        }
+
+        $this->assertEquals(AddonSyncing::Done, $addon->fresh()->syncing);
+        Log::shouldHaveReceived('error')
+            ->with('Addon grade sync batch failed', Mockery::type('array'))
+            ->once();
     }
 
     public function test_cannot_access_edit_page_for_deleted_addon(): void
