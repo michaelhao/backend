@@ -65,11 +65,14 @@
         <label class="block text-sm font-medium text-gray-700 mb-2">所屬版本 <span class="text-gray-400 text-xs">（可複選）</span></label>
         <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
             @foreach ($grades as $grade)
-                <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                @php($isLinked = in_array($grade->id, $selectedGradeIds ?? []))
+                @php($isDisabled = ! $isLinked && $grade->status !== \App\Enums\GradeStatus::Active)
+                <label class="flex items-center gap-2 text-sm {{ $isDisabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer' }}">
                     <input type="checkbox" name="grade_ids[]" value="{{ $grade->id }}"
                            {{ in_array($grade->id, old('grade_ids', $selectedGradeIds ?? [])) ? 'checked' : '' }}
-                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                    {{ $grade->name }}
+                           {{ $isDisabled ? 'disabled' : '' }}
+                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50">
+                    {{ $grade->name }}{{ $isDisabled ? '（已停用）' : '' }}
                 </label>
             @endforeach
         </div>

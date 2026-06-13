@@ -378,6 +378,41 @@ class AddonCrudTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_edit_page_disables_inactive_unlinked_grade_checkbox(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $addon = Addon::factory()->create();
+        Grade::factory()->create(['name' => '停用版本X', 'status' => GradeStatus::Inactive]);
+
+        $response = $this->get(route('addons.edit', $addon));
+
+        $response->assertStatus(200);
+        $response->assertSee('停用版本X（已停用）');
+    }
+
+    public function test_edit_page_keeps_linked_inactive_grade_checkbox_enabled(): void
+    {
+        Bus::fake();
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $addon = Addon::factory()->create();
+        $grade = Grade::factory()->create(['name' => '已關聯停用版本']);
+        DB::table('grades_addons')->insert([
+            'grade_id' => $grade->id,
+            'addon_id' => $addon->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $grade->update(['status' => GradeStatus::Inactive]);
+
+        $response = $this->get(route('addons.edit', $addon));
+
+        $response->assertStatus(200);
+        $response->assertSee('已關聯停用版本');
+        $response->assertDontSee('已關聯停用版本（已停用）');
+    }
+
     public function test_admin_can_update_addon(): void
     {
         $this->seedPermissions();
