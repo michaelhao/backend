@@ -140,6 +140,25 @@ class ConferenceCrudTest extends TestCase
         $this->assertDatabaseHas('conferences', ['name' => '新說明會A', 'status' => ConferenceStatus::Active->value]);
     }
 
+    public function test_store_persists_all_fields(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $data = $this->validConferenceData(['name' => '完整欄位說明會']);
+
+        $this->post(route('conferences.store'), $data);
+
+        $this->assertDatabaseHas('conferences', [
+            'name' => '完整欄位說明會',
+            'status' => ConferenceStatus::Active->value,
+            'register_started_at' => $data['register_started_at'],
+            'register_ended_at' => $data['register_ended_at'],
+            'started_at' => $data['started_at'],
+            'ended_at' => $data['ended_at'],
+        ]);
+    }
+
     public function test_store_fails_when_name_missing(): void
     {
         $this->seedPermissions();
@@ -281,6 +300,29 @@ class ConferenceCrudTest extends TestCase
         $response->assertSessionHas('success');
         $conference->refresh();
         $this->assertEquals('新名稱', $conference->name);
+    }
+
+    public function test_update_validation_failure_keeps_record_unchanged(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $original = $this->validConferenceData(['name' => '原始說明會']);
+        $conference = Conference::factory()->create($original);
+
+        $invalid = $this->validConferenceData([
+            'name' => '不應被寫入',
+            'ended_at' => $original['started_at'],
+        ]);
+
+        $response = $this->put(route('conferences.update', $conference), $invalid);
+
+        $response->assertSessionHasErrors('ended_at');
+        $this->assertDatabaseHas('conferences', [
+            'id' => $conference->id,
+            'name' => '原始說明會',
+            'ended_at' => $original['ended_at'],
+        ]);
     }
 
     public function test_edit_for_non_existing_id_redirects_with_error(): void
