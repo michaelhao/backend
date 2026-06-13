@@ -52,6 +52,16 @@
 - **WHEN** 呼叫 `Mask::email('@test.com')`
 - **THEN** 回傳 `@test.com`
 
+#### Scenario: 多位元組 local part 以字元為單位遮蔽
+- **GIVEN** local part 含多位元組字元（`@` 為 ASCII 切點，落在字元邊界）
+- **WHEN** 呼叫 `Mask::email('中文@test.com')`
+- **THEN** 回傳 `中*@test.com`（local part 交 mb-safe 的 `Mask::string()` 處理）
+
+#### Scenario: 多個 @ 以第一個切分
+- **GIVEN** 輸入含多個 `@`
+- **WHEN** 呼叫 `Mask::email('a@b@c.com')`
+- **THEN** 回傳 `a@b@c.com`（`strpos` 取第一個 `@`，local part `a` 索引 0 不遮蔽）
+
 ---
 
 ### Requirement: 不以全域函式提供遮蔽（刻意設計）
@@ -68,7 +78,7 @@
 
 ### Requirement: 前後端遮蔽演算法一致（設計約束）
 
-前端 `resources/js/shops/edit.js` 的 `maskString()` 與 `App\Support\Mask::string()` SHALL 維持相同演算法（奇數索引換 `*`）。任一端調整遮蔽規則時 MUST 同步另一端，以免認證當下前端即時顯示與重新載入後伺服端渲染不一致。此跨語言一致性無自動化測試守護，改以 `edit.js` 註解指回 `App\Support\Mask` 與本約束守護。
+前端 `resources/js/shops/edit.js` 的 `maskString()` 與 `App\Support\Mask::string()` SHALL 維持相同演算法（奇數索引換 `*`）。任一端調整遮蔽規則時 MUST 同步另一端，以免認證當下前端即時顯示與重新載入後伺服端渲染不一致。此跨語言一致性無自動化測試守護，改以 `edit.js` 註解指回 `App\Support\Mask` 與本約束守護。等價以「字元索引」為準：JS `split('')` 以 UTF-16 code unit 計、PHP `mb_*` 以 code point 計，對 ASCII/BMP（含中文）一致，僅星芒字（emoji 等 surrogate pair）會分歧；唯一以前端遮蔽的欄位為統一編號（ASCII），故實務上恆等價。
 
 #### Scenario: 認證後前端遮蔽與重載後伺服端遮蔽一致
 - **GIVEN** 統一編號 `12345678`

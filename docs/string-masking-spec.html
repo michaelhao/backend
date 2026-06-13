@@ -347,6 +347,20 @@
       <div class="gwt"><span class="kw then">THEN</span><span>回傳 <code>@test.com</code></span></div>
     </div>
   </details>
+  <details class="scn"><summary>多位元組 local part 以字元為單位遮蔽<span class="testref">MaskTest::test_email_is_multibyte_safe_in_local_part</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>local part 含多位元組字元（<code>@</code> 為 ASCII 切點，落在字元邊界）</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>呼叫 <code>Mask::email('中文@test.com')</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回傳 <code>中*@test.com</code>（local part 交 mb-safe 的 <code>Mask::string()</code>）</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>多個 @ 以第一個切分<span class="testref">MaskTest::test_email_splits_on_first_at_sign</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>輸入含多個 <code>@</code></span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>呼叫 <code>Mask::email('a@b@c.com')</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回傳 <code>a@b@c.com</code>（<code>strpos</code> 取第一個 <code>@</code>，local part <code>a</code> 索引 0 不遮蔽）</span></div>
+    </div>
+  </details>
 </section>
 
 <!-- ============ 整合約束 ============ -->
@@ -355,7 +369,7 @@
 
 <section class="req" id="r4" style="--c:var(--amber)">
   <h3><span class="no">R4</span>前後端遮蔽演算法一致（設計約束）</h3>
-  <div class="body">前端 <code>resources/js/shops/edit.js</code> 的 <code>maskString()</code> 與 <code>App\Support\Mask::string()</code> <span class="badge shall">SHALL</span> 維持相同演算法（奇數索引換 <code>*</code>）。任一端調整遮蔽規則時 <span class="badge shall">MUST</span> 同步另一端，以免認證當下前端即時顯示與重新載入後伺服端渲染不一致。此跨語言一致性無自動化測試守護，改以 <code>edit.js</code> 註解指回 <code>App\Support\Mask</code> 與本約束守護。</div>
+  <div class="body">前端 <code>resources/js/shops/edit.js</code> 的 <code>maskString()</code> 與 <code>App\Support\Mask::string()</code> <span class="badge shall">SHALL</span> 維持相同演算法（奇數索引換 <code>*</code>）。任一端調整遮蔽規則時 <span class="badge shall">MUST</span> 同步另一端，以免認證當下前端即時顯示與重新載入後伺服端渲染不一致。此跨語言一致性無自動化測試守護，改以 <code>edit.js</code> 註解指回 <code>App\Support\Mask</code> 與本約束守護。等價以「字元索引」為準：JS <code>split('')</code> 以 UTF-16 code unit 計、PHP <code>mb_*</code> 以 code point 計，對 ASCII/BMP（含中文）一致，僅星芒字（emoji 等 surrogate pair）會分歧；唯一以前端遮蔽的欄位為統一編號（ASCII），故實務上恆等價。</div>
   <details class="scn"><summary>認證後前端遮蔽與重載後伺服端遮蔽一致<span class="testref none">無自動化測試（跨語言）— edit.js 註解守護</span></summary>
     <div class="scn-body">
       <div class="gwt"><span class="kw given">GIVEN</span><span>統一編號 <code>12345678</code></span></div>
