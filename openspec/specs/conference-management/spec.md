@@ -1,7 +1,7 @@
 # conference-management Specification
 
 ## Purpose
-TBD - created by archiving change add-conference-management. Update Purpose after archive.
+說明會（conferences）管理的完整行為規格：列表檢視（關鍵字／狀態篩選、分頁）、新增、修改，以及透過 `status = Inactive` 達成的下架。刻意不提供刪除與軟刪，歷史紀錄永久保留；`name` 允許重複；時間欄位不與 `now()` 比較（允許補建歷史資料）。威脅模型：內部後台、非公網暴露（brute-force 不在 scope）；正式環境無對外網際網路連線。回填自 change `add-conference-management`（archive 2026-04-26）並納入 2026-06-13 設計 review 的分層合規修正（commit `df03cae`、`70e9f3f`）。
 
 ## Requirements
 ### Requirement: Conference 資料模型
