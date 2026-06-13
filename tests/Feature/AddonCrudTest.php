@@ -687,6 +687,17 @@ class AddonCrudTest extends TestCase
         $this->assertDatabaseMissing('shops_addons', ['addon_id' => $addon->id]);
     }
 
+    public function test_destroy_returns_404_for_missing_addon(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->delete(route('addons.destroy', 99999));
+
+        $response->assertStatus(404);
+        $response->assertExactJson(['message' => '找不到該附加功能']);
+    }
+
     public function test_viewer_cannot_delete_addon(): void
     {
         $this->seedPermissions();

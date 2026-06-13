@@ -77,7 +77,7 @@ class AddonController extends Controller
     {
         $addon = $this->addonService->findAddonById($id);
         if (! $addon) {
-            return response()->json(['message' => '找不到該附加功能'], 422);
+            return response()->json(['message' => '找不到該附加功能'], 404);
         }
 
         $this->addonService->deleteAddon($addon);

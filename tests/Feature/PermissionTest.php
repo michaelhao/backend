@@ -401,7 +401,7 @@ class PermissionTest extends TestCase
         $response->assertSessionHas('error', '找不到該角色');
     }
 
-    public function test_destroy_nonexistent_role_returns_422(): void
+    public function test_destroy_nonexistent_role_returns_404(): void
     {
         $this->seedPermissions();
 
@@ -409,7 +409,7 @@ class PermissionTest extends TestCase
 
         $response = $this->delete(route('roles.destroy', 99999));
 
-        $response->assertStatus(422);
+        $response->assertStatus(404);
         $response->assertExactJson(['message' => '找不到該角色']);
     }
 

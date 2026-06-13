@@ -73,7 +73,7 @@ class RoleController extends Controller
     {
         $role = $this->roleService->findRoleById($id);
         if (! $role) {
-            return response()->json(['message' => '找不到該角色'], 422);
+            return response()->json(['message' => '找不到該角色'], 404);
         }
 
         if (! $this->roleService->deleteRole($role)) {
