@@ -5,24 +5,23 @@ namespace App\Services;
 use App\Enums\ConferenceStatus;
 use App\Models\Conference;
 use App\Repositories\ConferenceRepository;
-use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class ConferenceService
 {
     public function __construct(private ConferenceRepository $conferenceRepository) {}
 
+    public function findConferenceById(int $id): ?Conference
+    {
+        return $this->conferenceRepository->getById($id);
+    }
+
     /**
+     * @param  array<string, string>  $filters
      * @return array{conferences: LengthAwarePaginator, filters: array, perPage: int}
      */
-    public function getIndexData(Request $request): array
+    public function getIndexData(array $filters, int $perPage): array
     {
-        $perPage = in_array((int) $request->per_page, [50, 100, 150, 200])
-            ? (int) $request->per_page
-            : 50;
-
-        $filters = $request->only(['keyword', 'status']);
-
         return [
             'conferences' => $this->conferenceRepository->paginate($perPage, $filters),
             'filters' => $filters,

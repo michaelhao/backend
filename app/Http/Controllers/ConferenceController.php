@@ -17,7 +17,13 @@ class ConferenceController extends Controller
     #[RequiresPermission('Conference.index')]
     public function index(Request $request): View
     {
-        return view('admin.conferences.index', $this->conferenceService->getIndexData($request));
+        $perPage = in_array((int) $request->per_page, Conference::PER_PAGE_OPTIONS, true)
+            ? (int) $request->per_page
+            : Conference::DEFAULT_PER_PAGE;
+
+        $filters = $request->only(['keyword', 'status']);
+
+        return view('admin.conferences.index', $this->conferenceService->getIndexData($filters, $perPage));
     }
 
     #[RequiresPermission('Conference.create')]
@@ -37,7 +43,7 @@ class ConferenceController extends Controller
     #[RequiresPermission('Conference.update')]
     public function edit(int $id): View|RedirectResponse
     {
-        $conference = Conference::find($id);
+        $conference = $this->conferenceService->findConferenceById($id);
         if (! $conference) {
             return redirect()->route('conferences.index')->with('error', '找不到該說明會');
         }
@@ -48,7 +54,7 @@ class ConferenceController extends Controller
     #[RequiresPermission('Conference.update')]
     public function update(ConferenceRequest $request, int $id): RedirectResponse
     {
-        $conference = Conference::find($id);
+        $conference = $this->conferenceService->findConferenceById($id);
         if (! $conference) {
             return redirect()->route('conferences.index')->with('error', '找不到該說明會');
         }

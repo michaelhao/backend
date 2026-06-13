@@ -52,7 +52,7 @@
                 <select id="per-page-select" name="per_page" form="per-page-form"
                         class="rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
                         onchange="document.getElementById('per-page-form').submit();">
-                    @foreach ([50, 100, 150, 200] as $size)
+                    @foreach (\App\Models\Conference::PER_PAGE_OPTIONS as $size)
                         <option value="{{ $size }}" {{ $perPage === $size ? 'selected' : '' }}>{{ $size }}</option>
                     @endforeach
                 </select>
