@@ -17,8 +17,13 @@ export function initDeleteModal() {
     const confirmBtn = document.getElementById('delete-modal-confirm');
     if (!modal || !cancelBtn || !confirmBtn) return;
 
+    function onEsc(e) {
+        if (e.key === 'Escape') closeModal();
+    }
+
     function closeModal() {
         modal.classList.add('hidden');
+        document.removeEventListener('keydown', onEsc);
         deleteTargetUrl = null;
     }
 
@@ -27,6 +32,7 @@ export function initDeleteModal() {
             deleteTargetUrl = this.dataset.url;
             document.getElementById('delete-modal-name').textContent = this.dataset.name;
             modal.classList.remove('hidden');
+            document.addEventListener('keydown', onEsc);
         });
     });
 
@@ -37,29 +43,24 @@ export function initDeleteModal() {
         if (e.target === modal) closeModal();
     });
 
-    // Esc 關閉
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
-    });
-
     confirmBtn.addEventListener('click', async function () {
-        if (!deleteTargetUrl) return;
+        const url = deleteTargetUrl;
+        if (!url) return;
 
         this.disabled = true;
         this.textContent = '刪除中...';
 
         try {
-            const res = await window.axios.delete(deleteTargetUrl);
-            document.querySelector(`[data-url="${deleteTargetUrl}"]`).closest('tr').remove();
+            const res = await window.axios.delete(url);
+            document.querySelector(`[data-url="${url}"]`).closest('tr').remove();
             showFlash('success', res.data?.message ?? '已成功刪除');
         } catch (err) {
             const message = err.response?.data?.message ?? '刪除失敗，請稍後再試';
             showFlash('error', message);
         } finally {
-            modal.classList.add('hidden');
+            closeModal();
             this.disabled = false;
             this.textContent = '確認刪除';
-            deleteTargetUrl = null;
         }
     });
 }

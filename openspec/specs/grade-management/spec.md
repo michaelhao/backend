@@ -97,7 +97,7 @@
 
 ### Requirement: 狀態切換
 
-`PATCH /grades/{id}/toggle`（需 `Grade.update` 權限，前端以 axios + 確認 modal 呼叫）SHALL 回應 JSON：成功時切換 `status`（Active ↔ Inactive）並回應 200 與訊息「版本狀態已更新」；id 不存在時回應 422 與訊息「找不到該版本」。
+`PATCH /grades/{id}/toggle`（需 `Grade.update` 權限，前端以 axios + 確認 modal 呼叫）SHALL 回應 JSON：成功時切換 `status`（Active ↔ Inactive）並回應 200 與訊息「版本狀態已更新」；id 不存在時回應 404 與訊息「找不到該版本」。
 
 #### Scenario: 啟用版本切換為關閉
 - **GIVEN** 啟用中的版本
@@ -111,7 +111,7 @@
 
 #### Scenario: 切換不存在的版本
 - **WHEN** PATCH `/grades/99999/toggle`
-- **THEN** 系統回應 422 JSON「找不到該版本」
+- **THEN** 系統回應 404 JSON「找不到該版本」
 
 #### Scenario: 無權限者不可切換
 - **GIVEN** Viewer 角色（無 `Grade.update`）

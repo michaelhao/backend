@@ -458,8 +458,8 @@
 
 <section class="req" id="r4" style="--c:var(--green)">
   <h3><span class="no">R4</span>狀態切換</h3>
-  <div class="body"><code>PATCH /grades/{id}/toggle</code>（需 <code>Grade.update</code> 權限，前端以 axios + 確認 modal 呼叫）<span class="badge shall">SHALL</span> 回應 JSON：成功時切換 <code>status</code>（Active ↔ Inactive）並回應 200 與訊息「版本狀態已更新」；id 不存在時回應 422 與訊息「找不到該版本」。
-  <div class="note">舊 spec/5 原設計為 form POST + redirect flash，後續比照 spec/10 的 axios + 自訂 modal 模式改版，免整頁 reload。</div></div>
+  <div class="body"><code>PATCH /grades/{id}/toggle</code>（需 <code>Grade.update</code> 權限，前端以 axios + 確認 modal 呼叫）<span class="badge shall">SHALL</span> 回應 JSON：成功時切換 <code>status</code>（Active ↔ Inactive）並回應 200 與訊息「版本狀態已更新」；id 不存在時回應 404 與訊息「找不到該版本」。
+  <div class="note">舊 spec/5 原設計為 form POST + redirect flash，後續比照 <code>delete-confirmation</code> 的 axios + 自訂 modal 模式改版，免整頁 reload。</div></div>
   <details class="scn"><summary>啟用版本切換為關閉<span class="testref">GradeCruTest::admin_can_toggle_active_grade_to_inactive</span></summary>
     <div class="scn-body">
       <div class="gwt"><span class="kw given">GIVEN</span><span>啟用中的版本</span></div>
