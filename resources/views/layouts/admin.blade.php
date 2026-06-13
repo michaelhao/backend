@@ -26,12 +26,6 @@
                         儀表板
                     </a>
                 </x-permission>
-                <x-permission name="Post.index">
-                    <a href="#"
-                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors">
-                        文章管理
-                    </a>
-                </x-permission>
                 <x-permission name="User.index">
                     <a href="{{ route('users.index') }}"
                        class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
