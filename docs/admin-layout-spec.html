@@ -267,7 +267,7 @@
     <div class="farrow">剩餘 &le; 300s</div>
     <div class="fnode gate">變紅<small><code>text-red-500</code></small></div>
     <div class="farrow">歸零</div>
-    <div class="fnode fail">導向 <code>/login</code></div>
+    <div class="fnode fail">導向 <code>login-url</code><small><code>route('login')</code></small></div>
   </div>
 </div>
 
@@ -281,7 +281,7 @@
     <li><code>@yield('content')</code> 主內容插槽</li>
     <li><code>@yield('page-title', 'Dashboard')</code> 同時用於 <code>&lt;title&gt;</code> 與頂部列標題</li>
     <li><code>@stack('scripts')</code> 供子頁面注入頁面層級 JS</li>
-    <li><code>&lt;head&gt;</code> 內 <code>csrf-token</code> 與 <code>session-lifetime</code>（值 = <code>config('session.lifetime') * 60</code> 秒）兩個 meta</li>
+    <li><code>&lt;head&gt;</code> 內 <code>csrf-token</code>、<code>session-lifetime</code>（值 = <code>config('session.lifetime') * 60</code> 秒）與 <code>login-url</code>（值 = <code>route('login')</code>）三個 meta</li>
     <li>透過 <code>@vite</code> 載入 <code>app.css</code>、<code>app.js</code>、<code>layouts/admin.js</code></li>
   </ul>
   <details class="scn"><summary>後台頁面套用版型外殼<span class="testref">DashboardTest::test_admin_can_access_dashboard</span></summary>
@@ -383,13 +383,13 @@
 
 <section class="req" id="r5" style="--c:var(--amber)">
   <h3><span class="no">R5</span>Session 倒數計時器</h3>
-  <div class="body"><code>resources/js/layouts/admin.js</code> <span class="badge shall">SHALL</span> 讀取 <code>session-lifetime</code> meta 作為起始秒數，於頂部列以 <code>HH:MM:SS</code> 每秒遞減顯示。剩餘 &le; 300 秒時 <span class="badge shall">SHALL</span> 由 <code>text-slate-400</code> 切換為 <code>text-red-500</code>；歸零時 <span class="badge shall">SHALL</span> 導向 <code>/login</code>。顏色 class <span class="badge shall">SHALL</span> 與 markup 一致採 <code>slate-*</code>（修正先前 <code>text-gray-400</code> 的 no-op remove 死碼）。</div>
+  <div class="body"><code>resources/js/layouts/admin.js</code> <span class="badge shall">SHALL</span> 讀取 <code>session-lifetime</code> meta 作為起始秒數，於頂部列以 <code>HH:MM:SS</code> 每秒遞減顯示。剩餘 &le; 300 秒時 <span class="badge shall">SHALL</span> 由 <code>text-slate-400</code> 切換為 <code>text-red-500</code>，&gt; 300 秒時 <span class="badge shall">SHALL</span> 還原為 <code>text-slate-400</code>；歸零時 <span class="badge shall">SHALL</span> 導向 <code>login-url</code> meta（值 = <code>route('login')</code>，fallback <code>/login</code>）。顏色 class <span class="badge shall">SHALL</span> 與 markup 一致採 <code>slate-*</code>（修正先前 <code>text-gray-400</code> 的 no-op remove 死碼）。</div>
   <div class="note">此為純前端視覺提示，伺服器端 session 失效仍由 Laravel session middleware 權威處理。</div>
   <details class="scn"><summary>倒數歸零導向登入頁<span class="testref none">無直接測試 — 前端行為</span></summary>
     <div class="scn-body">
       <div class="gwt"><span class="kw given">GIVEN</span><span>後台頁面載入且計時器啟動</span></div>
       <div class="gwt"><span class="kw when">WHEN</span><span>剩餘秒數遞減至 0</span></div>
-      <div class="gwt"><span class="kw then">THEN</span><span>瀏覽器導向 <code>/login</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>瀏覽器導向 <code>login-url</code> meta 指定的位址（<code>route('login')</code>，fallback <code>/login</code>）</span></div>
     </div>
   </details>
   <details class="scn"><summary>進入警示門檻變紅<span class="testref none">無直接測試 — 前端行為</span></summary>

@@ -36,7 +36,7 @@
 - `@yield('content')` 主內容插槽
 - `@yield('page-title', 'Dashboard')` 同時用於 `<title>` 與頂部列標題
 - `@stack('scripts')` 供子頁面注入頁面層級 JS
-- `<head>` 內 `csrf-token` 與 `session-lifetime`（值 = `config('session.lifetime') * 60` 秒）兩個 meta
+- `<head>` 內 `csrf-token`、`session-lifetime`（值 = `config('session.lifetime') * 60` 秒）與 `login-url`（值 = `route('login')`）三個 meta
 - 透過 `@vite` 載入 `resources/css/app.css`、`resources/js/app.js`、`resources/js/layouts/admin.js`
 
 #### Scenario: 後台頁面套用版型外殼
@@ -90,12 +90,12 @@ sidebar 每個選單連結 SHALL 以 `<x-permission name="{Module}.index">` 元�
 
 ### Requirement: Session 倒數計時器
 
-[resources/js/layouts/admin.js](resources/js/layouts/admin.js) SHALL 讀取 `session-lifetime` meta 作為起始秒數，於頂部列以 `HH:MM:SS` 每秒遞減顯示。剩餘秒數 ≤ 300 時顯示文字 SHALL 由 `text-slate-400` 切換為 `text-red-500`；歸零時 SHALL 將瀏覽器導向 `/login`。計時器顏色 class SHALL 與 markup 一致採用 `slate-*`（修正先前 `text-gray-400` 的 no-op remove 死碼）。
+[resources/js/layouts/admin.js](resources/js/layouts/admin.js) SHALL 讀取 `session-lifetime` meta 作為起始秒數，於頂部列以 `HH:MM:SS` 每秒遞減顯示。剩餘秒數 ≤ 300 時顯示文字 SHALL 由 `text-slate-400` 切換為 `text-red-500`，> 300 時 SHALL 還原為 `text-slate-400`；歸零時 SHALL 將瀏覽器導向 `login-url` meta（值 = `route('login')`，fallback `/login`）。計時器顏色 class SHALL 與 markup 一致採用 `slate-*`（修正先前 `text-gray-400` 的 no-op remove 死碼）。
 
 #### Scenario: 倒數歸零導向登入頁
 - **GIVEN** 後台頁面載入且計時器啟動
 - **WHEN** 剩餘秒數遞減至 0
-- **THEN** 瀏覽器導向 `/login`
+- **THEN** 瀏覽器導向 `login-url` meta 指定的位址（`route('login')`，fallback `/login`）
 
 #### Scenario: 進入警示門檻變紅
 - **GIVEN** 計時器運作中

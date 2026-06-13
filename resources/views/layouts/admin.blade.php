@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="session-lifetime" content="{{ config('session.lifetime') * 60 }}">
+    <meta name="login-url" content="{{ route('login') }}">
     <title>@yield('page-title', 'Dashboard') - {{ config('app.name', 'Laravel') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/layouts/admin.js'])
 </head>
