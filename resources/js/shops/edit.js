@@ -117,6 +117,7 @@ function initCertModal(form) {
     });
 }
 
+// 與後端 App\Support\Mask::string() 同演算法（奇數索引換 *）；兩端須同步修改
 function maskString(value) {
     return value.split('').map((c, i) => (i % 2 === 1 ? '*' : c)).join('');
 }
