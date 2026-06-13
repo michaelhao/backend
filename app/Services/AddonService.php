@@ -7,11 +7,10 @@ use App\Enums\AddonSyncing;
 use App\Enums\AddonType;
 use App\Jobs\SyncShopAddonsForGrade;
 use App\Models\Addon;
-use App\Models\Grade;
 use App\Repositories\AddonRepository;
+use App\Repositories\GradeRepository;
 use Illuminate\Bus\Batch;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Bus;
@@ -21,24 +20,33 @@ use Illuminate\Support\Facades\Storage;
 
 class AddonService
 {
-    public function __construct(private AddonRepository $addonRepository) {}
+    public function __construct(
+        private AddonRepository $addonRepository,
+        private GradeRepository $gradeRepository,
+    ) {}
+
+    public function findAddonById(int $id): ?Addon
+    {
+        $addon = $this->addonRepository->getById($id);
+
+        if (! $addon || $addon->status === AddonStatus::Deleted) {
+            return null;
+        }
+
+        return $addon;
+    }
 
     /**
-     * @return array{addons: LengthAwarePaginator, filters: array, perPage: int}
+     * @param  array<string, string>  $filters
+     * @return array{addons: LengthAwarePaginator, filters: array, perPage: int, grades: Collection}
      */
-    public function getIndexData(Request $request): array
+    public function getIndexData(array $filters, int $perPage): array
     {
-        $perPage = in_array((int) $request->per_page, [50, 100, 150, 200])
-            ? (int) $request->per_page
-            : 50;
-
-        $filters = $request->only(['keyword', 'type', 'status', 'grade_id']);
-
         return [
             'addons' => $this->addonRepository->paginate($perPage, $filters),
             'filters' => $filters,
             'perPage' => $perPage,
-            'grades' => Grade::all(),
+            'grades' => $this->gradeRepository->getAll(),
         ];
     }
 
@@ -50,7 +58,7 @@ class AddonService
         return [
             'types' => AddonType::cases(),
             'statuses' => [AddonStatus::Active, AddonStatus::Inactive],
-            'grades' => Grade::all(),
+            'grades' => $this->gradeRepository->getAll(),
         ];
     }
 
@@ -65,7 +73,7 @@ class AddonService
             'addon' => $addon,
             'types' => AddonType::cases(),
             'statuses' => [AddonStatus::Active, AddonStatus::Inactive],
-            'grades' => Grade::all(),
+            'grades' => $this->gradeRepository->getAll(),
             'selectedGradeIds' => $addon->grades->pluck('id')->all(),
         ];
     }
@@ -97,7 +105,7 @@ class AddonService
         });
 
         if (! empty($affectedGradeIds)) {
-            DB::afterCommit(fn () => $this->dispatchGradeSyncBatch($addon, $affectedGradeIds));
+            $this->dispatchGradeSyncBatch($addon, $affectedGradeIds);
         }
 
         return $addon;
@@ -137,7 +145,7 @@ class AddonService
         });
 
         if (! empty($affectedGradeIds)) {
-            DB::afterCommit(fn () => $this->dispatchGradeSyncBatch($addon, $affectedGradeIds));
+            $this->dispatchGradeSyncBatch($addon, $affectedGradeIds);
         }
     }
 
@@ -148,7 +156,7 @@ class AddonService
         DB::transaction(fn () => $this->addonRepository->softDelete($addon));
 
         if ($imageUrl) {
-            DB::afterCommit(fn () => Storage::disk('public')->delete($imageUrl));
+            Storage::disk('public')->delete($imageUrl);
         }
     }
 
@@ -165,14 +173,15 @@ class AddonService
     private function dispatchGradeSyncBatch(Addon $addon, array $gradeIds): void
     {
         $addonId = $addon->id;
-        $grades = Grade::whereIn('id', $gradeIds)->get();
-        $jobs = $grades->map(fn ($grade) => new SyncShopAddonsForGrade($grade))->all();
+        $jobs = $this->gradeRepository->getByIds($gradeIds)
+            ->map(fn ($grade) => new SyncShopAddonsForGrade($grade))
+            ->all();
 
         Bus::batch($jobs)
             ->name('Addon grade sync')
             ->onQueue('addon_sync')
             ->then(function (Batch $batch) use ($addonId) {
-                Addon::where('id', $addonId)->update(['syncing' => AddonSyncing::Done->value]);
+                $this->addonRepository->setSyncingById($addonId, AddonSyncing::Done);
             })
             ->catch(function (Batch $batch, \Throwable $e) use ($addonId) {
                 Log::error('Addon grade sync batch failed', [
@@ -180,7 +189,7 @@ class AddonService
                     'batch_id' => $batch->id,
                     'error'    => $e->getMessage(),
                 ]);
-                Addon::where('id', $addonId)->update(['syncing' => AddonSyncing::Done->value]);
+                $this->addonRepository->setSyncingById($addonId, AddonSyncing::Done);
             })
             ->dispatch();
     }

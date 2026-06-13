@@ -3,9 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Attributes\RequiresPermission;
-use App\Enums\AddonStatus;
 use App\Http\Requests\AddonRequest;
-use App\Models\Addon;
 use App\Services\AddonService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -19,7 +17,13 @@ class AddonController extends Controller
     #[RequiresPermission('Addon.index')]
     public function index(Request $request): View
     {
-        return view('admin.addons.index', $this->addonService->getIndexData($request));
+        $perPage = in_array((int) $request->per_page, [50, 100, 150, 200])
+            ? (int) $request->per_page
+            : 50;
+
+        $filters = $request->only(['keyword', 'type', 'status', 'grade_id']);
+
+        return view('admin.addons.index', $this->addonService->getIndexData($filters, $perPage));
     }
 
     #[RequiresPermission('Addon.create')]
@@ -42,8 +46,8 @@ class AddonController extends Controller
     #[RequiresPermission('Addon.update')]
     public function edit(int $id): View|RedirectResponse
     {
-        $addon = Addon::find($id);
-        if (! $addon || $addon->status === AddonStatus::Deleted) {
+        $addon = $this->addonService->findAddonById($id);
+        if (! $addon) {
             return redirect()->route('addons.index')->with('error', '找不到該附加功能');
         }
 
@@ -53,8 +57,8 @@ class AddonController extends Controller
     #[RequiresPermission('Addon.update')]
     public function update(AddonRequest $request, int $id): RedirectResponse
     {
-        $addon = Addon::find($id);
-        if (! $addon || $addon->status === AddonStatus::Deleted) {
+        $addon = $this->addonService->findAddonById($id);
+        if (! $addon) {
             return redirect()->route('addons.index')->with('error', '找不到該附加功能');
         }
 
@@ -71,8 +75,8 @@ class AddonController extends Controller
     #[RequiresPermission('Addon.delete')]
     public function destroy(int $id): JsonResponse
     {
-        $addon = Addon::find($id);
-        if (! $addon || $addon->status === AddonStatus::Deleted) {
+        $addon = $this->addonService->findAddonById($id);
+        if (! $addon) {
             return response()->json(['message' => '找不到該附加功能'], 422);
         }
 

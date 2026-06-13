@@ -25,6 +25,14 @@ class GradeRepository
     }
 
     /**
+     * @param  int[]  $ids
+     */
+    public function getByIds(array $ids): Collection
+    {
+        return Grade::whereIn('id', $ids)->get();
+    }
+
+    /**
      * @param  string[]  $columns
      */
     public function getAllOrderedByWeight(array $columns = ['*']): Collection

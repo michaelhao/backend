@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Enums\AddonStatus;
+use App\Enums\AddonSyncing;
 use App\Models\Addon;
 use App\Models\AddonImage;
 use Illuminate\Database\Eloquent\Collection;
@@ -52,6 +53,11 @@ class AddonRepository
     public function update(Addon $addon, array $data): void
     {
         $addon->update($data);
+    }
+
+    public function setSyncingById(int $addonId, AddonSyncing $state): void
+    {
+        Addon::where('id', $addonId)->update(['syncing' => $state->value]);
     }
 
     /**
