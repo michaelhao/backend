@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>conference-management Specification — 說明會管理</title>
+<style>
+  :root {
+    --ink: #1e293b;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --blue: #2563eb;   --blue-bg: #eff6ff;   --blue-line: #bfdbfe;
+    --amber: #d97706;  --amber-bg: #fffbeb;  --amber-line: #fde68a;
+    --green: #059669;  --green-bg: #ecfdf5;  --green-line: #a7f3d0;
+    --gray: #6b7280;   --gray-bg: #f3f4f6;   --gray-line: #d1d5db;
+    --red: #dc2626;    --red-bg: #fef2f2;
+    --sidebar-w: 264px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 0.86em;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+
+  /* ===== 版面 ===== */
+  .layout { display: flex; min-height: 100vh; }
+  nav.toc {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: sticky; top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: #0f172a;
+    color: #cbd5e1;
+    padding: 20px 0 32px;
+  }
+  main {
+    flex: 1;
+    min-width: 0;
+    max-width: 880px;
+    padding: 32px 40px 96px;
+  }
+
+  /* ===== 側欄 ===== */
+  .toc-title { padding: 0 20px 12px; font-weight: 700; color: #fff; font-size: 16px; }
+  .toc-title small { display: block; font-weight: 400; color: #94a3b8; font-size: 11px; margin-top: 2px; }
+  .toc-group { margin-top: 14px; }
+  .toc-group-label {
+    padding: 0 20px; font-size: 11px; letter-spacing: .08em;
+    color: #94a3b8; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .toc a {
+    display: block; padding: 5px 20px 5px 34px;
+    color: #cbd5e1; text-decoration: none; font-size: 13px;
+    border-left: 3px solid transparent;
+  }
+  .toc a:hover { color: #fff; background: rgba(255,255,255,.06); }
+  .toc a.active { color: #fff; background: rgba(255,255,255,.1); border-left-color: #60a5fa; }
+
+  /* ===== Header ===== */
+  header h1 { font-size: 26px; margin: 0 0 4px; }
+  header .sub { color: var(--muted); margin-bottom: 16px; }
+  .threat-banner {
+    background: var(--amber-bg); border: 1px solid var(--amber-line);
+    border-radius: 10px; padding: 12px 16px; font-size: 14px; margin-bottom: 12px;
+  }
+  .threat-banner strong { color: var(--amber); }
+  .meta { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; }
+  .meta span { white-space: nowrap; }
+  .truth-note { font-size: 12.5px; color: var(--muted); margin-bottom: 24px; }
+
+  /* ===== 工具列 ===== */
+  .toolbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: flex-end; padding: 8px 0; background: linear-gradient(var(--bg) 80%, transparent); }
+  .toolbar button {
+    font: inherit; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card);
+    border-radius: 8px; padding: 6px 14px; color: var(--ink);
+  }
+  .toolbar button:hover { border-color: #94a3b8; }
+
+  /* ===== 區段標題 ===== */
+  h2.section {
+    font-size: 19px; margin: 44px 0 6px;
+    padding-left: 12px; border-left: 5px solid var(--c, var(--blue));
+  }
+  .section-desc { color: var(--muted); font-size: 13.5px; margin: 0 0 18px 17px; }
+
+  /* ===== 流程圖 ===== */
+  .flow {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px 24px; margin-bottom: 18px; overflow-x: auto;
+  }
+  .flow h3 { margin: 0 0 16px; font-size: 15px; }
+  .frow { display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap; min-width: max-content; }
+  .fnode {
+    border: 1.5px solid var(--blue-line); background: var(--blue-bg);
+    border-radius: 8px; padding: 7px 12px; font-size: 13px;
+    display: flex; flex-direction: column; justify-content: center;
+    text-align: center; max-width: 190px;
+  }
+  .fnode small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+  .fnode.start { border-color: #94a3b8; background: #f1f5f9; font-weight: 600; }
+  .fnode.ok { border-color: var(--green-line); background: var(--green-bg); }
+  .fnode.gate { border-color: var(--amber-line); background: var(--amber-bg); }
+  .farrow {
+    align-self: center; padding: 0 8px; color: var(--muted);
+    font-size: 12px; text-align: center; flex-shrink: 0; line-height: 1.3;
+  }
+  .farrow::after { content: "<"; display: block; font-size: 16px; color: #94a3b8; }
+  .farrow.lt::after { content: "<"; }
+  .farrow.le::after { content: "\2264"; }
+
+  /* ===== Requirement 卡片 ===== */
+  .req {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 5px solid var(--c, var(--blue));
+    border-radius: 12px; padding: 18px 22px 14px; margin-bottom: 16px;
+    scroll-margin-top: 56px;
+  }
+  .req h3 { margin: 0 0 8px; font-size: 16px; display: flex; align-items: baseline; gap: 10px; }
+  .req h3 .no { color: var(--muted); font-size: 13px; font-weight: 600; }
+  .req .body { font-size: 14.5px; margin-bottom: 12px; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    border-radius: 5px; padding: 0 7px; vertical-align: 1px;
+  }
+  .badge.shall { background: var(--blue); color: #fff; }
+  .badge.mustnot { background: var(--red); color: #fff; }
+  .note { font-size: 13px; color: var(--muted); background: var(--gray-bg); border-radius: 8px; padding: 8px 12px; margin-top: 8px; }
+
+  /* ===== Scenario ===== */
+  details.scn { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: #fcfdfe; }
+  details.scn summary {
+    cursor: pointer; padding: 9px 14px; font-size: 13.5px; font-weight: 600;
+    list-style: none; display: flex; align-items: center; gap: 8px;
+  }
+  details.scn summary::-webkit-details-marker { display: none; }
+  details.scn summary::before { content: "\25B8"; color: #94a3b8; transition: transform .15s; }
+  details.scn[open] summary::before { transform: rotate(90deg); }
+  .scn-body { padding: 2px 14px 12px 34px; }
+  .gwt { display: flex; gap: 10px; margin: 5px 0; font-size: 13.5px; align-items: baseline; }
+  .gwt .kw {
+    flex-shrink: 0; width: 56px; text-align: center; font-size: 11px; font-weight: 700;
+    border-radius: 5px; padding: 1px 0; letter-spacing: .05em;
+  }
+  .kw.given { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-line); }
+  .kw.when  { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-line); }
+  .kw.then  { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-line); }
+  .kw.and   { background: #fff; color: var(--muted); border: 1px dashed var(--gray-line); }
+  .testref {
+    margin-left: auto; font-size: 11px; font-weight: 400; color: var(--muted);
+    background: var(--gray-bg); border-radius: 99px; padding: 1px 10px; white-space: nowrap;
+  }
+  .testref.none { background: var(--amber-bg); color: var(--amber); }
+
+  /* ===== 刻意不做 ===== */
+  .req.excluded { border-left-color: var(--gray); background: #fafafa; }
+  .nots { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+  .not-card { border: 1px dashed var(--gray-line); border-radius: 10px; padding: 10px 14px; background: var(--card); font-size: 13.5px; }
+  .not-card .x { font-weight: 700; color: var(--gray); text-decoration: line-through; }
+  .not-card small { display: block; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+  footer { margin-top: 56px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+  @media (max-width: 860px) {
+    nav.toc { display: none; }
+    main { padding: 20px 18px 64px; }
+  }
+  @media print {
+    nav.toc, .toolbar { display: none; }
+    .req { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <div class="toc-title">conference-management<small>說明會管理規格</small></div>
+  <div class="toc-group">
+    <div class="toc-group-label">總覽</div>
+    <a href="#overview">時間順序規則</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--blue)"></span>資料與列表</div>
+    <a href="#r1">1. 資料模型</a>
+    <a href="#r2">2. 列表檢視</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--green)"></span>新增與修改</div>
+    <a href="#r3">3. 新增說明會</a>
+    <a href="#r4">4. 修改說明會</a>
+    <a href="#r5">5. 時間欄位順序驗證</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--gray)"></span>刻意設計</div>
+    <a href="#r6">6. 不提供刪除功能</a>
+    <a href="#excluded">刻意不做的事</a>
+  </div>
+</nav>
+
+<main>
+<header>
+  <h1>conference-management Specification</h1>
+  <div class="sub">說明會（conferences）列表、新增、修改與下架的完整行為規格</div>
+  <div class="threat-banner">
+    <strong>威脅模型：</strong>內部後台、非公網暴露（brute-force 不在 scope）；正式環境<strong>無對外網際網路連線</strong>。
+  </div>
+  <div class="meta">
+    <span>來源：<code>openspec/specs/conference-management/spec.md</code></span>
+    <span>實作：<code>df03cae</code>、<code>70e9f3f</code></span>
+    <span>change：<code>add-conference-management</code></span>
+  </div>
+  <div class="truth-note">本頁為人工同步的閱讀版；若與 <code>spec.md</code> 不一致，以 <code>spec.md</code> 為準。每個 Scenario 右側標註對應的自動化測試。</div>
+</header>
+
+<div class="toolbar"><button id="toggleAll" data-open="0">全部展開</button></div>
+
+<!-- ============ 總覽 ============ -->
+<h2 class="section" id="overview" style="--c:#94a3b8">時間順序規則</h2>
+<p class="section-desc">四個時間欄位的順序約束貫穿新增與修改的驗證；先看懂規則，再讀下方逐項規格。</p>
+
+<div class="flow">
+  <h3>四時間欄位順序：報名開始 &lt; 報名截止 &le; 活動開始 &lt; 活動結束</h3>
+  <div class="frow">
+    <div class="fnode start">register_started_at<small>報名開始</small></div>
+    <div class="farrow lt"></div>
+    <div class="fnode">register_ended_at<small>報名截止</small></div>
+    <div class="farrow le"></div>
+    <div class="fnode gate">started_at<small>活動開始<br>（可等於報名截止）</small></div>
+    <div class="farrow lt"></div>
+    <div class="fnode ok">ended_at<small>活動結束</small></div>
+  </div>
+  <div class="note">時間欄位<strong>不與 <code>now()</code> 比較</strong>——允許管理員補建歷史說明會。順序由 <code>ConferenceRequest</code> 以 <code>after</code> / <code>before_or_equal</code> 規則驗證。</div>
+</div>
+
+<!-- ============ 資料與列表 ============ -->
+<h2 class="section" style="--c:var(--blue)">資料與列表</h2>
+
+<section class="req" id="r1" style="--c:var(--blue)">
+  <h3><span class="no">R1</span>Conference 資料模型</h3>
+  <div class="body">系統 <span class="badge shall">SHALL</span> 維護 <code>conferences</code> 資料表：<code>id</code>（int unsigned 主鍵）、<code>name</code>（字串，最長 100）、<code>status</code>（Active=1 或 Inactive=0）、<code>started_at</code>、<code>ended_at</code>、<code>register_started_at</code>、<code>register_ended_at</code>（皆 datetime）、<code>created_at</code>、<code>updated_at</code>。資料表 <span class="badge shall">SHALL</span> 對 <code>status</code> 與 <code>started_at</code> 建立索引。</div>
+  <details class="scn"><summary>執行 migration 建立資料表<span class="testref none">無直接測試 — migration 結構</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>執行 <code>php artisan migrate</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>資料庫出現 <code>conferences</code> 資料表，欄位與型別與上述規格相符</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span><code>status</code> 與 <code>started_at</code> 索引已建立</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>Model 正確 cast status 為 enum<span class="testref none">無直接測試 — 由 factory／CRUD 間接覆蓋</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>讀取一筆 <code>Conference</code> 記錄</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>$conference-&gt;status</code> 為 <code>App\Enums\ConferenceStatus</code> 的實例</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r2" style="--c:var(--blue)">
+  <h3><span class="no">R2</span>列表檢視</h3>
+  <div class="body">系統 <span class="badge shall">SHALL</span> 提供 <code>GET /conferences</code> 列表頁，顯示所有說明會（含 Active 與 Inactive），支援依 <code>keyword</code> 搜尋 <code>name</code>、依 <code>status</code> 篩選與 <code>per_page</code> 分頁。頁面 <span class="badge shall">SHALL</span> 受 <code>Conference.index</code> 權限保護。<code>per_page</code> <span class="badge shall">SHALL</span> 限定白名單 <code>{50, 100, 150, 200}</code>；不在白名單或未提供時 <span class="badge shall">SHALL</span> fallback 為 <code>50</code>。</div>
+  <div class="note">per_page 白名單與 filters 萃取由 Controller 處理後傳入 Service（<code>getIndexData(array $filters, int $perPage)</code>），Service 不接觸 Request。</div>
+  <details class="scn"><summary>授權使用者瀏覽列表<span class="testref">ConferenceCrudTest::test_admin_can_access_conference_index</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>擁有 <code>Conference.index</code> 權限的使用者 GET <code>/conferences</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回傳 HTTP 200 與包含分頁結果的 <code>admin.conferences.index</code> view</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>未授權使用者被擋<span class="testref none">無直接測試 — Viewer 角色亦具 index 權限</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>不具 <code>Conference.index</code> 權限的使用者 GET <code>/conferences</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統拒絕存取（依專案權限 middleware 回應 403 或導向）</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>依關鍵字過濾<span class="testref">ConferenceCrudTest::test_index_filters_by_keyword</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>使用者 GET <code>/conferences?keyword=春季</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回傳結果僅包含 <code>name</code> 含「春季」的說明會</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>依狀態過濾<span class="testref">ConferenceCrudTest::test_index_filters_by_status</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>使用者 GET <code>/conferences?status=0</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回傳結果僅包含 <code>status = Inactive</code> 的說明會</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>per_page 白名單外的值 fallback 為 50<span class="testref">ConferenceCrudTest::test_per_page_outside_whitelist_falls_back_to_50</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>使用者 GET <code>/conferences?per_page=9999</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回傳分頁大小為 <code>50</code>，不以使用者輸入為準</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 新增與修改 ============ -->
+<h2 class="section" style="--c:var(--green)">新增與修改</h2>
+
+<section class="req" id="r3" style="--c:var(--green)">
+  <h3><span class="no">R3</span>新增說明會</h3>
+  <div class="body">系統 <span class="badge shall">SHALL</span> 提供 <code>GET /conferences/create</code> 顯示表單、<code>POST /conferences</code> 接收並建立。兩者 <span class="badge shall">SHALL</span> 受 <code>Conference.create</code> 權限保護。所有欄位 <span class="badge shall">SHALL</span> 通過驗證後才寫入。建立成功後 <span class="badge shall">SHALL</span> 導向 <code>/conferences</code> 並帶 success flash。</div>
+  <details class="scn"><summary>成功建立<span class="testref">ConferenceCrudTest::test_admin_can_create_conference</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>授權使用者 POST 合法表單（name、status、四個時間欄位皆合法且順序正確）</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>資料庫新增一筆 <code>conferences</code> 記錄</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>回應為 302 導向 <code>conferences.index</code></span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>session 含成功訊息</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>必填欄位缺漏時不寫入<span class="testref">ConferenceCrudTest::test_store_fails_when_name_missing</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>授權使用者 POST 缺少 <code>name</code> 或 <code>status</code> 或任一時間欄位的表單</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回應為 422（或 redirect back with errors）</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>資料庫未新增任何 <code>conferences</code> 記錄</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>時間順序錯誤時不寫入<span class="testref">ConferenceCrudTest::test_store_fails_when_register_ended_after_started</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>授權使用者 POST 時間欄位不滿足順序規則的表單</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回應為 422（或 redirect back with errors）</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>資料庫未新增任何 <code>conferences</code> 記錄</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r4" style="--c:var(--green)">
+  <h3><span class="no">R4</span>修改說明會</h3>
+  <div class="body">系統 <span class="badge shall">SHALL</span> 提供 <code>GET /conferences/{id}/edit</code> 顯示編輯表單、<code>PUT /conferences/{id}</code> 接收更新。兩者 <span class="badge shall">SHALL</span> 受 <code>Conference.update</code> 權限保護。更新成功後 <span class="badge shall">SHALL</span> 導向 <code>/conferences</code> 並帶 success flash。找不到指定 <code>id</code> 時 <span class="badge shall">SHALL</span> 導回 <code>/conferences</code> 並帶 error flash。</div>
+  <div class="note">查無記錄的判斷由 Controller 委派 <code>ConferenceService::findConferenceById()</code>（再經 <code>ConferenceRepository::getById()</code>），Controller 不直接接觸 Eloquent。</div>
+  <details class="scn"><summary>成功更新<span class="testref">ConferenceCrudTest::test_admin_can_update_conference</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>授權使用者 PUT 合法表單至 <code>/conferences/{existing_id}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>該筆記錄欄位被更新</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>回應為 302 導向 <code>conferences.index</code> 並帶 success flash</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>找不到 id<span class="testref">ConferenceCrudTest::test_edit_for_non_existing_id_redirects_with_error</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>授權使用者 GET <code>/conferences/{non_existing_id}/edit</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回應為 302 導向 <code>conferences.index</code> 並帶 error flash</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>驗證失敗不變更資料<span class="testref">ConferenceCrudTest::test_update_validation_failure_keeps_record_unchanged</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>授權使用者 PUT 時間順序錯誤的表單</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>資料庫該筆記錄保持原狀</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>回應為 422 或 redirect back with errors</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r5" style="--c:var(--green)">
+  <h3><span class="no">R5</span>時間欄位順序驗證</h3>
+  <div class="body">系統 <span class="badge shall">SHALL</span> 在寫入（建立或修改）時驗證四個時間欄位滿足順序：<code>register_started_at &lt; register_ended_at &le; started_at &lt; ended_at</code>。任一條件不滿足 <span class="badge shall">SHALL</span> 視為驗證錯誤。</div>
+  <details class="scn"><summary>報名截止晚於活動開始<span class="testref">ConferenceCrudTest::test_store_fails_when_register_ended_after_started</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>使用者提交 <code>register_ended_at &gt; started_at</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回傳驗證錯誤，不進行寫入</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>活動結束不晚於活動開始<span class="testref">ConferenceCrudTest::test_store_fails_when_ended_not_after_started</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>使用者提交 <code>ended_at &le; started_at</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回傳驗證錯誤，不進行寫入</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>報名開始晚於報名截止<span class="testref">ConferenceCrudTest::test_store_fails_when_register_started_not_before_register_ended</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>使用者提交 <code>register_started_at &ge; register_ended_at</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回傳驗證錯誤，不進行寫入</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>報名截止等於活動開始（邊界）<span class="testref">ConferenceCrudTest::test_store_accepts_register_ended_equal_to_started</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>使用者提交 <code>register_ended_at = started_at</code>（其餘順序皆合法）</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統接受，寫入成功</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 刻意設計 ============ -->
+<h2 class="section" style="--c:var(--gray)">刻意設計（不是缺漏）</h2>
+<p class="section-desc">以下為依產品決策刻意排除的功能，避免後人誤判為待補項目。</p>
+
+<section class="req excluded" id="r6" style="--c:var(--gray)">
+  <h3><span class="no">R6</span>不提供刪除功能（刻意設計）</h3>
+  <div class="body">為保留歷史紀錄，系統 <span class="badge mustnot">MUST NOT</span> 提供任何刪除說明會的路徑：無 DELETE 路由、無 <code>destroy</code> controller action、無 <code>Conference.delete</code> 權限、無軟刪欄位。下架 <span class="badge shall">SHALL</span> 透過 <code>status = Inactive</code> 達成。</div>
+  <details class="scn"><summary>DELETE 路由不存在<span class="testref">ConferenceCrudTest::test_delete_route_is_not_registered</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>任何使用者 DELETE <code>/conferences/{id}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 405（Method Not Allowed）或 404</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>權限列表不含 Conference.delete<span class="testref">ConferenceCrudTest::test_conference_delete_permission_is_not_registered</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>查詢系統已註冊之權限清單</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>清單中不存在 <code>Conference.delete</code></span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req excluded" id="excluded" style="--c:var(--gray)">
+  <h3><span class="no">—</span>刻意不做的事（彙整）</h3>
+  <div class="nots">
+    <div class="not-card"><span class="x">刪除 / 軟刪</span><small>保留歷史紀錄；無 DELETE 路由、無 <code>destroy</code>、無 <code>Conference.delete</code>、無軟刪欄位，下架改用 <code>status = Inactive</code>（R6）</small></div>
+    <div class="not-card"><span class="x">name 唯一性約束</span><small><code>name</code> 刻意允許重複——反覆舉辦同主題活動為合法情境</small></div>
+    <div class="not-card"><span class="x">時間與 now() 比較</span><small>四時間欄位僅檢查彼此順序，不與當下比較，允許補建歷史說明會</small></div>
+    <div class="not-card"><span class="x">Deleted 狀態值</span><small><code>ConferenceStatus</code> 僅 Active / Inactive，無預留 Deleted</small></div>
+  </div>
+</section>
+
+<footer>
+  產生自 <code>openspec/specs/conference-management/spec.md</code>（change <code>add-conference-management</code>）。6 項 Requirement、19 個 Scenario。
+  測試對應：<code>tests/Feature/Conference/ConferenceCrudTest.php</code>。
+  本頁為人工同步版本，內容以 <code>spec.md</code> 為準。
+</footer>
+</main>
+</div>
+
+<script>
+// 全部展開 / 收合
+const btn = document.getElementById('toggleAll');
+btn.addEventListener('click', () => {
+  const open = btn.dataset.open !== '1';
+  document.querySelectorAll('details.scn').forEach(d => d.open = open);
+  btn.dataset.open = open ? '1' : '0';
+  btn.textContent = open ? '全部收合' : '全部展開';
+});
+
+// 側欄 scroll-spy
+const links = [...document.querySelectorAll('.toc a')];
+const targets = links
+  .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+  .filter(Boolean);
+const byId = Object.fromEntries(links.map(a => [a.getAttribute('href').slice(1), a]));
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(a => a.classList.remove('active'));
+      byId[e.target.id]?.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -75% 0px' });
+targets.forEach(t => observer.observe(t));
+</script>
+</body>
+</html>
