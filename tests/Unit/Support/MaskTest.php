@@ -66,4 +66,16 @@ class MaskTest extends TestCase
     {
         $this->assertSame('@test.com', Mask::email('@test.com'));
     }
+
+    public function test_email_is_multibyte_safe_in_local_part(): void
+    {
+        // @ 為 ASCII 切點，local part 交 mb-safe 的 string() 處理
+        $this->assertSame('中*@test.com', Mask::email('中文@test.com'));
+    }
+
+    public function test_email_splits_on_first_at_sign(): void
+    {
+        // strpos 取第一個 @；local part 'a'（索引 0）不遮蔽，其餘原樣保留
+        $this->assertSame('a@b@c.com', Mask::email('a@b@c.com'));
+    }
 }
