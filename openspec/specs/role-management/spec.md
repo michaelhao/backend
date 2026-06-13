@@ -2,7 +2,6 @@
 
 ## Purpose
 角色 CRUD 與自製權限系統（`Module.Action` 格式、attribute-based middleware、session 權限快取與版本戳即時撤銷）的完整行為規格。威脅模型：內部後台、非公網暴露；能登入後台者即為受信任的內部人員，自我提權防護與操作稽核 log 刻意不做。合併自舊版 `spec/3-permission-system.md`、`spec/15-role-security-review.md` 與 2026-06-12 設計 review 修正（commit `bdf668a`、`ce741b3`、`4b2091d`）。
-
 ## Requirements
 ### Requirement: 角色列表
 
@@ -95,7 +94,7 @@
 
 ### Requirement: 刪除角色
 
-`DELETE /roles/{id}`（需 `Role.delete` 權限，前端以 axios 呼叫）SHALL 回應 JSON。成功時 SHALL 於單一 database transaction 內先清除 `role_has_permissions` pivot 再刪除角色，回應 200 與訊息「角色已刪除」。角色仍有使用者時 SHALL 拒絕並回應 422 與訊息「此角色仍有使用者，無法刪除」。id 不存在時回應 422 與訊息「找不到該角色」（與業務拒絕同碼；2026-06-12 設計 review 裁示維持現狀、不改 404）。
+`DELETE /roles/{id}`（需 `Role.delete` 權限，前端以 axios 呼叫）SHALL 回應 JSON。成功時 SHALL 於單一 database transaction 內先清除 `role_has_permissions` pivot 再刪除角色，回應 200 與訊息「角色已刪除」。角色仍有使用者時 SHALL 拒絕並回應 422 與訊息「此角色仍有使用者，無法刪除」。id 不存在時回應 **404** 與訊息「找不到該角色」（not-found 與業務拒絕分流：not-found→404、業務拒絕→422；2026-06-14 設計 review 裁示一致化為 404，覆寫先前「維持現狀、不改 404」的決定，與 user-management 對齊）。共用前端刪除互動見 [[delete-confirmation]]。
 
 #### Scenario: 成功刪除角色
 - **GIVEN** 無使用者的角色
@@ -116,9 +115,7 @@
 
 #### Scenario: 刪除不存在的角色
 - **WHEN** DELETE `/roles/99999`
-- **THEN** 系統回應 422 JSON「找不到該角色」
-
----
+- **THEN** 系統回應 404 JSON「找不到該角色」
 
 ### Requirement: 權限解析
 

@@ -2,7 +2,6 @@
 
 ## Purpose
 附加功能管理（addons）的完整行為規格：CRUD、單圖上傳、Grade 關聯與停用版本規則、Grade-Addon 變動觸發的商店同步（Queue 批次）、配額餘額獨立過期與可用量查詢。威脅模型：內部後台、非公網暴露（brute-force 不在 scope）；正式環境無對外網際網路連線，本功能無任何外部 API 呼叫。合併自舊版 `spec/9-addons-system.md`、`spec/12-addons-balances.md` 與 2026-06-13 設計 review 修正（commit `c0d5ae9`、`ddabe18`、`a68c8d3`、`8636db0`）。購買 / 安裝觸發點屬 bill-management（見 `openspec/specs/bill-management/spec.md`）。
-
 ## Requirements
 ### Requirement: 權限控管
 
@@ -131,7 +130,7 @@
 
 ### Requirement: 刪除採軟刪除並清除關聯
 
-`DELETE /addons/{id}`（需 `Addon.delete`）SHALL 對主表執行軟刪除（`status = -1`，保留名稱與價格歷史），並在**同一資料庫交易內物理刪除** `grades_addons`、`shops_addons`、`addons_image` 中對應的所有關聯列。找不到或已刪除的項目 SHALL 回 422 JSON。
+`DELETE /addons/{id}`（需 `Addon.delete`）SHALL 對主表執行軟刪除（`status = -1`，保留名稱與價格歷史），並在**同一資料庫交易內物理刪除** `grades_addons`、`shops_addons`、`addons_image` 中對應的所有關聯列。找不到或已刪除的項目 SHALL 回 **404** JSON「找不到該附加功能」（2026-06-14 設計 review 裁示 not-found 一致化為 404，與 role / user 對齊）。共用前端刪除互動見 [[delete-confirmation]]。
 
 #### Scenario: 軟刪除主表
 - **GIVEN** 一筆上架附加功能
@@ -148,7 +147,9 @@
 - **WHEN** DELETE `/addons/{id}`
 - **THEN** `shops_addons` 對應列被物理刪除
 
----
+#### Scenario: 刪除不存在的附加功能
+- **WHEN** DELETE `/addons/99999`
+- **THEN** 系統回應 404 JSON「找不到該附加功能」
 
 ### Requirement: 圖片處理規範
 
