@@ -78,6 +78,10 @@ class AddonService
         ];
     }
 
+    /**
+     * post-commit 副作用（grade sync job dispatch）於內層交易提交後立即執行，
+     * 故本方法不可置於外層 DB transaction 內呼叫。
+     */
     public function createAddon(array $data, ?UploadedFile $image): Addon
     {
         $gradeIds = $data['grade_ids'] ?? [];
@@ -111,6 +115,10 @@ class AddonService
         return $addon;
     }
 
+    /**
+     * post-commit 副作用（grade sync job dispatch）於內層交易提交後立即執行，
+     * 故本方法不可置於外層 DB transaction 內呼叫。
+     */
     public function updateAddon(Addon $addon, array $data, ?UploadedFile $image, bool $removeImage = false): void
     {
         $gradeIds = $data['grade_ids'] ?? [];
@@ -149,6 +157,10 @@ class AddonService
         }
     }
 
+    /**
+     * post-commit 副作用（圖片刪除）於交易提交後立即執行，
+     * 故本方法不可置於外層 DB transaction 內呼叫。
+     */
     public function deleteAddon(Addon $addon): void
     {
         $imageUrl = $addon->image?->image_url;
@@ -181,7 +193,7 @@ class AddonService
             ->name('Addon grade sync')
             ->onQueue('addon_sync')
             ->then(function (Batch $batch) use ($addonId) {
-                $this->addonRepository->setSyncingById($addonId, AddonSyncing::Done);
+                app(AddonRepository::class)->setSyncingById($addonId, AddonSyncing::Done);
             })
             ->catch(function (Batch $batch, \Throwable $e) use ($addonId) {
                 Log::error('Addon grade sync batch failed', [
@@ -189,7 +201,7 @@ class AddonService
                     'batch_id' => $batch->id,
                     'error'    => $e->getMessage(),
                 ]);
-                $this->addonRepository->setSyncingById($addonId, AddonSyncing::Done);
+                app(AddonRepository::class)->setSyncingById($addonId, AddonSyncing::Done);
             })
             ->dispatch();
     }
