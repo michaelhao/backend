@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>addon-management Specification — 附加功能管理</title>
+<style>
+  :root {
+    --ink: #1e293b;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --blue: #2563eb;   --blue-bg: #eff6ff;   --blue-line: #bfdbfe;
+    --amber: #d97706;  --amber-bg: #fffbeb;  --amber-line: #fde68a;
+    --green: #059669;  --green-bg: #ecfdf5;  --green-line: #a7f3d0;
+    --purple: #7c3aed; --purple-bg: #f5f3ff; --purple-line: #ddd6fe;
+    --gray: #6b7280;   --gray-bg: #f3f4f6;   --gray-line: #d1d5db;
+    --red: #dc2626;    --red-bg: #fef2f2;
+    --sidebar-w: 264px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 0.86em;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+
+  /* ===== 版面 ===== */
+  .layout { display: flex; min-height: 100vh; }
+  nav.toc {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: sticky; top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: #0f172a;
+    color: #cbd5e1;
+    padding: 20px 0 32px;
+  }
+  main {
+    flex: 1;
+    min-width: 0;
+    max-width: 880px;
+    padding: 32px 40px 96px;
+  }
+
+  /* ===== 側欄 ===== */
+  .toc-title { padding: 0 20px 12px; font-weight: 700; color: #fff; font-size: 16px; }
+  .toc-title small { display: block; font-weight: 400; color: #94a3b8; font-size: 11px; margin-top: 2px; }
+  .toc-group { margin-top: 14px; }
+  .toc-group-label {
+    padding: 0 20px; font-size: 11px; letter-spacing: .08em;
+    color: #94a3b8; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .toc a {
+    display: block; padding: 5px 20px 5px 34px;
+    color: #cbd5e1; text-decoration: none; font-size: 13px;
+    border-left: 3px solid transparent;
+  }
+  .toc a:hover { color: #fff; background: rgba(255,255,255,.06); }
+  .toc a.active { color: #fff; background: rgba(255,255,255,.1); border-left-color: #60a5fa; }
+
+  /* ===== Header ===== */
+  header h1 { font-size: 26px; margin: 0 0 4px; }
+  header .sub { color: var(--muted); margin-bottom: 16px; }
+  .threat-banner {
+    background: var(--amber-bg); border: 1px solid var(--amber-line);
+    border-radius: 10px; padding: 12px 16px; font-size: 14px; margin-bottom: 12px;
+  }
+  .threat-banner strong { color: var(--amber); }
+  .meta { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; }
+  .meta span { white-space: nowrap; }
+  .truth-note { font-size: 12.5px; color: var(--muted); margin-bottom: 24px; }
+
+  /* ===== 工具列 ===== */
+  .toolbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: flex-end; padding: 8px 0; background: linear-gradient(var(--bg) 80%, transparent); }
+  .toolbar button {
+    font: inherit; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card);
+    border-radius: 8px; padding: 6px 14px; color: var(--ink);
+  }
+  .toolbar button:hover { border-color: #94a3b8; }
+
+  /* ===== 區段標題 ===== */
+  h2.section {
+    font-size: 19px; margin: 44px 0 6px;
+    padding-left: 12px; border-left: 5px solid var(--c, var(--blue));
+  }
+  .section-desc { color: var(--muted); font-size: 13.5px; margin: 0 0 18px 17px; }
+
+  /* ===== 流程圖 ===== */
+  .flow {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px 24px; margin-bottom: 18px; overflow-x: auto;
+  }
+  .flow h3 { margin: 0 0 16px; font-size: 15px; }
+  .frow { display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap; min-width: max-content; }
+  .fnode {
+    border: 1.5px solid var(--blue-line); background: var(--blue-bg);
+    border-radius: 8px; padding: 7px 12px; font-size: 13px;
+    display: flex; flex-direction: column; justify-content: center;
+    text-align: center; max-width: 200px;
+  }
+  .fnode small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+  .fnode.start { border-color: #94a3b8; background: #f1f5f9; font-weight: 600; }
+  .fnode.ok { border-color: var(--green-line); background: var(--green-bg); }
+  .fnode.fail { border-color: #fecaca; background: var(--red-bg); }
+  .fnode.gate { border-color: var(--amber-line); background: var(--amber-bg); }
+  .farrow {
+    align-self: center; padding: 0 8px; color: var(--muted);
+    font-size: 12px; text-align: center; flex-shrink: 0; line-height: 1.3;
+  }
+  .farrow::after { content: "→"; display: block; font-size: 16px; color: #94a3b8; }
+  .fbranches { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+  .fbranch { display: flex; align-items: center; }
+
+  /* ===== Requirement 卡片 ===== */
+  .req {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 5px solid var(--c, var(--blue));
+    border-radius: 12px; padding: 18px 22px 14px; margin-bottom: 16px;
+    scroll-margin-top: 56px;
+  }
+  .req h3 { margin: 0 0 8px; font-size: 16px; display: flex; align-items: baseline; gap: 10px; }
+  .req h3 .no { color: var(--muted); font-size: 13px; font-weight: 600; }
+  .req .body { font-size: 14.5px; margin-bottom: 12px; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    border-radius: 5px; padding: 0 7px; vertical-align: 1px;
+  }
+  .badge.shall { background: var(--blue); color: #fff; }
+  .badge.mustnot { background: var(--red); color: #fff; }
+  .note { font-size: 13px; color: var(--muted); background: var(--gray-bg); border-radius: 8px; padding: 8px 12px; margin-top: 8px; }
+
+  /* ===== Scenario ===== */
+  details.scn { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: #fcfdfe; }
+  details.scn summary {
+    cursor: pointer; padding: 9px 14px; font-size: 13.5px; font-weight: 600;
+    list-style: none; display: flex; align-items: center; gap: 8px;
+  }
+  details.scn summary::-webkit-details-marker { display: none; }
+  details.scn summary::before { content: "▸"; color: #94a3b8; transition: transform .15s; }
+  details.scn[open] summary::before { transform: rotate(90deg); }
+  .scn-body { padding: 2px 14px 12px 34px; }
+  .gwt { display: flex; gap: 10px; margin: 5px 0; font-size: 13.5px; align-items: baseline; }
+  .gwt .kw {
+    flex-shrink: 0; width: 56px; text-align: center; font-size: 11px; font-weight: 700;
+    border-radius: 5px; padding: 1px 0; letter-spacing: .05em;
+  }
+  .kw.given { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-line); }
+  .kw.when  { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-line); }
+  .kw.then  { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-line); }
+  .kw.and   { background: #fff; color: var(--muted); border: 1px dashed var(--gray-line); }
+  .testref {
+    margin-left: auto; font-size: 11px; font-weight: 400; color: var(--muted);
+    background: var(--gray-bg); border-radius: 99px; padding: 1px 10px; white-space: nowrap;
+  }
+  .testref.none { background: var(--amber-bg); color: var(--amber); }
+
+  /* ===== 刻意不做 ===== */
+  .req.excluded { border-left-color: var(--gray); background: #fafafa; }
+  .nots { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+  .not-card { border: 1px dashed var(--gray-line); border-radius: 10px; padding: 10px 14px; background: var(--card); font-size: 13.5px; }
+  .not-card .x { font-weight: 700; color: var(--gray); text-decoration: line-through; }
+  .not-card small { display: block; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+  footer { margin-top: 56px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+  @media (max-width: 860px) {
+    nav.toc { display: none; }
+    main { padding: 20px 18px 64px; }
+  }
+  @media print {
+    nav.toc, .toolbar { display: none; }
+    details.scn { open: true; }
+    .req { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <div class="toc-title">addon-management Specification<small>附加功能管理</small></div>
+  <div class="toc-group">
+    <div class="toc-group-label">總覽</div>
+    <a href="#overview">行為流程圖</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--blue)"></span>列表與 CRUD</div>
+    <a href="#r1">1. 權限控管</a>
+    <a href="#r2">2. 列表與分頁</a>
+    <a href="#r3">3. 列表搜尋篩選</a>
+    <a href="#r4">4. 建立附加功能</a>
+    <a href="#r5">5. 編輯附加功能</a>
+    <a href="#r6">6. 刪除（軟刪除）</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--amber)"></span>圖片與版本關聯</div>
+    <a href="#r7">7. 圖片處理規範</a>
+    <a href="#r8">8. Grade 關聯與停用規則</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--green)"></span>商店同步</div>
+    <a href="#r9">9. Grade-Addon 變動觸發同步</a>
+    <a href="#r10">10. 商店 addon 同步差集規則</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--purple)"></span>配額餘額</div>
+    <a href="#r11">11. 餘額獨立過期與可用量</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--gray)"></span>刻意設計</div>
+    <a href="#r12">12. 同步 Job 冪等性</a>
+    <a href="#r13">13. 購買觸發不在本範疇</a>
+    <a href="#r14">14. 餘額不 cascade delete</a>
+    <a href="#excluded">刻意不做的事</a>
+  </div>
+</nav>
+
+<main>
+<header>
+  <h1>addon-management Specification</h1>
+  <div class="sub">附加功能 CRUD、單圖上傳、Grade 關聯與停用規則、Grade-Addon 變動的商店同步（Queue 批次）與配額餘額的完整行為規格</div>
+  <div class="threat-banner">
+    <strong>威脅模型：</strong>內部後台、非公網暴露；能登入後台者即為受信任的內部人員。<strong>正式環境無對外網際網路連線</strong>，本功能無任何外部 API 呼叫。附加功能採<strong>軟刪除</strong>（status=-1）保留歷史；購買 / 安裝觸發點屬 bill-management。
+  </div>
+  <div class="meta">
+    <span>來源：<code>openspec/specs/addon-management/spec.md</code></span>
+    <span>實作：<code>c0d5ae9</code>、<code>ddabe18</code>、<code>a68c8d3</code>、<code>8636db0</code></span>
+    <span>change：<code>2026-06-13-retrofit-addons-spec</code></span>
+  </div>
+  <div class="truth-note">本頁為人工同步的閱讀版；若與 <code>spec.md</code> 不一致，以 <code>spec.md</code> 為準。每個 Scenario 右側標註對應的自動化測試。</div>
+</header>
+
+<div class="toolbar"><button id="toggleAll" data-open="0">全部展開</button></div>
+
+<!-- ============ 總覽流程圖 ============ -->
+<h2 class="section" id="overview" style="--c:#94a3b8">行為流程圖</h2>
+<p class="section-desc">先看懂「建立/編輯 + Grade 同步派工」與「單店差集套用」兩條主流程，再讀下方逐項規格。</p>
+
+<div class="flow">
+  <h3>建立 / 編輯與 Grade 同步派工（POST /addons、PUT /addons/{id}）</h3>
+  <div class="frow">
+    <div class="fnode start">表單送出<small>含 grade_ids[]、圖片<br>停用版本 checkbox 已 disabled</small></div>
+    <div class="farrow"></div>
+    <div class="fnode">AddonRequest 驗證<small>type/name/price/unit/status<br>新關聯版本須 Active</small></div>
+    <div class="farrow"></div>
+    <div class="fnode gate">交易：寫 addons / 圖片<br>sync grades_addons<small>有 attach/detach<br>→ syncing=1</small></div>
+    <div class="farrow">commit</div>
+    <div class="fnode">Bus::batch 派工<small>每個受影響版本一個<br>SyncShopAddonsForGrade<br>queue: addon_sync</small></div>
+    <div class="farrow"></div>
+    <div class="fnode ok">then / catch<br>→ syncing=0<small>catch 並記 log</small></div>
+  </div>
+  <div class="frow" style="margin-top:12px">
+    <div class="fnode fail">驗證失敗：欄位錯誤（含 status=-1、grade_ids 含停用版本）</div>
+    <div class="farrow"></div>
+    <div class="fnode fail">edit/update 找不到或已刪除：302 → /addons + error flash</div>
+    <div class="farrow"></div>
+    <div class="fnode fail">delete 找不到或已刪除：422 JSON</div>
+  </div>
+</div>
+
+<div class="flow">
+  <h3>單店 addon 差集套用（ShopAddonSyncService::syncForShop，獨立交易）</h3>
+  <div class="frow">
+    <div class="fnode start">syncForShop(shopId, 目標集合)<small>目標 = 版本 grades_addons 全集</small></div>
+    <div class="farrow"></div>
+    <div class="fnode gate">比對現有 source=Grade<small>差集</small></div>
+    <div class="farrow"></div>
+    <div class="fbranches">
+      <div class="fbranch"><div class="fnode fail">要移除（舊有不在目標）<small>→ source=Purchased<br>expired_at = 當日 23:59:59</small></div></div>
+      <div class="fbranch"><div class="fnode ok">要新增＋已有 Purchased<small>→ 升級 source=Grade<br>expired_at=null</small></div></div>
+      <div class="fbranch"><div class="fnode ok">要新增＋全新<small>→ insert source=Grade<br>status=Enabled</small></div></div>
+      <div class="fbranch"><div class="fnode">其餘獨立 Purchased<small>不在目標 → 維持原狀</small></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 列表與 CRUD ============ -->
+<h2 class="section" style="--c:var(--blue)">列表與 CRUD</h2>
+
+<section class="req" id="r1" style="--c:var(--blue)">
+  <h3><span class="no">R1</span>權限控管</h3>
+  <div class="body">附加功能路由 <span class="badge shall">SHALL</span> 受 <code>auth</code> middleware 與 <code>RequiresPermission</code> attribute 保護：列表需 <code>Addon.index</code>、建立需 <code>Addon.create</code>、編輯與更新需 <code>Addon.update</code>、刪除需 <code>Addon.delete</code>。未登入或無對應權限者 <span class="badge shall">SHALL</span> 被導離，且資料不得被變更。</div>
+  <details class="scn"><summary>有 index 權限者可見列表<span class="testref">AddonCrudTest::admin_can_access_addon_index</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>持有 <code>Addon.index</code> 權限的 Admin 使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/addons</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200 並渲染附加功能列表</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>Viewer 具列表權限可見列表<span class="testref">AddonCrudTest::viewer_can_access_addon_index</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>持有 Viewer 角色（含 <code>Addon.index</code>）的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/addons</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>無 create 權限者不可見建立頁<span class="testref">AddonCrudTest::viewer_cannot_access_create_page</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>僅持有 Viewer 角色權限的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/addons/create</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導離</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>無 update 權限者不可更新<span class="testref">AddonCrudTest::viewer_cannot_update_addon</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>僅持有 Viewer 角色權限的使用者與一筆附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/addons/{id}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導離且資料不變</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>無 delete 權限者不可刪除<span class="testref">AddonCrudTest::viewer_cannot_delete_addon</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>僅持有 Viewer 角色權限的使用者與一筆附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>DELETE <code>/addons/{id}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導離且資料不變</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r2" style="--c:var(--blue)">
+  <h3><span class="no">R2</span>附加功能列表與分頁</h3>
+  <div class="body"><code>GET /addons</code> <span class="badge shall">SHALL</span> 以 <code>id</code> 升序分頁顯示，eager load <code>image</code> 與 <code>grades</code>，並<strong>預設排除 <code>status = -1</code>（已刪除）</strong>的項目。每頁筆數 <span class="badge shall">SHALL</span> 由 <code>per_page</code> 控制，僅接受白名單 <code>[50, 100, 150, 200]</code>，非白名單值（含未帶）<span class="badge shall">SHALL</span> 回退為預設 50。</div>
+  <details class="scn"><summary>列表排除已刪除項目<span class="testref">AddonCrudTest::index_excludes_deleted_addons</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆 <code>status = -1</code> 的附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/addons</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>該已刪除項目不出現在列表</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>per_page 接受白名單值<span class="testref">AddonCrudTest::index_per_page_accepts_whitelisted_value</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/addons?per_page=100</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>每頁筆數為 100</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>per_page 非白名單回退預設<span class="testref">AddonCrudTest::index_per_page_falls_back_to_default_for_invalid_value</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/addons?per_page=999</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>每頁筆數回退為 50</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r3" style="--c:var(--blue)">
+  <h3><span class="no">R3</span>列表搜尋篩選</h3>
+  <div class="body">列表 <span class="badge shall">SHALL</span> 支援四個可組合的篩選條件：<code>keyword</code>（對 <code>name</code> 模糊比對）、<code>type</code>（1 功能 / 2 配額）、<code>status</code>（1 上架 / 0 下架）、<code>grade_id</code>（所屬版本）。<code>status = 0</code>（下架）為合法且非「未篩選」，篩選判斷 <span class="badge shall">SHALL</span> 以「值是否填寫」（<code>filled()</code>）為準，<span class="badge mustnot">MUST NOT</span> 以值的真假（truthiness）判斷，否則 <code>'0'</code> 會被誤判為未篩選而失效。
+  <div class="note">修正前 <code>when($filters['status'] ?? null)</code> 把 <code>'0'</code>（PHP falsy）當成未篩選，「下架」篩選回傳全部；改 <code>when(filled(...))</code> 修正（commit <code>c0d5ae9</code>）。<code>type</code> / <code>grade_id</code> 無 <code>0</code> 值故不受影響。</div></div>
+  <details class="scn"><summary>下架篩選只回下架項目<span class="testref">AddonCrudTest::index_status_filter_shows_only_inactive</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆上架（status=1）與一筆下架（status=0）附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/addons?status=0</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>列表只含下架項目，不含上架項目</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>上架篩選只回上架項目<span class="testref">AddonCrudTest::index_status_filter_shows_only_active</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆上架與一筆下架附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/addons?status=1</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>列表只含上架項目</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>名稱關鍵字模糊比對<span class="testref">AddonCrudTest::index_keyword_filter_matches_name</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>名稱含「電子發票」與不含的兩筆附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/addons?keyword=電子發票</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>列表只含名稱符合者</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>類型篩選<span class="testref">AddonCrudTest::index_type_filter_matches_type</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆 Feature 與一筆 Quota 附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/addons?type=2</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>列表只含 Quota 項目</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>所屬版本篩選<span class="testref">AddonCrudTest::index_grade_filter_matches_grade</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆關聯某版本與一筆未關聯的附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/addons?grade_id={id}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>列表只含關聯該版本者</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r4" style="--c:var(--blue)">
+  <h3><span class="no">R4</span>建立附加功能</h3>
+  <div class="body"><code>POST /addons</code>（需 <code>Addon.create</code>）<span class="badge shall">SHALL</span> 以 <code>AddonRequest</code> 驗證：<code>type</code> 必填且為 <code>AddonType</code>、<code>name</code> 必填且 ≤ 50 字、<code>price</code> 必填整數且 ≥ 0、<code>unit</code> 選填 ≤ 10 字、<code>status</code> 必填且僅允許上架（1）或下架（0）——<span class="badge mustnot">MUST NOT</span> 接受已刪除（-1）。建立 <span class="badge shall">SHALL</span> 在單一資料庫交易內寫入 <code>addons</code>、（若有圖片）<code>addons_image</code> 與（若有 <code>grade_ids</code>）<code>grades_addons</code>。</div>
+  <details class="scn"><summary>成功建立<span class="testref">AddonCrudTest::admin_can_create_addon</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/addons</code> 帶合法欄位</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統 302 導回列表並 flash success，<code>addons</code> 新增該筆</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>帶 grade_ids 寫入 grades_addons<span class="testref">AddonCrudTest::create_with_grade_ids_creates_grades_addons_rows</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一個 Active 版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/addons</code> 帶該版本於 <code>grade_ids</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>grades_addons</code> 新增 grade 與 addon 的對應列</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>非法 type 被擋<span class="testref">AddonCrudTest::store_fails_with_invalid_type</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/addons</code> 帶 <code>type = 99</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 含 <code>type</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>status 不接受已刪除值<span class="testref">AddonCrudTest::store_fails_with_deleted_status</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/addons</code> 帶 <code>status = -1</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 含 <code>status</code></span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r5" style="--c:var(--blue)">
+  <h3><span class="no">R5</span>編輯附加功能</h3>
+  <div class="body"><code>GET /addons/{id}/edit</code> 與 <code>PUT /addons/{id}</code>（需 <code>Addon.update</code>）<span class="badge shall">SHALL</span> 先解析 addon；<strong>找不到或 <code>status = -1</code>（已刪除）<span class="badge shall">SHALL</span> 一律視為不存在</strong>，回 302 導回列表並 flash error。更新 <span class="badge shall">SHALL</span> 在單一交易內套用欄位變更、圖片異動與 <code>grade_ids</code> 同步。
+  <div class="note">「已刪除＝不存在」判斷收斂於 <code>AddonService::findAddonById()</code>，Controller 僅判 <code>null</code>，不直接碰 Eloquent / Enum（commit <code>8636db0</code>，比照 Shop/Grade 慣例）。</div></div>
+  <details class="scn"><summary>成功更新<span class="testref">AddonCrudTest::admin_can_update_addon</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆既有附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/addons/{id}</code> 帶合法欄位</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統 302 導回列表並 flash success，資料已更新</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>已刪除項目不可進入編輯頁<span class="testref">AddonCrudTest::cannot_access_edit_page_for_deleted_addon</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆 <code>status = -1</code> 的附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/addons/{id}/edit</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統 302 導回列表並 flash error</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>已刪除項目不可更新<span class="testref">AddonCrudTest::cannot_update_deleted_addon</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆 <code>status = -1</code> 的附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/addons/{id}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統 302 導回列表並 flash error，資料不變</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r6" style="--c:var(--blue)">
+  <h3><span class="no">R6</span>刪除採軟刪除並清除關聯</h3>
+  <div class="body"><code>DELETE /addons/{id}</code>（需 <code>Addon.delete</code>）<span class="badge shall">SHALL</span> 對主表執行軟刪除（<code>status = -1</code>，保留名稱與價格歷史），並在<strong>同一資料庫交易內物理刪除</strong> <code>grades_addons</code>、<code>shops_addons</code>、<code>addons_image</code> 中對應的所有關聯列。找不到或已刪除的項目 <span class="badge shall">SHALL</span> 回 422 JSON。圖片實體檔於交易提交後刪除。</div>
+  <details class="scn"><summary>軟刪除主表<span class="testref">AddonCrudTest::admin_can_soft_delete_addon</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆上架附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>DELETE <code>/addons/{id}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回 JSON 成功訊息，該 addon <code>status = -1</code>（仍存在於資料表）</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>刪除清除 grades_addons 關聯<span class="testref">AddonCrudTest::delete_removes_grades_addons_rows</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆關聯某版本的附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>DELETE <code>/addons/{id}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>grades_addons</code> 對應列被物理刪除</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>刪除清除 shops_addons 關聯<span class="testref">AddonCrudTest::delete_removes_shops_addons_rows</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆已被商店持有的附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>DELETE <code>/addons/{id}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>shops_addons</code> 對應列被物理刪除</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 圖片與版本關聯 ============ -->
+<h2 class="section" style="--c:var(--amber)">圖片與版本關聯</h2>
+<p class="section-desc">單圖由 DB UNIQUE 約束保障；停用版本的關聯規則與表單 UX 一致——只擋新關聯，保留既有引用。</p>
+
+<section class="req" id="r7" style="--c:var(--amber)">
+  <h3><span class="no">R7</span>圖片處理規範</h3>
+  <div class="body">附加功能 <span class="badge shall">SHALL</span> 最多對應一筆 <code>addons_image</code>（<code>addon_id</code> 加 UNIQUE 約束，由 DB 層保障單圖）。上傳圖片 <span class="badge shall">SHALL</span> 僅接受 <code>jpg</code> / <code>png</code>（≤ 5 MB），檔名 <span class="badge shall">SHALL</span> 改寫為 <code>{addon_id}-img-{timestamp}.{ext}</code> 並以 <code>Storage::disk('public')</code> 存於 <code>addons/</code>。更新圖片 <span class="badge shall">SHALL</span> <strong>先寫入新圖、成功後才於交易提交後刪除舊圖</strong>；<code>remove_image=1</code> 且未同時上傳新圖時 <span class="badge shall">SHALL</span> 刪除圖片列與實體檔；同時上傳新圖時以新圖為主、忽略 <code>remove_image</code>。Blade <span class="badge shall">SHALL</span> 以 <code>asset('storage/' . $image_url)</code> 生成 URL。
+  <div class="note">不用 <code>Storage::disk('public')->url()</code>：後者硬編碼 <code>APP_URL</code>，Docker 環境可能與瀏覽器存取的 host 不符導致破圖。</div></div>
+  <details class="scn"><summary>拒絕非 jpg/png 格式<span class="testref">AddonCrudTest::store_fails_with_gif_image</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/addons</code> 帶 <code>gif</code> 圖片</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 含 <code>image</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>接受 jpg 並寫入 addons_image<span class="testref">AddonCrudTest::store_accepts_jpg_image</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/addons</code> 帶合法 jpg 圖片</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>addons_image</code> 新增對應該 addon 的列</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>remove_image 刪除既有圖片<span class="testref">AddonCrudTest::update_can_remove_existing_image</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆已有圖片的附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/addons/{id}</code> 帶 <code>remove_image=1</code> 且不帶新圖</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>addons_image</code> 對應列被刪除、實體檔被移除</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>同時上傳新圖時忽略 remove_image<span class="testref">AddonCrudTest::update_with_new_image_overrides_remove_image</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆已有圖片的附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/addons/{id}</code> 同時帶新圖與 <code>remove_image=1</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>以新圖取代，<code>addons_image</code> 仍保有一筆</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>無既有圖片時 remove_image 為 no-op<span class="testref">AddonCrudTest::update_with_remove_image_when_no_image_exists_is_noop</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆無圖片的附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/addons/{id}</code> 帶 <code>remove_image=1</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>更新成功且不報錯</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>remove_image=0 保留既有圖片<span class="testref">AddonCrudTest::update_keeps_image_when_remove_image_is_zero</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆已有圖片的附加功能</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/addons/{id}</code> 帶 <code>remove_image=0</code> 且不帶新圖</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>addons_image</code> 對應列維持不變</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r8" style="--c:var(--amber)">
+  <h3><span class="no">R8</span>Grade 關聯與停用版本規則</h3>
+  <div class="body">附加功能的所屬版本 <span class="badge shall">SHALL</span> 以 <code>grade_ids[]</code> 多選設定（可為空）。<strong>新關聯的版本 MUST 為 Active</strong>：<code>AddonRequest</code> <span class="badge shall">SHALL</span> 擋下將未關聯的停用版本加入 <code>grade_ids</code>；但<strong>已關聯到當前 addon 的版本即使後來被停用，更新時 <span class="badge shall">SHALL</span> 允許保留</strong>（否則僅改其他欄位也會被擋）。建立 / 編輯表單 <span class="badge shall">SHALL</span> 對「未關聯且非 Active」的版本 checkbox 加 <code>disabled</code> 並標示「（已停用）」，已關聯的停用版本維持可勾選。
+  <div class="note">表單 UX 與驗證規則一致，避免使用者誤勾後送出才被擋（commit <code>a68c8d3</code>）。</div></div>
+  <details class="scn"><summary>新關聯停用版本被擋<span class="testref">AddonCrudTest::store_fails_when_grade_ids_contains_inactive_grade</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一個停用版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/addons</code> 帶該停用版本於 <code>grade_ids</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>session errors 含 <code>grade_ids.0</code>，addon 不被建立</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>已關聯的停用版本更新時保留<span class="testref">AddonCrudTest::update_allows_keeping_existing_inactive_grade_link</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆 addon 已關聯某版本，該版本之後被停用</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/addons/{id}</code> 的 <code>grade_ids</code> 仍含該版本</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>更新成功無錯誤，<code>grades_addons</code> 關聯維持</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>表單停用未關聯的停用版本 checkbox<span class="testref">AddonCrudTest::edit_page_disables_inactive_unlinked_grade_checkbox</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一個未關聯當前 addon 的停用版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET 該 addon 的編輯頁</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>該版本 checkbox 為 <code>disabled</code> 並標示「（已停用）」</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>表單保留已關聯停用版本可勾<span class="testref">AddonCrudTest::edit_page_keeps_linked_inactive_grade_checkbox_enabled</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆 addon 已關聯某版本，該版本之後被停用</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET 該 addon 的編輯頁</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>該版本 checkbox 維持可勾、不標示「（已停用）」</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 商店同步 ============ -->
+<h2 class="section" style="--c:var(--green)">商店同步</h2>
+<p class="section-desc">Grade-Addon 關聯變動透過 Queue 批次對受影響商店同步；單店差集套用保留既有購買權益。</p>
+
+<section class="req" id="r9" style="--c:var(--green)">
+  <h3><span class="no">R9</span>Grade-Addon 變動觸發商店同步</h3>
+  <div class="body">當 addon 的 <code>grade_ids</code> 在建立 / 編輯時有新增或移除時，系統 <span class="badge shall">SHALL</span> 於交易內把 <code>addons.syncing</code> 設為 <code>1</code>（同步中），交易提交後對每個受影響版本 dispatch 一個 <code>SyncShopAddonsForGrade</code> Job，並以 <code>Bus::batch</code> 統一追蹤。Job <span class="badge shall">SHALL</span> 使用獨立 queue <code>addon_sync</code>（不混入 <code>default</code>）。批次全部成功（<code>then</code>）或失敗（<code>catch</code>）時 <span class="badge shall">SHALL</span> 一律把 <code>addons.syncing</code> 重置為 <code>0</code>（失敗時並寫入 error log），避免旗標永久卡在「同步中」。<code>job_batches</code> <span class="badge shall">SHALL</span> 由排程 <code>queue:prune-batches --hours=48</code>（每日）清理。
+  <div class="note">舊 spec 草稿寫 queue 名 <code>addons</code>，實作為 <code>addon_sync</code>，以實作為準。then/catch 兩條路徑解除 syncing 由 commit <code>ddabe18</code> 補測試覆蓋。</div></div>
+  <details class="scn"><summary>建立帶 grade_ids 觸發同步批次<span class="testref">AddonCrudTest::create_with_grade_ids_dispatches_sync_batch</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一個版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/addons</code> 帶該版本於 <code>grade_ids</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統 dispatch 含 <code>SyncShopAddonsForGrade</code> 的批次</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>更新變更 grade_ids 觸發批次並設 syncing<span class="testref">AddonCrudTest::update_with_changed_grade_ids_dispatches_sync_batch / sets_syncing</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆既有 addon</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PUT <code>/addons/{id}</code> 變更 <code>grade_ids</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統 dispatch 同步批次，且 <code>addons.syncing = 1</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>批次完成重置 syncing<span class="testref">AddonCrudTest::grade_sync_batch_resets_syncing_on_success</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆已觸發同步、<code>syncing = 1</code> 的 addon</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>批次所有 Job 成功（<code>then</code> 觸發）</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>addons.syncing</code> 重置為 <code>0</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>批次失敗仍重置 syncing 並記錄 log<span class="testref">AddonCrudTest::grade_sync_batch_resets_syncing_and_logs_on_failure</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一筆已觸發同步、<code>syncing = 1</code> 的 addon</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>批次有 Job 失敗（<code>catch</code> 觸發）</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>addons.syncing</code> 重置為 <code>0</code>，且寫入「Addon grade sync batch failed」error log</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r10" style="--c:var(--green)">
+  <h3><span class="no">R10</span>商店 addon 同步差集規則</h3>
+  <div class="body"><code>ShopAddonSyncService::syncForShop(int $shopId, int[] $newAddonIds)</code> <span class="badge shall">SHALL</span> 在獨立 <code>DB::transaction</code> 內，對單一商店 <code>source = Grade</code> 的 addon 集合與目標集合做差集並套用：<strong>要移除</strong>→ <code>source</code> 改 <code>Purchased</code>、<code>expired_at</code> 壓上當日 23:59:59（降級為獨立加購、保留權益）；<strong>要新增</strong>→ 若已有相同 addon 的 <code>source = Purchased</code> 列則升級為 <code>Grade</code>、<code>expired_at = null</code>，否則新增 <code>source = Grade</code>、<code>status = Enabled</code>；<strong>其餘獨立加購</strong>（不在目標的 <code>Purchased</code>）維持原狀。<code>SyncShopAddonsForGrade</code> Job <span class="badge shall">SHALL</span> 取得該版本完整 addon 集合，對該版本下每家商店呼叫 <code>syncForShop</code>。</div>
+  <details class="scn"><summary>同步新增版本 addon 至商店<span class="testref">SyncShopAddonsForGradeTest::job_adds_new_addon_to_shops</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>某版本新增一個 addon，且有商店屬於該版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>Job 執行</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>商店 <code>shops_addons</code> 新增該 addon（<code>source = Grade</code>）</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>同步移除版本 addon 降級為購買<span class="testref">SyncShopAddonsForGradeTest::job_demotes_removed_addon</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>商店有 <code>source = Grade</code> 的 addon，該 addon 自版本移除</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>Job 執行</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>該列 <code>source</code> 改為 <code>Purchased</code>、<code>expired_at</code> 為當日 23:59:59</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>加入版本時升級既有購買<span class="testref">SyncShopAddonsForGradeTest::job_upgrades_purchased_addon_when_added_to_grade</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>商店已有 <code>source = Purchased</code> 的某 addon，該 addon 被加入商店所屬版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>Job 執行</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>該列升級為 <code>source = Grade</code>、<code>expired_at = null</code></span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>不在版本內的獨立加購維持原狀<span class="testref">SyncShopAddonsForGradeTest::job_leaves_purchased_addons_not_in_grade_untouched</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>商店有一個不屬於其版本的 <code>source = Purchased</code> addon</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>Job 執行</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>該列維持不變</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>版本下無商店時 Job 為 no-op<span class="testref">SyncShopAddonsForGradeTest::job_handles_grade_with_no_shops</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一個沒有任何商店的版本</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>Job 執行</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>不產生任何 <code>shops_addons</code> 異動</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 配額餘額 ============ -->
+<h2 class="section" style="--c:var(--purple)">配額餘額</h2>
+
+<section class="req" id="r11" style="--c:var(--purple)">
+  <h3><span class="no">R11</span>額度餘額獨立過期與可用量查詢</h3>
+  <div class="body"><code>AddonType::Quota</code>（配額型）的每次購買 <span class="badge shall">SHALL</span> 於 <code>shop_addon_balances</code> 記錄一筆獨立的 <code>quantity</code> 與 <code>expired_at</code>（依購買日計算），不可為負。可用數量查詢 <code>ShopAddonBalanceRepository::getAvailableQuantity(shopId, addonId)</code> <span class="badge shall">SHALL</span> 回傳該商店該 addon <strong>所有未過期（<code>expired_at &gt; now</code>）餘額的 <code>quantity</code> 加總</strong>。</div>
+  <details class="scn"><summary>僅加總未過期餘額<span class="testref">ShopAddonBalanceTest::get_available_quantity_sums_only_non_expired_balances</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>同一商店同一 addon 有一筆已過期與一筆未過期的餘額</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>查詢可用數量</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回傳值僅含未過期那筆的 quantity</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>全部過期回 0<span class="testref">ShopAddonBalanceTest::get_available_quantity_returns_zero_when_all_expired</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>同一商店同一 addon 的所有餘額皆已過期</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>查詢可用數量</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回傳 0</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 刻意設計 ============ -->
+<h2 class="section" style="--c:var(--gray)">刻意設計（不是缺漏）</h2>
+<p class="section-desc">以下為刻意排除或委派他處的設計，避免後人誤判為待補項目。</p>
+
+<section class="req excluded" id="r12" style="--c:var(--gray)">
+  <h3><span class="no">R12</span>同步 Job 冪等性來源（刻意設計）</h3>
+  <div class="body">Grade 同步的冪等性 <span class="badge shall">SHALL</span> 來自「per-grade 全集合差集」設計——Job 每次取得版本當前 <code>grades_addons</code> 的完整 addon 集合再 diff，重複執行收斂到相同結果。因此 Job <span class="badge mustnot">MUST NOT</span> 依賴 per-addon 的 <code>status != -1</code> 檢查：addon 軟刪除時其 <code>grades_addons</code> 列已於同一交易內物理刪除，版本集合自然不含已刪除 addon。</div>
+  <details class="scn"><summary>重複執行同步收斂一致<span class="testref none">無直接重跑測試 — per-grade 全集合 diff 設計（SyncShopAddonsForGradeTest 覆蓋各差集分支）</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>某版本的 addon 集合固定</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span><code>SyncShopAddonsForGrade</code> 對同一商店重複執行</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>shops_addons</code> 結果一致，不產生重複或殘留</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req excluded" id="r13" style="--c:var(--gray)">
+  <h3><span class="no">R13</span>購買觸發點不在本範疇（刻意設計）</h3>
+  <div class="body">附加功能的「購買 / 安裝」流程 <span class="badge mustnot">MUST NOT</span> 由 addon-management 擁有。<code>shops_addons</code> 的 <code>source = Purchased</code> 寫入與 <code>shop_addon_balances</code> 餘額建立 <span class="badge shall">SHALL</span> 由 <strong>bill-management 的付款安裝</strong>（<code>BillPaymentService::installAddonDetail</code>）負責：加購類安裝 upsert <code>shops_addons</code>（<code>source = Purchased</code>、<code>status = Enabled</code>），<code>AddonType::Quota</code> 並同時寫入 <code>shop_addon_balances</code>。詳見 <code>openspec/specs/bill-management/spec.md</code> 的「付款安裝流程」。</div>
+  <details class="scn"><summary>加購安裝由帳單付款觸發<span class="testref">Bill/BillPaymentTest::update_to_paid_installs_details（付款安裝交界）</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>一張含加購明細、轉為 paid 的帳單</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>付款安裝執行</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>商店 <code>shops_addons</code> upsert 該 addon（<code>source = Purchased</code>），Quota 型並寫入 <code>shop_addon_balances</code></span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req excluded" id="r14" style="--c:var(--gray)">
+  <h3><span class="no">R14</span>餘額不隨 addon 刪除清除（刻意設計）</h3>
+  <div class="body"><code>shop_addon_balances</code> <span class="badge mustnot">MUST NOT</span> 隨 addon 軟刪除或關聯解除而被 cascade delete——軟刪除僅物理刪除 <code>grades_addons</code> / <code>shops_addons</code> / <code>addons_image</code>，餘額列 <span class="badge shall">SHALL</span> 保留作為歷史紀錄。</div>
+  <details class="scn"><summary>刪除 addon 不影響餘額歷史<span class="testref none">無直接測試 — softDelete 僅刪 grades_addons / shops_addons / addons_image，未觸及 shop_addon_balances（程式碼佐證）</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>某商店持有某 Quota addon 的餘額紀錄</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>該 addon 被軟刪除</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>shop_addon_balances</code> 對應列仍保留</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req excluded" id="excluded" style="--c:var(--gray)">
+  <h3><span class="no">—</span>刻意不做的事（彙整）</h3>
+  <div class="nots">
+    <div class="not-card"><span class="x">硬刪除主表</span><small>addons 採軟刪除（status=-1）保留名稱 / 價格歷史，供 bill detail 等引用（R6）</small></div>
+    <div class="not-card"><span class="x">Job 內 per-addon status 檢查</span><small>冪等性來自 per-grade 全集合 diff；軟刪除已在同交易移除 grades_addons 列（R12）</small></div>
+    <div class="not-card"><span class="x">addon 端購買 / 安裝入口</span><small>source=Purchased 寫入與餘額建立由 bill-management 付款安裝負責（R13）</small></div>
+    <div class="not-card"><span class="x">餘額 cascade delete</span><small>shop_addon_balances 不隨 addon 刪除清除，保留歷史紀錄（R14）</small></div>
+    <div class="not-card"><span class="x">status truthiness 篩選</span><small>status=0（下架）合法，篩選以 filled() 判斷而非真假值（R3）</small></div>
+    <div class="not-card"><span class="x">Storage::url() 生成圖片 URL</span><small>改用 asset('storage/...')，避免硬編碼 APP_URL 在 Docker 破圖（R7）</small></div>
+  </div>
+</section>
+
+<footer>
+  產生自 <code>openspec/specs/addon-management/spec.md</code>（change <code>2026-06-13-retrofit-addons-spec</code>）。14 項 Requirement、47 個 Scenario。
+  測試對應：<code>tests/Feature/AddonCrudTest.php</code>、<code>tests/Feature/ShopAddon/</code>（ShopAddonSyncTest / SyncShopAddonsForGradeTest / ShopAddonBalanceTest）；購買安裝交界見 <code>tests/Feature/Bill/BillPaymentTest.php</code>。
+  本頁為人工同步版本，內容以 <code>spec.md</code> 為準。
+</footer>
+</main>
+</div>
+
+<script>
+// 全部展開 / 收合
+const btn = document.getElementById('toggleAll');
+btn.addEventListener('click', () => {
+  const open = btn.dataset.open !== '1';
+  document.querySelectorAll('details.scn').forEach(d => d.open = open);
+  btn.dataset.open = open ? '1' : '0';
+  btn.textContent = open ? '全部收合' : '全部展開';
+});
+
+// 側欄 scroll-spy
+const links = [...document.querySelectorAll('.toc a')];
+const targets = links
+  .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+  .filter(Boolean);
+const byId = Object.fromEntries(links.map(a => [a.getAttribute('href').slice(1), a]));
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(a => a.classList.remove('active'));
+      byId[e.target.id]?.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -75% 0px' });
+targets.forEach(t => observer.observe(t));
+</script>
+</body>
+</html>
