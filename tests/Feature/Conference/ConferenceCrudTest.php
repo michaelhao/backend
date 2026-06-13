@@ -310,6 +310,8 @@ class ConferenceCrudTest extends TestCase
         $original = $this->validConferenceData(['name' => '原始說明會']);
         $conference = Conference::factory()->create($original);
 
+        // 依賴 ended_at 的 after:started_at（嚴格大於）規則：ended_at 等於 started_at 即觸發驗證失敗。
+        // 若日後規則放寬為 after_or_equal，需改用比 started_at 更早的時間，否則此測試會失去觸發條件。
         $invalid = $this->validConferenceData([
             'name' => '不應被寫入',
             'ended_at' => $original['started_at'],

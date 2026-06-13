@@ -10,6 +10,10 @@ class Conference extends Model
 {
     use HasFactory;
 
+    public const PER_PAGE_OPTIONS = [50, 100, 150, 200];
+
+    public const DEFAULT_PER_PAGE = 50;
+
     protected $fillable = [
         'name',
         'status',

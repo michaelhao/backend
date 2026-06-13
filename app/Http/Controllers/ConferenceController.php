@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Attributes\RequiresPermission;
 use App\Http\Requests\ConferenceRequest;
+use App\Models\Conference;
 use App\Services\ConferenceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,9 +17,9 @@ class ConferenceController extends Controller
     #[RequiresPermission('Conference.index')]
     public function index(Request $request): View
     {
-        $perPage = in_array((int) $request->per_page, [50, 100, 150, 200])
+        $perPage = in_array((int) $request->per_page, Conference::PER_PAGE_OPTIONS, true)
             ? (int) $request->per_page
-            : 50;
+            : Conference::DEFAULT_PER_PAGE;
 
         $filters = $request->only(['keyword', 'status']);
 
