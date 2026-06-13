@@ -16,7 +16,7 @@
         timerEl.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
 
         if (remaining <= 300) {
-            timerEl.classList.remove('text-gray-400');
+            timerEl.classList.remove('text-slate-400');
             timerEl.classList.add('text-red-500');
         }
     }
