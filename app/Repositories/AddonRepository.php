@@ -20,7 +20,7 @@ class AddonRepository
                 $query->where('name', 'like', "%{$keyword}%");
             })
             ->when($filters['type'] ?? null, fn ($q, $v) => $q->where('type', $v))
-            ->when($filters['status'] ?? null, fn ($q, $v) => $q->where('status', $v))
+            ->when(filled($filters['status'] ?? null), fn ($q) => $q->where('status', $filters['status']))
             ->when($filters['grade_id'] ?? null, fn ($q, $v) => $q->whereHas('grades', fn ($q2) => $q2->where('grades.id', $v)))
             ->orderBy('id')
             ->paginate($perPage);

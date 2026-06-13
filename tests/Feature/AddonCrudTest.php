@@ -90,6 +90,106 @@ class AddonCrudTest extends TestCase
         $response->assertDontSee('已刪除功能');
     }
 
+    public function test_index_status_filter_shows_only_inactive(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        Addon::factory()->create(['name' => '上架功能', 'status' => AddonStatus::Active]);
+        Addon::factory()->inactive()->create(['name' => '下架功能']);
+
+        $response = $this->get(route('addons.index', ['status' => AddonStatus::Inactive->value]));
+
+        $response->assertStatus(200);
+        $response->assertSee('下架功能');
+        $response->assertDontSee('上架功能');
+    }
+
+    public function test_index_status_filter_shows_only_active(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        Addon::factory()->create(['name' => '上架功能', 'status' => AddonStatus::Active]);
+        Addon::factory()->inactive()->create(['name' => '下架功能']);
+
+        $response = $this->get(route('addons.index', ['status' => AddonStatus::Active->value]));
+
+        $response->assertStatus(200);
+        $response->assertSee('上架功能');
+        $response->assertDontSee('下架功能');
+    }
+
+    public function test_index_keyword_filter_matches_name(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        Addon::factory()->create(['name' => '電子發票模組']);
+        Addon::factory()->create(['name' => '會員點數模組']);
+
+        $response = $this->get(route('addons.index', ['keyword' => '電子發票']));
+
+        $response->assertStatus(200);
+        $response->assertSee('電子發票模組');
+        $response->assertDontSee('會員點數模組');
+    }
+
+    public function test_index_type_filter_matches_type(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        Addon::factory()->create(['name' => '功能型加購', 'type' => AddonType::Feature]);
+        Addon::factory()->create(['name' => '額度型加購', 'type' => AddonType::Quota]);
+
+        $response = $this->get(route('addons.index', ['type' => AddonType::Quota->value]));
+
+        $response->assertStatus(200);
+        $response->assertSee('額度型加購');
+        $response->assertDontSee('功能型加購');
+    }
+
+    public function test_index_grade_filter_matches_grade(): void
+    {
+        Bus::fake();
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+        $grade = Grade::factory()->create();
+        $linked = Addon::factory()->create(['name' => '版本內含功能']);
+        Addon::factory()->create(['name' => '獨立功能']);
+        DB::table('grades_addons')->insert([
+            'grade_id' => $grade->id,
+            'addon_id' => $linked->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->get(route('addons.index', ['grade_id' => $grade->id]));
+
+        $response->assertStatus(200);
+        $response->assertSee('版本內含功能');
+        $response->assertDontSee('獨立功能');
+    }
+
+    public function test_index_per_page_falls_back_to_default_for_invalid_value(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->get(route('addons.index', ['per_page' => 999]));
+
+        $response->assertStatus(200);
+        $this->assertSame(50, $response->viewData('perPage'));
+    }
+
+    public function test_index_per_page_accepts_whitelisted_value(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Admin');
+
+        $response = $this->get(route('addons.index', ['per_page' => 100]));
+
+        $response->assertStatus(200);
+        $this->assertSame(100, $response->viewData('perPage'));
+    }
+
     // ── Create ─────────────────────────────────────────────────────────────
 
     public function test_admin_can_access_create_page(): void
