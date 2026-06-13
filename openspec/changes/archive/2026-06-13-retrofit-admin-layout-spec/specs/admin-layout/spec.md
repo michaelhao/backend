@@ -1,9 +1,7 @@
-# admin-layout Specification
+# admin-layout Specification (delta)
 
-## Purpose
-後台共用版型外殼的完整行為規格：固定左側 sidebar + 頂部列 + 主內容區的三段式骨架、權限導向的側邊欄導覽（`<x-permission>`）、頂部列使用者識別與登出、session 倒數計時器、無角色 fallback 頁與訪客版型。威脅模型：內部後台、非公網暴露（brute-force 不在 scope）；正式環境無對外網際網路連線（版型零外部資源依賴）。合併自舊版 `spec/2-backendLayout.md`、`refresh-admin-sidebar` change 與 2026-06-13 設計 review 修正（commit `f0d8bdc`、`5ea8aa7`）。
+## MODIFIED Requirements
 
-## Requirements
 ### Requirement: Admin Sidebar 視覺主題
 
 [layouts/admin.blade.php](resources/views/layouts/admin.blade.php) 的 sidebar SHALL 採用淺色 + 藍品牌主題：
@@ -28,6 +26,8 @@
 - **WHEN** admin 角色使用者開啟 admin 頁面
 - **THEN** sidebar 顯示全部 8 項既有選單（儀表板、使用者管理、角色管理、版本管理、商店管理、加購功能管理、帳務管理、說明會管理），順序與既有相同
 - **AND** 不再出現「文章管理」佔位連結
+
+## ADDED Requirements
 
 ### Requirement: 後台版型外殼
 
@@ -146,4 +146,3 @@ sidebar 每個選單連結 SHALL 以 `<x-permission name="{Module}.index">` 元�
 #### Scenario: 無行動裝置 sidebar 切換
 - **WHEN** 檢視版型 markup
 - **THEN** 不存在 sidebar 收合 / 漢堡選單的切換控制
-
