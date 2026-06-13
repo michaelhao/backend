@@ -1,9 +1,7 @@
-# admin-layout Specification
+# admin-layout Specification (delta)
 
-## Purpose
-後台共用版型外殼的完整行為規格：固定左側 sidebar + 頂部列 + 主內容區的三段式骨架、權限導向的側邊欄導覽（`<x-permission>`）、頂部列使用者識別與登出、session 倒數計時器、無角色 fallback 頁與訪客版型。威脅模型：內部後台、非公網暴露（brute-force 不在 scope）；正式環境無對外網際網路連線（版型零外部資源依賴）。合併自舊版 `spec/2-backendLayout.md`、`refresh-admin-sidebar` change 與 2026-06-13 設計 review 修正（commit `f0d8bdc`、`5ea8aa7`）。
+## MODIFIED Requirements
 
-## Requirements
 ### Requirement: Admin Sidebar 視覺主題
 
 [layouts/admin.blade.php](resources/views/layouts/admin.blade.php) 的 sidebar SHALL 採用淺色 + 藍品牌主題：
@@ -29,6 +27,8 @@
 - **THEN** sidebar 顯示全部 8 項既有選單（儀表板、使用者管理、角色管理、版本管理、商店管理、加購功能管理、帳務管理、說明會管理），順序與既有相同
 - **AND** 不再出現「文章管理」佔位連結
 
+## ADDED Requirements
+
 ### Requirement: 後台版型外殼
 
 所有後台頁面 SHALL 繼承 [layouts/admin.blade.php](resources/views/layouts/admin.blade.php)，由其提供固定左側 sidebar（`w-64`）+ 頂部列 + 主內容區的三段式骨架。版型外殼 SHALL 提供：
@@ -36,7 +36,7 @@
 - `@yield('content')` 主內容插槽
 - `@yield('page-title', 'Dashboard')` 同時用於 `<title>` 與頂部列標題
 - `@stack('scripts')` 供子頁面注入頁面層級 JS
-- `<head>` 內 `csrf-token`、`session-lifetime`（值 = `config('session.lifetime') * 60` 秒）與 `login-url`（值 = `route('login')`）三個 meta
+- `<head>` 內 `csrf-token` 與 `session-lifetime`（值 = `config('session.lifetime') * 60` 秒）兩個 meta
 - 透過 `@vite` 載入 `resources/css/app.css`、`resources/js/app.js`、`resources/js/layouts/admin.js`
 
 #### Scenario: 後台頁面套用版型外殼
@@ -90,12 +90,12 @@ sidebar 每個選單連結 SHALL 以 `<x-permission name="{Module}.index">` 元�
 
 ### Requirement: Session 倒數計時器
 
-[resources/js/layouts/admin.js](resources/js/layouts/admin.js) SHALL 讀取 `session-lifetime` meta 作為起始秒數，於頂部列以 `HH:MM:SS` 每秒遞減顯示。剩餘秒數 ≤ 300 時顯示文字 SHALL 由 `text-slate-400` 切換為 `text-red-500`，> 300 時 SHALL 還原為 `text-slate-400`；歸零時 SHALL 將瀏覽器導向 `login-url` meta（值 = `route('login')`，fallback `/login`）。計時器顏色 class SHALL 與 markup 一致採用 `slate-*`（修正先前 `text-gray-400` 的 no-op remove 死碼）。
+[resources/js/layouts/admin.js](resources/js/layouts/admin.js) SHALL 讀取 `session-lifetime` meta 作為起始秒數，於頂部列以 `HH:MM:SS` 每秒遞減顯示。剩餘秒數 ≤ 300 時顯示文字 SHALL 由 `text-slate-400` 切換為 `text-red-500`；歸零時 SHALL 將瀏覽器導向 `/login`。計時器顏色 class SHALL 與 markup 一致採用 `slate-*`（修正先前 `text-gray-400` 的 no-op remove 死碼）。
 
 #### Scenario: 倒數歸零導向登入頁
 - **GIVEN** 後台頁面載入且計時器啟動
 - **WHEN** 剩餘秒數遞減至 0
-- **THEN** 瀏覽器導向 `login-url` meta 指定的位址（`route('login')`，fallback `/login`）
+- **THEN** 瀏覽器導向 `/login`
 
 #### Scenario: 進入警示門檻變紅
 - **GIVEN** 計時器運作中
@@ -146,4 +146,3 @@ sidebar 每個選單連結 SHALL 以 `<x-permission name="{Module}.index">` 元�
 #### Scenario: 無行動裝置 sidebar 切換
 - **WHEN** 檢視版型 markup
 - **THEN** 不存在 sidebar 收合 / 漢堡選單的切換控制
-

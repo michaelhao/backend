@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="session-lifetime" content="{{ config('session.lifetime') * 60 }}">
+    <meta name="login-url" content="{{ route('login') }}">
     <title>@yield('page-title', 'Dashboard') - {{ config('app.name', 'Laravel') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/layouts/admin.js'])
 </head>
@@ -24,12 +25,6 @@
                        class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
                               {{ request()->routeIs('dashboard') ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700' }}">
                         儀表板
-                    </a>
-                </x-permission>
-                <x-permission name="Post.index">
-                    <a href="#"
-                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors">
-                        文章管理
                     </a>
                 </x-permission>
                 <x-permission name="User.index">

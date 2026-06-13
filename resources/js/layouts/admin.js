@@ -3,6 +3,8 @@
     const timerEl = document.getElementById('session-timer');
     if (!meta || !timerEl) return;
 
+    const loginUrl = document.querySelector('meta[name="login-url"]')?.content || '/login';
+
     let remaining = parseInt(meta.content, 10);
 
     function pad(n) {
@@ -16,8 +18,11 @@
         timerEl.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
 
         if (remaining <= 300) {
-            timerEl.classList.remove('text-gray-400');
+            timerEl.classList.remove('text-slate-400');
             timerEl.classList.add('text-red-500');
+        } else {
+            timerEl.classList.remove('text-red-500');
+            timerEl.classList.add('text-slate-400');
         }
     }
 
@@ -26,7 +31,7 @@
     setInterval(() => {
         remaining--;
         if (remaining <= 0) {
-            window.location.href = '/login';
+            window.location.href = loginUrl;
             return;
         }
         updateDisplay();
