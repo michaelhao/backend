@@ -51,4 +51,23 @@ class DocsTest extends TestCase
 
         $this->actingAs($user)->get('/docs/..%2F.env')->assertNotFound();
     }
+
+    public function test_docs_sidebar_link_hidden_outside_local(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('docs.index'));
+
+        $response->assertDontSee('href="'.route('docs.index').'"', false);
+    }
+
+    public function test_docs_sidebar_link_visible_in_local(): void
+    {
+        $this->app['env'] = 'local';
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('docs.index'));
+
+        $response->assertSee('href="'.route('docs.index').'"', false);
+    }
 }

@@ -20,6 +20,13 @@
 
             {{-- 導覽連結 --}}
             <nav class="flex-1 px-4 py-6 space-y-1">
+                @env('local')
+                    <a href="{{ route('docs.index') }}"
+                       class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
+                              {{ request()->routeIs('docs.*') ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700' }}">
+                        系統文件
+                    </a>
+                @endenv
                 <x-permission name="Dashboard.index">
                     <a href="{{ route('dashboard') }}"
                        class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
