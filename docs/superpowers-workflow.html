@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>開發功能逐步手冊(整合版)— OpenSpec 流程 + Superpowers</title>
+<style>
+  :root {
+    --ink: #1e293b;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --blue: #2563eb;   --blue-bg: #eff6ff;   --blue-line: #bfdbfe;
+    --amber: #d97706;  --amber-bg: #fffbeb;  --amber-line: #fde68a;
+    --green: #059669;  --green-bg: #ecfdf5;  --green-line: #a7f3d0;
+    --gray: #6b7280;   --gray-bg: #f3f4f6;   --gray-line: #d1d5db;
+    --red: #dc2626;    --red-bg: #fef2f2;
+    --sidebar-w: 264px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 0.86em;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+
+  /* ===== 版面 ===== */
+  .layout { display: flex; min-height: 100vh; }
+  nav.toc {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: sticky; top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: #0f172a;
+    color: #cbd5e1;
+    padding: 20px 0 32px;
+  }
+  main {
+    flex: 1;
+    min-width: 0;
+    max-width: 880px;
+    padding: 32px 40px 96px;
+  }
+
+  /* ===== 側欄 ===== */
+  .toc-title { padding: 0 20px 12px; font-weight: 700; color: #fff; font-size: 16px; }
+  .toc-title small { display: block; font-weight: 400; color: #94a3b8; font-size: 11px; margin-top: 2px; }
+  .toc-group { margin-top: 14px; }
+  .toc-group-label {
+    padding: 0 20px; font-size: 11px; letter-spacing: .08em;
+    color: #94a3b8; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .toc a {
+    display: block; padding: 5px 20px 5px 34px;
+    color: #cbd5e1; text-decoration: none; font-size: 13px;
+    border-left: 3px solid transparent;
+  }
+  .toc a:hover { color: #fff; background: rgba(255,255,255,.06); }
+  .toc a.active { color: #fff; background: rgba(255,255,255,.1); border-left-color: #60a5fa; }
+
+  /* ===== Header ===== */
+  header h1 { font-size: 26px; margin: 0 0 4px; }
+  header .sub { color: var(--muted); margin-bottom: 16px; }
+  .threat-banner {
+    background: var(--amber-bg); border: 1px solid var(--amber-line);
+    border-radius: 10px; padding: 12px 16px; font-size: 14px; margin-bottom: 12px;
+  }
+  .threat-banner strong { color: var(--amber); }
+  .meta { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; }
+  .meta span { white-space: nowrap; }
+  .truth-note { font-size: 12.5px; color: var(--muted); margin-bottom: 24px; }
+
+  /* ===== 工具列 ===== */
+  .toolbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: flex-end; padding: 8px 0; background: linear-gradient(var(--bg) 80%, transparent); }
+  .toolbar button {
+    font: inherit; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card);
+    border-radius: 8px; padding: 6px 14px; color: var(--ink);
+  }
+  .toolbar button:hover { border-color: #94a3b8; }
+
+  /* ===== 區段標題 ===== */
+  h2.section {
+    font-size: 19px; margin: 44px 0 6px;
+    padding-left: 12px; border-left: 5px solid var(--c, var(--blue));
+  }
+  .section-desc { color: var(--muted); font-size: 13.5px; margin: 0 0 18px 17px; }
+
+  /* ===== 流程圖 ===== */
+  .flow {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px 24px; margin-bottom: 18px; overflow-x: auto;
+  }
+  .flow h3 { margin: 0 0 16px; font-size: 15px; }
+  .frow { display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap; min-width: max-content; }
+  .fnode {
+    border: 1.5px solid var(--blue-line); background: var(--blue-bg);
+    border-radius: 8px; padding: 7px 12px; font-size: 13px;
+    display: flex; flex-direction: column; justify-content: center;
+    text-align: center; max-width: 200px;
+  }
+  .fnode small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+  .fnode.start { border-color: #94a3b8; background: #f1f5f9; font-weight: 600; }
+  .fnode.ok { border-color: var(--green-line); background: var(--green-bg); }
+  .fnode.fail { border-color: #fecaca; background: var(--red-bg); }
+  .fnode.gate { border-color: var(--amber-line); background: var(--amber-bg); }
+  .farrow {
+    align-self: center; padding: 0 8px; color: var(--muted);
+    font-size: 12px; text-align: center; flex-shrink: 0; line-height: 1.3;
+  }
+  .farrow::after { content: "→"; display: block; font-size: 16px; color: #94a3b8; }
+  .fbranches { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+  .fbranch { display: flex; align-items: center; }
+
+  /* ===== 步驟卡片 ===== */
+  .req {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 5px solid var(--c, var(--blue));
+    border-radius: 12px; padding: 18px 22px 14px; margin-bottom: 16px;
+    scroll-margin-top: 56px;
+  }
+  .req h3 { margin: 0 0 8px; font-size: 16px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .req h3 .no { color: var(--muted); font-size: 13px; font-weight: 600; }
+  .req h3 .en { color: var(--muted); font-size: 12.5px; font-weight: 500; }
+  .req .body { font-size: 14.5px; margin-bottom: 12px; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    border-radius: 5px; padding: 0 7px; vertical-align: 1px;
+  }
+  .badge.skill { background: var(--green); color: #fff; }
+  .badge.rigid { background: var(--red); color: #fff; }
+  .badge.flex { background: var(--blue); color: #fff; }
+  .note { font-size: 13px; color: var(--muted); background: var(--gray-bg); border-radius: 8px; padding: 8px 12px; margin-top: 8px; }
+  .example { font-size: 13px; background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin-top: 8px; }
+  .example b { color: var(--muted); font-weight: 600; }
+  .lawbox { font-size: 13px; background: var(--red-bg); border: 1px solid #fecaca; border-radius: 8px; padding: 8px 12px; margin-top: 8px; }
+  .lawbox b { color: var(--red); font-weight: 700; }
+
+  /* ===== 可展開明細 ===== */
+  details.scn { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: #fcfdfe; }
+  details.scn summary {
+    cursor: pointer; padding: 9px 14px; font-size: 13.5px; font-weight: 600;
+    list-style: none; display: flex; align-items: center; gap: 8px;
+  }
+  details.scn summary::-webkit-details-marker { display: none; }
+  details.scn summary::before { content: "▸"; color: #94a3b8; transition: transform .15s; }
+  details.scn[open] summary::before { transform: rotate(90deg); }
+  .scn-body { padding: 2px 14px 12px 34px; }
+  .scn-body ul { margin: 4px 0; padding-left: 18px; }
+  .scn-body li { margin: 4px 0; font-size: 13.5px; line-height: 1.65; }
+  .scn-body p { margin: 4px 0; font-size: 13.5px; }
+  .skillref {
+    margin-left: auto; font-size: 11px; font-weight: 400; color: var(--muted);
+    background: var(--gray-bg); border-radius: 99px; padding: 1px 10px; white-space: nowrap;
+  }
+
+  /* ===== 對照表 ===== */
+  .dtable { width: 100%; border-collapse: collapse; font-size: 13px; margin: 6px 0 4px; background: var(--card); }
+  .dtable th, .dtable td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  .dtable th { background: var(--gray-bg); font-weight: 700; }
+  .dtable td.new { color: var(--green); font-weight: 700; }
+  .dtable td.have { color: var(--muted); }
+  .dtable td.cmd code { white-space: normal; }
+
+  /* ===== 開發功能手冊步驟卡 ===== */
+  .play {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 5px solid var(--c, var(--blue));
+    border-radius: 12px; padding: 16px 20px 12px; margin-bottom: 14px;
+    scroll-margin-top: 56px;
+  }
+  .play h3 { margin: 0 0 10px; font-size: 16px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .play h3 .no {
+    flex-shrink: 0; min-width: 24px; height: 24px; line-height: 24px; text-align: center;
+    background: var(--blue); color: #fff; border-radius: 6px; font-size: 13px; font-weight: 700; padding: 0 6px;
+  }
+  .play h3 .opt { font-size: 11px; font-weight: 600; color: var(--amber); background: var(--amber-bg); border: 1px solid var(--amber-line); border-radius: 5px; padding: 0 7px; }
+  .play h3 .star { font-size: 11px; font-weight: 700; color: var(--green); background: var(--green-bg); border: 1px solid var(--green-line); border-radius: 5px; padding: 0 7px; }
+  .prow { display: grid; grid-template-columns: 92px 1fr; gap: 4px 12px; font-size: 13.5px; margin: 6px 0; align-items: start; }
+  .prow .k {
+    font-size: 10.5px; font-weight: 700; letter-spacing: .03em; text-align: center;
+    border-radius: 5px; padding: 2px 0; line-height: 1.5;
+  }
+  .k.call { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-line); }
+  .k.give { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-line); }
+  .k.sp   { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-line); }
+  .k.out  { background: #f8fafc; color: var(--muted); border: 1px solid var(--line); }
+  .prow .v { line-height: 1.6; }
+  .prow .v code { white-space: normal; }
+  .track-label {
+    display: inline-block; font-size: 12px; font-weight: 700; color: #fff;
+    border-radius: 6px; padding: 2px 10px; margin: 8px 0 10px;
+  }
+  .track-label.a { background: var(--blue); }
+  .track-label.b { background: var(--amber); }
+
+  footer { margin-top: 56px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+  @media (max-width: 860px) {
+    nav.toc { display: none; }
+    main { padding: 20px 18px 64px; }
+  }
+  @media print {
+    nav.toc, .toolbar { display: none; }
+    .req { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <div class="toc-title">開發功能逐步手冊<small>OpenSpec 流程 + Superpowers(整合版)</small></div>
+  <div class="toc-group">
+    <div class="toc-group-label">總覽</div>
+    <a href="#intro">核心理念與閱讀方式</a>
+    <a href="#flow">整合流程總圖</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--blue)"></span>開發功能手冊</div>
+    <a href="#play-new">Track A:新功能(逐步)</a>
+    <a href="#play-retrofit">Track B:既有功能回填</a>
+    <a href="#mapping">步驟 ↔ 指令/skill 速查</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--green)"></span>Skill 字典:主線</div>
+    <a href="#s1">1. 腦力激盪</a>
+    <a href="#s2">2. 隔離工作區</a>
+    <a href="#s3">3. 寫實作計畫</a>
+    <a href="#s4">4. 執行計畫</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--green)"></span>Skill 字典:品質防線</div>
+    <a href="#s5">5. 測試驅動開發</a>
+    <a href="#s6">6. 系統化除錯</a>
+    <a href="#s7">7. 請求 Code Review</a>
+    <a href="#s8">8. 接收 Code Review</a>
+    <a href="#s9">9. 完成前驗證</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--amber)"></span>Skill 字典:收尾與進階</div>
+    <a href="#s10">10. 收尾分支</a>
+    <a href="#parallel">平行派工 Agent</a>
+    <a href="#writing-skills">撰寫 Skill</a>
+  </div>
+</nav>
+
+<main>
+<header>
+  <h1>開發功能逐步手冊(整合版)</h1>
+  <div class="sub">本專案在裝了 <code>superpowers</code> 之後的<b>開發功能 SOP</b>:把既有的 <b>OpenSpec / <code>spec-*</code> 流程</b>當骨架,疊上 <b>superpowers</b> 的紀律層。每一步都寫明:<b>呼叫什麼指令/skill、要提供什麼內容、產出什麼</b>。</div>
+  <div class="threat-banner">
+    <strong>怎麼用這頁:</strong>照「<a href="#play-new" style="color:inherit;font-weight:700">開發功能手冊</a>」的步驟順序做事;每一步的卡片給你「呼叫 / 提供 / superpowers 疊加 / 產出」。需要某個 skill 的細節時,點進下方「<b>Skill 字典</b>」看完整規則。
+  </div>
+  <div class="meta">
+    <span>既有流程:<code>.claude/commands/opsx/*</code>、<code>.claude/commands/spec-*.md</code></span>
+    <span>superpowers:<code>github.com/obra/superpowers</code> 各 <code>SKILL.md</code>(已裝)</span>
+  </div>
+  <div class="truth-note">人工整理的閱讀版;指令行為以 <code>.claude/commands/*</code> 為準,superpowers 規則以官方 <code>SKILL.md</code> 為準。</div>
+</header>
+
+<div class="toolbar"><button id="toggleAll" data-open="0">全部展開</button></div>
+
+<!-- ============ 總覽 ============ -->
+<h2 class="section" id="intro" style="--c:#94a3b8">這份文件與核心理念</h2>
+<p class="section-desc">先理解 superpowers 怎麼運作,再讀下方逐步流程。</p>
+
+<section class="req" id="intro-card" style="--c:#94a3b8">
+  <h3>運作前提:Skill 優先 (<code>using-superpowers</code>)</h3>
+  <div class="body">superpowers 的骨幹是一組可組合的 <b>skill</b>。它的第一條規則是:只要有 <b>1% 機率</b>某個 skill 可能適用,就<b>必須先 invoke 該 skill 再回應</b> —— 連澄清問題、探索 codebase 之前都要先查 skill,因為「skill 會告訴你該怎麼探索、怎麼問」。invoke 後若發現不適用,再放下即可。</div>
+  <div class="example"><b>指令優先序(高 → 低):</b>① 使用者明確指令(<code>CLAUDE.md</code> / 直接要求) ② superpowers skills ③ 預設系統提示。若 <code>CLAUDE.md</code> 說「別用 TDD」而 skill 說「一律 TDD」,<b>聽使用者的</b> —— 使用者永遠在控制權上。</div>
+  <details class="scn"><summary>兩種 skill 型別 / 觸發順序</summary>
+    <div class="scn-body">
+      <ul>
+        <li><span class="badge rigid">RIGID</span> 嚴格型(如 TDD、debugging):一字不差照做,不可把紀律「調整掉」。</li>
+        <li><span class="badge flex">FLEX</span> 彈性型(模式類):依情境調整原則。skill 本身會告訴你它屬哪一型。</li>
+        <li><b>多個 skill 都適用時:</b>先 process skill(brainstorming / debugging — 決定「怎麼 approach」),再 implementation skill(決定「怎麼執行」)。<br>「來做 X」→ 先 brainstorming;「修這個 bug」→ 先 debugging。</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 整合流程總圖 ============ -->
+<h2 class="section" id="flow" style="--c:var(--blue)">整合流程總圖</h2>
+<p class="section-desc">上層是<b>既有指令骨架</b>(OpenSpec / <code>spec-*</code>);每個節點的小字是<b>該步疊上的 superpowers 紀律</b>。★ 標記的是 superpowers 帶進來、本專案原本沒有的環節。</p>
+
+<div class="flow">
+  <h3>新功能:端到端管線(指令 + superpowers 疊加)</h3>
+  <div class="frow">
+    <div class="fnode start">/opsx:explore<small>釐清 / 設計<br>+ brainstorming</small></div>
+    <div class="farrow"></div>
+    <div class="fnode">/opsx:propose<small>產 proposal /<br>design / tasks<br>+ writing-plans</small></div>
+    <div class="farrow"></div>
+    <div class="fnode gate">隔離工作區 ★<small>using-git-<br>worktrees<br>+ baseline 測試</small></div>
+    <div class="farrow"></div>
+    <div class="fnode">/spec-finalize<small>validate<br>+ review spec</small></div>
+    <div class="farrow"></div>
+    <div class="fnode gate">/spec-build<small>逐 task 實作<br>+ TDD ★ + 除錯 ★<br>+ review / simplify</small></div>
+    <div class="farrow"></div>
+    <div class="fnode">完成前驗證 ★<small>verification-<br>before-completion</small></div>
+    <div class="farrow"></div>
+    <div class="fnode ok">/spec-ship<small>歸檔 + commit<br>+ finishing-branch</small></div>
+  </div>
+</div>
+<div class="flow">
+  <h3>side-loop:/spec-build 途中遇 bug / 測試失敗</h3>
+  <div class="frow">
+    <div class="fnode fail">bug / 測試失敗</div>
+    <div class="farrow"></div>
+    <div class="fnode gate">系統化除錯 ★<small>先找根因<br>再修</small></div>
+    <div class="farrow"></div>
+    <div class="fnode">寫失敗測試<small>TDD:治根因<br>非治標</small></div>
+    <div class="farrow"></div>
+    <div class="fnode ok">回 /spec-build 繼續</div>
+  </div>
+</div>
+
+<!-- ============ 開發功能手冊 ============ -->
+<h2 class="section" id="play-new" style="--c:var(--blue)">Track A:開發新功能(逐步)</h2>
+<p class="section-desc">每張卡固定四欄:<b>呼叫</b>(下什麼指令 / 哪個 skill)、<b>提供</b>(要餵什麼)、<b>疊加</b>(套哪個 superpowers 紀律)、<b>產出</b>。標題的 ★ 表示這步是 superpowers 新增的環節。</p>
+<div class="track-label a">Track A · 新功能:從想法到歸檔</div>
+
+<section class="play" id="pa1" style="--c:var(--blue)">
+  <h3><span class="no">1</span>探索與設計</h3>
+  <div class="prow"><span class="k call">呼叫</span><span class="v"><code>/opsx:explore &lt;題目&gt;</code> 進思考模式(可順手產 OpenSpec artifacts);搭配 superpowers <code>Skill brainstorming</code></span></div>
+  <div class="prow"><span class="k give">提供</span><span class="v">想做什麼 / 要解決的問題(一句也行)。例:<code>/opsx:explore 後台批次匯出帳單</code></span></div>
+  <div class="prow"><span class="k sp">疊加</span><span class="v"><code>brainstorming</code> 的 <b>HARD-GATE</b>:在你核可設計前不寫任何 code;一次問一題、提 2–3 方案含推薦。</span></div>
+  <div class="prow"><span class="k out">產出</span><span class="v">釐清過的需求與設計方向(尚未實作)。</span></div>
+</section>
+
+<section class="play" id="pa2" style="--c:var(--blue)">
+  <h3><span class="no">2</span>產出 change artifacts</h3>
+  <div class="prow"><span class="k call">呼叫</span><span class="v"><code>/opsx:propose &lt;kebab-name | 描述&gt;</code></span></div>
+  <div class="prow"><span class="k give">提供</span><span class="v">change 名稱(kebab-case,如 <code>add-bill-export</code>)或一段描述讓它自己命名。</span></div>
+  <div class="prow"><span class="k sp">疊加</span><span class="v"><code>writing-plans</code> 的標準:把 <code>tasks.md</code> 切成 <b>2–5 分鐘一步</b>、<b>無 placeholder</b>(不准 TBD / 「加上適當錯誤處理」)、每步含 TDD(先寫測試)。</span></div>
+  <div class="prow"><span class="k out">產出</span><span class="v"><code>openspec/changes/&lt;name&gt;/</code> 下的 <code>proposal.md</code>、<code>design.md</code>、<code>tasks.md</code>。</span></div>
+</section>
+
+<section class="play" id="pa3" style="--c:var(--blue)">
+  <h3><span class="no">3</span>拷問設計 <span class="opt">選用</span></h3>
+  <div class="prow"><span class="k call">呼叫</span><span class="v"><code>/grill-me [change-name]</code></span></div>
+  <div class="prow"><span class="k give">提供</span><span class="v">要被壓力測試的 change 名稱(它會讀該 change 的 artifacts 當拷問素材)。</span></div>
+  <div class="prow"><span class="k sp">疊加</span><span class="v">等同 superpowers <code>brainstorming</code> 的增量驗證精神 —— 逐題解決決策樹,挑出矛盾與缺口。</span></div>
+  <div class="prow"><span class="k out">產出</span><span class="v">修訂後的 artifacts(proposal / design / tasks 視情況更新)。</span></div>
+</section>
+
+<section class="play" id="pa4" style="--c:var(--blue)">
+  <h3><span class="no">4</span>建立隔離工作區 <span class="star">★ superpowers 新增</span></h3>
+  <div class="prow"><span class="k call">呼叫</span><span class="v">harness 原生 <code>EnterWorktree</code>(優先);或 superpowers <code>Skill using-git-worktrees</code></span></div>
+  <div class="prow"><span class="k give">提供</span><span class="v">分支 / 工作區名稱(通常用 change name)。</span></div>
+  <div class="prow"><span class="k sp">疊加</span><span class="v"><code>using-git-worktrees</code>:先偵測是否已隔離 → 用原生工具(別用 <code>git worktree add</code>)→ <b>跑 baseline 測試確認起點全綠</b>(失敗先回報)。</span></div>
+  <div class="prow"><span class="k out">產出</span><span class="v">乾淨、隔離、測試通過的工作區,保護 <code>master</code>。</span></div>
+</section>
+
+<section class="play" id="pa5" style="--c:var(--blue)">
+  <h3><span class="no">5</span>spec 收尾</h3>
+  <div class="prow"><span class="k call">呼叫</span><span class="v"><code>/spec-finalize &lt;name&gt;</code></span></div>
+  <div class="prow"><span class="k give">提供</span><span class="v">change 名稱(省略則從 active change 推斷)。前提:artifacts 已存在。</span></div>
+  <div class="prow"><span class="k sp">疊加</span><span class="v">內含 <code>openspec validate --strict</code> + <code>review</code> skill 審 spec;對應 superpowers「先把規格定清楚再動工」。</span></div>
+  <div class="prow"><span class="k out">產出</span><span class="v">驗證通過的 spec,並 commit <code>docs(spec): propose &lt;name&gt;</code>。</span></div>
+</section>
+
+<section class="play" id="pa6" style="--c:var(--blue)">
+  <h3><span class="no">6</span>實作(逐 task)</h3>
+  <div class="prow"><span class="k call">呼叫</span><span class="v"><code>/spec-build &lt;name&gt;</code>(內部跑 <code>opsx:apply</code> 逐 task 迴圈)</span></div>
+  <div class="prow"><span class="k give">提供</span><span class="v">change 名稱。它會逐 task 實作,每 task 後跑 <code>pint</code> + 相關測試(Docker 內)。</span></div>
+  <div class="prow"><span class="k sp">疊加</span><span class="v"><b><code>test-driven-development</code> ★</b>:每 task 先寫失敗測試 → 看它失敗 → 最小實作 → 看它通過。(可選)<code>subagent-driven-development</code>:每 task 派新 subagent + spec/品質兩階段審。卡關時走步驟 6-bug。</span></div>
+  <div class="prow"><span class="k out">產出</span><span class="v">逐 task 勾選的實作,測試全綠、pint 過;<b>不自動 commit</b>。</span></div>
+</section>
+
+<section class="play" id="pa6b" style="--c:var(--green)">
+  <h3><span class="no">6·bug</span>遇 bug / 測試失敗時 <span class="star">★ superpowers 新增</span></h3>
+  <div class="prow"><span class="k call">呼叫</span><span class="v">superpowers <code>Skill systematic-debugging</code></span></div>
+  <div class="prow"><span class="k give">提供</span><span class="v">錯誤訊息 / 失敗測試 / 重現步驟。</span></div>
+  <div class="prow"><span class="k sp">疊加</span><span class="v"><b>鐵律:先根因再修。</b>四階段:根因調查 → 模式分析 → 單一假設最小測試 → 寫失敗測試後只改一處。修 3 次仍不好 → 停下質疑架構。</span></div>
+  <div class="prow"><span class="k out">產出</span><span class="v">治根因的修正 + 防回歸測試,然後回步驟 6 繼續。</span></div>
+</section>
+
+<section class="play" id="pa7" style="--c:var(--blue)">
+  <h3><span class="no">7</span>審查與回應 finding</h3>
+  <div class="prow"><span class="k call">呼叫</span><span class="v">由 <code>/spec-build</code> 全 task 完成後自動跑 <code>review</code>(實作 vs spec)+ <code>simplify</code></span></div>
+  <div class="prow"><span class="k give">提供</span><span class="v">無需額外輸入;review 對整個 branch diff 比對 <code>openspec/changes/&lt;name&gt;/</code> 的 spec。</span></div>
+  <div class="prow"><span class="k sp">疊加</span><span class="v">收 finding 時套 <code>receiving-code-review</code>:<b>先查證再改、不說「你說得對」、不感謝</b>;不清楚先全部澄清;違反 YAGNI 的建議先 grep 有沒有人用。</span></div>
+  <div class="prow"><span class="k out">產出</span><span class="v">實作與 spec 一致;reuse / 冗餘已處理。偏離 spec 時停下討論「修實作還是改 spec」。</span></div>
+</section>
+
+<section class="play" id="pa8" style="--c:var(--green)">
+  <h3><span class="no">8</span>完成前驗證 <span class="star">★ superpowers 新增</span></h3>
+  <div class="prow"><span class="k call">呼叫</span><span class="v">superpowers <code>Skill verification-before-completion</code></span></div>
+  <div class="prow"><span class="k give">提供</span><span class="v">無;這是宣稱「完成」前的自我 gate。</span></div>
+  <div class="prow"><span class="k sp">疊加</span><span class="v"><b>鐵律:沒在這一刻跑過驗證指令,就不能說它過。</b>跑全測試 <code>docker compose exec backend-api php artisan test --compact</code>、pint,讀完整輸出 / 退出碼,才宣稱完成。</span></div>
+  <div class="prow"><span class="k out">產出</span><span class="v">附證據的「完成」狀態(N/N 測試通過、pint 乾淨)。</span></div>
+</section>
+
+<section class="play" id="pa9" style="--c:var(--blue)">
+  <h3><span class="no">9</span>Commit(人工)</h3>
+  <div class="prow"><span class="k call">呼叫</span><span class="v">手動 <code>git commit</code>(<code>/spec-build</code> 刻意不自動 commit)</span></div>
+  <div class="prow"><span class="k give">提供</span><span class="v">自訂顆粒度與訊息;重構與行為修正分開 commit。</span></div>
+  <div class="prow"><span class="k sp">疊加</span><span class="v">CLAUDE.md commit 紀律:<b>commit 訊息逐項對得上 staged diff</b>(不要有幽靈項目);用 HEREDOC。</span></div>
+  <div class="prow"><span class="k out">產出</span><span class="v">乾淨、可追溯的 commit。</span></div>
+</section>
+
+<section class="play" id="pa10" style="--c:var(--amber)">
+  <h3><span class="no">10</span>歸檔與收尾</h3>
+  <div class="prow"><span class="k call">呼叫</span><span class="v"><code>/spec-ship &lt;name&gt;</code>(內部跑 <code>opsx:archive</code>)</span></div>
+  <div class="prow"><span class="k give">提供</span><span class="v">change 名稱。它會 sync delta spec → <code>openspec/specs/</code>、移到 <code>archive/</code>、從 <code>proposal.md</code> 的 <code>## Why</code> 產 commit。</span></div>
+  <div class="prow"><span class="k sp">疊加</span><span class="v">整體收尾決策參考 <code>finishing-a-development-branch</code>:先確認測試全綠,再決定 merge / 開 PR / 保留 / 丟棄。<b>不自動 push</b>。</span></div>
+  <div class="prow"><span class="k out">產出</span><span class="v">已歸檔的 change、合併進主 specs、收尾 commit;branch 可推送 / 開 PR。</span></div>
+</section>
+
+<!-- ============ Track B 回填 ============ -->
+<h2 class="section" id="play-retrofit" style="--c:var(--amber)">Track B:既有功能回填</h2>
+<p class="section-desc">用在「<b>已經有實作、但 spec 還沒進 OpenSpec</b>」的舊功能;新功能請走 Track A。</p>
+<div class="track-label b">Track B · 既有功能:補 spec + 文件</div>
+
+<section class="play" id="pb1" style="--c:var(--amber)">
+  <h3><span class="no">R</span>回填一個既有功能</h3>
+  <div class="prow"><span class="k call">呼叫</span><span class="v"><code>/spec-retrofit &lt;feature&gt;</code></span></div>
+  <div class="prow"><span class="k give">提供</span><span class="v">既有功能名(如 <code>roles</code>、<code>grades</code>、<code>users</code>、<code>shops</code>、<code>bills</code>)。前置:routes 與 Controller 已存在(否則改走 Track A)。</span></div>
+  <div class="prow"><span class="k sp">疊加</span><span class="v">Phase 1 全面設計 Review(分層架構 / 安全 / 測試覆蓋 / 與舊 spec 落差)<b>結束必停等你裁示</b>;只修核可項目;刻意設計要寫成 MUST NOT Requirement。</span></div>
+  <div class="prow"><span class="k out">產出</span><span class="v"><code>openspec/specs/&lt;capability&gt;/spec.md</code> + 互動式 <code>docs/&lt;feature&gt;-spec.html</code>(零外部資源,<code>/docs</code> 可瀏覽)。</span></div>
+</section>
+
+<!-- ============ 速查 ============ -->
+<h2 class="section" id="mapping" style="--c:var(--blue)">步驟 ↔ 指令/skill 速查</h2>
+<p class="section-desc">一眼對照:每個手冊步驟下什麼指令、疊哪個 superpowers skill。★ = superpowers 帶進來的新環節。</p>
+
+<section class="req" style="--c:var(--blue)">
+  <table class="dtable">
+    <thead>
+      <tr><th style="width:30%">步驟</th><th style="width:38%">呼叫(指令 / skill)</th><th style="width:32%">superpowers 疊加</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1. 探索與設計</td><td class="cmd"><code>/opsx:explore</code></td><td class="have"><code>brainstorming</code>(先設計再 code)</td></tr>
+      <tr><td>2. 產 change artifacts</td><td class="cmd"><code>/opsx:propose</code></td><td class="have"><code>writing-plans</code>(小步、無 placeholder)</td></tr>
+      <tr><td>3. 拷問設計(選用)</td><td class="cmd"><code>/grill-me</code></td><td class="have">(brainstorming 增量驗證)</td></tr>
+      <tr><td>4. 隔離工作區 ★</td><td class="cmd"><code>EnterWorktree</code></td><td class="new"><code>using-git-worktrees</code> + baseline 測試</td></tr>
+      <tr><td>5. spec 收尾</td><td class="cmd"><code>/spec-finalize</code></td><td class="have"><code>validate</code> + <code>review</code></td></tr>
+      <tr><td>6. 實作(逐 task)</td><td class="cmd"><code>/spec-build</code></td><td class="new"><code>test-driven-development</code> ★(可選 <code>subagent-driven</code>)</td></tr>
+      <tr><td>6·bug. 除錯 ★</td><td class="cmd"><code>Skill systematic-debugging</code></td><td class="new"><code>systematic-debugging</code>(先根因)</td></tr>
+      <tr><td>7. 審查與回應</td><td class="cmd"><code>/spec-build</code> 內 <code>review</code> + <code>simplify</code></td><td class="new"><code>receiving-code-review</code>(先查證再改)</td></tr>
+      <tr><td>8. 完成前驗證 ★</td><td class="cmd"><code>Skill verification-before-completion</code></td><td class="new"><code>verification-before-completion</code></td></tr>
+      <tr><td>9. Commit(人工)</td><td class="cmd"><code>git commit</code></td><td class="have">CLAUDE.md commit 紀律</td></tr>
+      <tr><td>10. 歸檔與收尾</td><td class="cmd"><code>/spec-ship</code></td><td class="have"><code>finishing-a-development-branch</code></td></tr>
+      <tr><td>B. 既有功能回填</td><td class="cmd"><code>/spec-retrofit</code></td><td class="have">—(Phase 1 設計 Review 後必停)</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><b>指令優先序:</b>使用者明確指令(<code>CLAUDE.md</code>)&gt; superpowers skills &gt; 系統預設。所以本專案的中文回覆、Docker-only、分層架構等規範,永遠蓋過 superpowers 的通則。</div>
+</section>
+
+<!-- ============ Skill 字典 ============ -->
+<h2 class="section" style="--c:var(--green)">Skill 字典:主線</h2>
+<p class="section-desc">以下是 superpowers 各 skill 的完整規則,供手冊各步驟查閱細節。</p>
+
+<section class="req" id="s1" style="--c:var(--blue)">
+  <h3><span class="no">1</span>腦力激盪 <span class="en">brainstorming</span> <span class="badge skill">SKILL</span></h3>
+  <div class="body">把點子透過<b>自然的協作對話</b>變成成形的設計與規格。這是所有實作的<b>第一道關卡</b>。</div>
+  <div class="lawbox"><b>HARD-GATE:</b>在<b>提出設計並取得使用者核可前</b>,不得 invoke 任何實作 skill、不得寫 code、不得 scaffold。再簡單的專案也適用(設計可以只有幾句話,但一定要呈現並取得同意)。</div>
+  <details class="scn"><summary>流程步驟<span class="skillref">brainstorming</span></summary>
+    <div class="scn-body">
+      <ul>
+        <li>探索專案脈絡(檔案、文件、近期 commit)。</li>
+        <li>(若接下來是視覺題)單獨一則訊息提供「視覺輔助」選項。</li>
+        <li><b>一次只問一個</b>澄清問題,聚焦目的 / 限制 / 成功標準;盡量用多選題。</li>
+        <li>提出 <b>2–3 個方案</b>含取捨,先講你推薦哪個與原因。</li>
+        <li><b>分段呈現設計</b>,每段都先取得認可才往下;涵蓋架構、元件、資料流、錯誤處理、測試。</li>
+        <li>寫 design doc 到 <code>docs/superpowers/specs/YYYY-MM-DD-&lt;topic&gt;-design.md</code> 並 commit。</li>
+        <li><b>spec 自我審查:</b>掃 placeholder / 前後矛盾 / 範圍是否該拆 / 歧義,當場修。</li>
+        <li>請使用者審 spec,核可後才進下一步。</li>
+      </ul>
+    </div>
+  </details>
+  <div class="note"><b>終點唯一:</b>brainstorming 之後只能接 <code>writing-plans</code>,不可直接跳任何實作 skill。原則:一次一問、YAGNI、先探索替代方案、增量驗證。</div>
+</section>
+
+<section class="req" id="s2" style="--c:var(--blue)">
+  <h3><span class="no">2</span>隔離工作區 <span class="en">using-git-worktrees</span> <span class="badge skill">SKILL</span></h3>
+  <div class="body">確保工作在<b>隔離工作區</b>進行,保護你當前的分支不受影響。核心順序:<b>先偵測是否已隔離 → 用平台原生工具 → 最後才退回 git worktree。別跟 harness 對著幹。</b></div>
+  <details class="scn"><summary>流程步驟<span class="skillref">using-git-worktrees</span></summary>
+    <div class="scn-body">
+      <ul>
+        <li><b>Step 0 偵測既有隔離:</b>比對 <code>git-dir</code> 與 <code>git-common-dir</code>(並排除 submodule);若已在 worktree 就跳過建立。在一般 repo 則先徵得同意。</li>
+        <li><b>Step 1 建立:</b>1a 優先用原生工具(如 <code>EnterWorktree</code>)—— 有原生工具卻用 <code>git worktree add</code> 是<b>第一大錯</b>;1b 無原生工具才退回 git,目錄優先序 <code>.worktrees/</code>,並用 <code>git check-ignore</code> 確認已被忽略。</li>
+        <li><b>Step 3 專案設定:</b>自動偵測並安裝相依(<code>npm install</code> / <code>cargo build</code> / <code>pip install</code> / <code>go mod download</code>)。</li>
+        <li><b>Step 4 驗證乾淨 baseline:</b>跑測試確認起點全綠;失敗就回報並詢問是否繼續(以便日後分辨新 bug 與既有問題)。</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="s3" style="--c:var(--blue)">
+  <h3><span class="no">3</span>寫實作計畫 <span class="en">writing-plans</span> <span class="badge skill">SKILL</span></h3>
+  <div class="body">寫一份<b>假設工程師對本 codebase 零背景</b>的詳盡計畫:每個任務要動哪些檔、附上實際 code、怎麼測。把整份工作切成一口一口的小任務。原則:DRY、YAGNI、TDD、頻繁 commit。存到 <code>docs/superpowers/plans/YYYY-MM-DD-&lt;feature&gt;.md</code>。</div>
+  <div class="example"><b>bite-sized 任務(每步 2–5 分鐘):</b>寫失敗測試 → 跑它確認失敗 → 寫剛好能過的最小實作 → 跑它確認通過 → commit。</div>
+  <details class="scn"><summary>關鍵規則<span class="skillref">writing-plans</span></summary>
+    <div class="scn-body">
+      <ul>
+        <li><b>先盤點檔案結構:</b>動工前列出要建/改哪些檔、各自單一職責;偏好小而專注的檔案。</li>
+        <li><b>No Placeholders(計畫失敗):</b>不准 <code>TBD</code>/<code>TODO</code>、不准「加上適當錯誤處理 / 驗證」、不准「為上面寫測試」卻沒附測試碼、不准引用未定義的型別或函式。改 code 的步驟一定要附上 code。</li>
+        <li><b>自我審查:</b>spec 覆蓋率(每個需求都有對應任務嗎)、placeholder 掃描、型別/命名前後一致。</li>
+        <li><b>交接:</b>提供兩種執行選項 —— subagent-driven(推薦)或 inline(<code>executing-plans</code>)。</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="s4" style="--c:var(--blue)">
+  <h3><span class="no">4</span>執行計畫 <span class="en">subagent-driven-development / executing-plans</span> <span class="badge skill">SKILL</span></h3>
+  <div class="body">把計畫<b>逐任務</b>執行。有兩種模式,視平台是否支援 subagent 而定。</div>
+  <details class="scn"><summary>模式 A:Subagent 驅動(推薦)<span class="skillref">subagent-driven-development</span></summary>
+    <div class="scn-body">
+      <ul>
+        <li>每個任務派一個<b>全新 subagent</b>:不繼承你的對話史,你精準裁切它需要的 context —— 保持它聚焦,也保留你自己的 context 做協調。</li>
+        <li><b>兩階段審查:</b>實作完先做 <b>spec 合規審</b>(有沒有少做 / 多做),通過後再做 <b>code quality 審</b>。審出問題由同一 implementer 修、再審,直到過才換下一任務。</li>
+        <li><b>連續執行:</b>任務間不要停下來問「要繼續嗎」;只有 BLOCKED 無法解、真正卡住、或全部完成才停。最後對整體再派一次 final review,然後進收尾。</li>
+        <li><b>implementer 四種狀態:</b><code>DONE</code> / <code>DONE_WITH_CONCERNS</code> / <code>NEEDS_CONTEXT</code> / <code>BLOCKED</code>,各有對應處置;絕不讓同一 model 無變更地重試。</li>
+        <li><b>選 model:</b>機械性任務(1–2 檔、規格完整)用便宜快的;整合/判斷用標準;架構/設計/審查用最強。</li>
+      </ul>
+    </div>
+  </details>
+  <details class="scn"><summary>模式 B:Inline 執行(無 subagent 時)<span class="skillref">executing-plans</span></summary>
+    <div class="scn-body">
+      <ul>
+        <li>載入計畫 → <b>批判式檢視</b>(有疑慮先提出)→ 建 TodoWrite → 逐任務照步驟執行、不跳驗證。</li>
+        <li>卡住(缺相依、測試失敗、指令不清)就<b>停下來問</b>,不要用猜的硬幹。</li>
+        <li>完成後進 <code>finishing-a-development-branch</code>。</li>
+      </ul>
+    </div>
+  </details>
+  <div class="note"><b>共同紅線:</b>未經明確同意,絕不在 <code>main</code>/<code>master</code> 上開工。</div>
+</section>
+
+<!-- ============ 品質防線 ============ -->
+<h2 class="section" style="--c:var(--green)">品質防線(貫穿全程)</h2>
+
+<section class="req" id="s5" style="--c:var(--green)">
+  <h3><span class="no">5</span>測試驅動開發 <span class="en">test-driven-development</span> <span class="badge rigid">RIGID</span></h3>
+  <div class="body">先寫測試、看它失敗、再寫剛好能過的最小 code。<b>核心原則:沒看著測試失敗過,就不知道它測對了東西。</b></div>
+  <div class="lawbox"><b>鐵律:</b>NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST。先寫了 code?<b>刪掉重來</b> —— 不留作參考、不一邊改一邊「適應」它。刪就是刪。</div>
+  <div class="flow" style="margin-top:10px">
+    <h3>RED → GREEN → REFACTOR</h3>
+    <div class="frow">
+      <div class="fnode fail">RED<small>寫一個最小失敗測試</small></div>
+      <div class="farrow"></div>
+      <div class="fnode gate">看它失敗<small>是因功能缺失<br>而非 typo</small></div>
+      <div class="farrow"></div>
+      <div class="fnode ok">GREEN<small>寫剛好能過的最小 code</small></div>
+      <div class="farrow"></div>
+      <div class="fnode gate">看它通過<small>其他測試仍綠<br>輸出乾淨</small></div>
+      <div class="farrow"></div>
+      <div class="fnode">REFACTOR<small>清理、保持綠<br>不加新行為</small></div>
+    </div>
+  </div>
+  <div class="note"><b>好測試:</b>一次一個行為、命名清楚、展示意圖、用真 code(萬不得已才 mock)。<b>例外(須先問人):</b>拋棄式原型、產生的 code、設定檔。</div>
+</section>
+
+<section class="req" id="s6" style="--c:var(--green)">
+  <h3><span class="no">6</span>系統化除錯 <span class="en">systematic-debugging</span> <span class="badge rigid">RIGID</span></h3>
+  <div class="body">隨機試錯既浪費時間又生新 bug。<b>一律先找到根因,再動手修;治標就是失敗。</b></div>
+  <div class="lawbox"><b>鐵律:</b>NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST。沒完成第一階段,就不准提任何修法。</div>
+  <details class="scn"><summary>四個階段(逐一完成才往下)<span class="skillref">systematic-debugging</span></summary>
+    <div class="scn-body">
+      <ul>
+        <li><b>① 根因調查:</b>仔細讀錯誤訊息 / stack trace;穩定重現;查近期變更;多元件系統在每個邊界加診斷 log 找出「哪一層壞」;回溯資料流到源頭,修在源頭而非症狀。</li>
+        <li><b>② 模式分析:</b>找同 codebase 的可用範例、完整讀參考實作(別只掃)、列出「可用 vs 壞掉」的每個差異、釐清相依。</li>
+        <li><b>③ 假設與測試:</b>提出<b>單一</b>假設(「我認為 X 是根因,因為 Y」)、做<b>最小</b>改動只測一個變數、驗證後才前進,不在上面疊修法。</li>
+        <li><b>④ 實作:</b>先寫失敗測試(用 TDD)→ 只改一處治根因(不順手重構)→ 驗證。<b>同一 bug 修 3 次還不好 → 停,質疑架構</b>,不要硬上第 4 次。</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="s7" style="--c:var(--green)">
+  <h3><span class="no">7</span>請求 Code Review <span class="en">requesting-code-review</span> <span class="badge skill">SKILL</span></h3>
+  <div class="body">派一個 <b>code reviewer subagent</b>,給它精準裁切的 context(不是你的對話史),在問題擴散前就抓住它。原則:<b>review early, review often。</b></div>
+  <details class="scn"><summary>何時與怎麼做<span class="skillref">requesting-code-review</span></summary>
+    <div class="scn-body">
+      <ul>
+        <li><b>強制:</b>subagent 驅動的每個任務後、完成大功能後、merge 進 main 前。<b>選用但有價值:</b>卡住時、重構前、修完複雜 bug 後。</li>
+        <li>取 <code>BASE_SHA</code> / <code>HEAD_SHA</code> → 用 reviewer 模板派 subagent(描述、需求、起訖 SHA)。</li>
+        <li><b>依嚴重度處理:</b>Critical 立刻修、Important 前進前先修、Minor 記下日後處理;reviewer 錯了用技術理由 push back。</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="s8" style="--c:var(--green)">
+  <h3><span class="no">8</span>接收 Code Review <span class="en">receiving-code-review</span> <span class="badge skill">SKILL</span></h3>
+  <div class="body">收到 review 回饋時要做<b>技術評估,不是情緒表演,也不是盲目照做</b>。核心:先查證再實作、先發問再假設,技術正確優先於社交舒適。</div>
+  <div class="example"><b>回應流程:</b>READ(讀完不急著反應)→ UNDERSTAND(用自己的話複述需求或發問)→ VERIFY(對照 codebase 現實)→ EVALUATE(對「這個」codebase 技術上成立嗎)→ RESPOND(技術性認可或有理由的反駁)→ IMPLEMENT(一次一項,各自測)。</div>
+  <details class="scn"><summary>禁語與要點<span class="skillref">receiving-code-review</span></summary>
+    <div class="scn-body">
+      <ul>
+        <li><b>禁語:</b>「你說得完全對!」「好點子!」「我馬上做」(未驗證前)、任何「謝謝」。<b>改成:</b>複述需求 / 發問 / 用技術理由反駁 / 直接動手並說「Fixed: …」。</li>
+        <li><b>不清楚就先全部澄清再動工</b> —— 項目可能彼此相關,半懂等於做錯。</li>
+        <li><b>外部回饋要存疑、查證:</b>會不會弄壞既有功能?有沒有現行實作的理由?跨平台都成立嗎?reviewer 懂完整脈絡嗎?</li>
+        <li><b>YAGNI 檢查:</b>reviewer 要你「做完整」時先 grep 有沒有人用;沒人用就提議移除。</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="s9" style="--c:var(--green)">
+  <h3><span class="no">9</span>完成前驗證 <span class="en">verification-before-completion</span> <span class="badge rigid">RIGID</span></h3>
+  <div class="body">沒驗證就宣稱完成,是<b>不誠實,不是有效率</b>。核心:<b>先有證據,再下結論。</b></div>
+  <div class="lawbox"><b>鐵律:</b>NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE。沒在「這一則訊息裡」跑過驗證指令,就不能宣稱它通過。</div>
+  <details class="scn"><summary>Gate 函式與紅旗<span class="skillref">verification-before-completion</span></summary>
+    <div class="scn-body">
+      <ul>
+        <li><b>宣稱任何狀態前:</b>① 找出能證明的指令 ② 完整跑一次(全新、不偷)③ 讀完整輸出 / 退出碼 / 失敗數 ④ 確認輸出真的支持宣稱 ⑤ 才宣稱(並附上證據)。跳任一步 = 說謊。</li>
+        <li><b>紅旗:</b>用「應該 / 大概 / 看起來」;驗證前就「太好了 / 完美 / 搞定」;未驗證就 commit / push / PR;<b>直接相信 agent 回報「成功」</b>(要自己看 VCS diff 查證)。</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 收尾與進階 ============ -->
+<h2 class="section" style="--c:var(--amber)">收尾與進階</h2>
+
+<section class="req" id="s10" style="--c:var(--amber)">
+  <h3><span class="no">10</span>收尾分支 <span class="en">finishing-a-development-branch</span> <span class="badge skill">SKILL</span></h3>
+  <div class="body">開發完成、測試全綠後,以<b>結構化選項</b>收尾。核心:驗測試 → 偵測環境 → 提選項 → 執行選擇 → 清理。</div>
+  <details class="scn"><summary>步驟與四個選項<span class="skillref">finishing-a-development-branch</span></summary>
+    <div class="scn-body">
+      <ul>
+        <li><b>Step 1 驗測試:</b>先跑測試,失敗就停(不得 merge / PR)。</li>
+        <li><b>Step 2–3:</b>偵測 worktree 狀態決定選單、判定 base branch。</li>
+        <li><b>Step 4 提「剛好這幾個」選項:</b>① 本地 merge 回 base ② push 並開 PR ③ 維持原樣(之後自己處理) ④ 丟棄(需<b>打字輸入 <code>discard</code></b> 確認)。</li>
+        <li><b>Step 5 執行:</b>merge 要先驗證成功才清 worktree、再刪 branch;開 PR 則<b>保留 worktree</b> 供迭代。</li>
+        <li><b>Step 6 清理:</b>只在選項 ①、④ 清理,且<b>只清自己建立</b>的 worktree(harness 建的不要動)。</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="parallel" style="--c:var(--amber)">
+  <h3>平行派工 Agent <span class="en">dispatching-parallel-agents</span> <span class="badge flex">FLEX</span></h3>
+  <div class="body">面對 <b>2 個以上彼此獨立、無共享狀態</b>的問題(例如不同檔的測試失敗各有根因),<b>一個問題派一個 agent 並行處理</b>,而非循序逐一查。</div>
+  <details class="scn"><summary>適用 / 不適用 / 做法<span class="skillref">dispatching-parallel-agents</span></summary>
+    <div class="scn-body">
+      <ul>
+        <li><b>適用:</b>3+ 測試檔各有不同根因、多個獨立壞掉的子系統、每個問題不需其他脈絡即可理解。</li>
+        <li><b>不適用:</b>失敗彼此相關(修一個可能修好其他)、需要看全系統狀態、會互相干擾(改同一檔)。</li>
+        <li><b>做法:</b>切出獨立領域 → 每個 agent 給聚焦範圍 + 明確目標 + 約束(別動其他 code)+ 要求回傳摘要 → 並行派出 → 回來後檢查是否衝突、跑全測試整合。</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="writing-skills" style="--c:var(--amber)">
+  <h3>撰寫 Skill <span class="en">writing-skills</span> <span class="badge skill">META</span></h3>
+  <div class="body">建立 / 編輯 / 驗證 skill 本身。<b>寫 skill 就是把 TDD 套用到「流程文件」上。</b>核心:沒看過 agent 在「沒這個 skill」時失敗,就不知道這個 skill 教對了東西。</div>
+  <details class="scn"><summary>TDD → Skill 的對應<span class="skillref">writing-skills</span></summary>
+    <div class="scn-body">
+      <ul>
+        <li><b>測試案例</b> = 用 subagent 跑的壓力情境;<b>production code</b> = <code>SKILL.md</code> 本身。</li>
+        <li><b>RED</b> = 沒 skill 時 agent 違規(記錄它用了哪些藉口);<b>GREEN</b> = 有 skill 時 agent 遵守;<b>REFACTOR</b> = 堵住漏洞同時維持遵守。</li>
+        <li><b>先寫測試:</b>寫 skill 前先跑 baseline 情境。個人 skill 放 <code>~/.claude/skills</code>。</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 補充:對照 ============ -->
+<footer>
+  手冊步驟的指令行為整理自本專案 <code>.claude/commands/opsx/*</code> 與 <code>.claude/commands/spec-*.md</code>;superpowers 紀律規則整理自 <code>github.com/obra/superpowers</code> 各 <code>SKILL.md</code>(已透過 <code>/plugin install superpowers@claude-plugins-official</code> 安裝)。
+  本頁為人工同步的閱讀版;指令以 <code>.claude/commands/*</code> 為準、superpowers 以官方 <code>SKILL.md</code> 為準。
+</footer>
+</main>
+</div>
+
+<script>
+// 全部展開 / 收合
+const btn = document.getElementById('toggleAll');
+btn.addEventListener('click', () => {
+  const open = btn.dataset.open !== '1';
+  document.querySelectorAll('details.scn').forEach(d => d.open = open);
+  btn.dataset.open = open ? '1' : '0';
+  btn.textContent = open ? '全部收合' : '全部展開';
+});
+
+// 側欄 scroll-spy
+const links = [...document.querySelectorAll('.toc a')];
+const targets = links
+  .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+  .filter(Boolean);
+const byId = Object.fromEntries(links.map(a => [a.getAttribute('href').slice(1), a]));
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(a => a.classList.remove('active'));
+      byId[e.target.id]?.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -75% 0px' });
+targets.forEach(t => observer.observe(t));
+</script>
+</body>
+</html>
