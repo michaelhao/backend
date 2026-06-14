@@ -17,8 +17,21 @@ class DocsController extends Controller
                     ? trim($matches[1])
                     : $name;
 
-                return ['name' => $name, 'title' => $title];
+                $isSpec = str_contains($title, 'Specification');
+                $heading = $title;
+                if (str_contains($title, '—')) {
+                    [$left, $right] = array_map('trim', explode('—', $title, 2));
+                    $heading = $isSpec ? $right : $left;
+                }
+
+                return [
+                    'name' => $name,
+                    'heading' => $heading,
+                    'category' => $isSpec ? 'spec' : 'flow',
+                    'modified' => date('Y-m-d', File::lastModified($path)),
+                ];
             })
+            ->sortBy('heading')
             ->values();
 
         return view('docs.index', ['docs' => $docs]);

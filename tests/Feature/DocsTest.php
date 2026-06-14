@@ -24,8 +24,10 @@ class DocsTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('系統文件');
+        $response->assertSee('規格文件');
+        $response->assertSee('開發流程');
         $response->assertSee('auth-spec.html');
-        $response->assertSee('auth Specification');
+        $response->assertSee('登入 / 節流 / 密碼重設');
     }
 
     public function test_authenticated_user_can_view_a_doc(): void
@@ -50,5 +52,24 @@ class DocsTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)->get('/docs/..%2F.env')->assertNotFound();
+    }
+
+    public function test_docs_sidebar_link_hidden_outside_local(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('docs.index'));
+
+        $response->assertDontSee('href="'.route('docs.index').'"', false);
+    }
+
+    public function test_docs_sidebar_link_visible_in_local(): void
+    {
+        $this->app['env'] = 'local';
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('docs.index'));
+
+        $response->assertSee('href="'.route('docs.index').'"', false);
     }
 }

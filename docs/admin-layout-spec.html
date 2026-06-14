@@ -154,7 +154,7 @@
     list-style: none; display: flex; align-items: center; gap: 8px;
   }
   details.scn summary::-webkit-details-marker { display: none; }
-  details.scn summary::before { content: "▸"; color: #94a3b8; transition: transform .15s; }
+  details.scn summary::before { content: "\25b8"; color: #94a3b8; transition: transform .15s; }
   details.scn[open] summary::before { transform: rotate(90deg); }
   .scn-body { padding: 2px 14px 12px 34px; }
   .gwt { display: flex; gap: 10px; margin: 5px 0; font-size: 13.5px; align-items: baseline; }
@@ -204,35 +204,36 @@
     <div class="toc-group-label"><span class="dot" style="background:var(--blue)"></span>版型結構與導覽</div>
     <a href="#r1">1. 後台版型外殼</a>
     <a href="#r2">2. 權限導向側邊欄導覽</a>
-    <a href="#r3">3. 頂部列與登出</a>
+    <a href="#r3">3. 系統文件側邊欄入口</a>
+    <a href="#r4">4. 頂部列與登出</a>
   </div>
   <div class="toc-group">
     <div class="toc-group-label"><span class="dot" style="background:var(--amber)"></span>視覺與互動</div>
-    <a href="#r4">4. Sidebar 視覺主題</a>
-    <a href="#r5">5. Session 倒數計時器</a>
+    <a href="#r5">5. Sidebar 視覺主題</a>
+    <a href="#r6">6. Session 倒數計時器</a>
   </div>
   <div class="toc-group">
     <div class="toc-group-label"><span class="dot" style="background:var(--green)"></span>輔助頁面</div>
-    <a href="#r6">6. 無角色 fallback 頁</a>
-    <a href="#r7">7. 訪客版型</a>
+    <a href="#r7">7. 無角色 fallback 頁</a>
+    <a href="#r8">8. 訪客版型</a>
   </div>
   <div class="toc-group">
     <div class="toc-group-label"><span class="dot" style="background:var(--gray)"></span>刻意設計</div>
-    <a href="#excluded">8. 刻意不做的事</a>
+    <a href="#excluded">9. 刻意不做的事</a>
   </div>
 </nav>
 
 <main>
 <header>
   <h1>admin-layout Specification</h1>
-  <div class="sub">後台共用版型外殼、權限導向導覽、頂部列登出、session 倒數計時器、無角色頁與訪客版型的完整行為規格</div>
+  <div class="sub">後台共用版型外殼、權限導向導覽、系統文件入口、頂部列登出、session 倒數計時器、無角色頁與訪客版型的完整行為規格</div>
   <div class="threat-banner">
     <strong>威脅模型：</strong>內部後台、非公網暴露（brute-force 不在 scope）；正式環境<strong>無對外網際網路連線</strong>（版型零外部資源依賴）。
   </div>
   <div class="meta">
     <span>來源：<code>openspec/specs/admin-layout/spec.md</code></span>
-    <span>實作：<code>f0d8bdc</code>、<code>5ea8aa7</code></span>
-    <span>change：<code>2026-06-13-retrofit-admin-layout-spec</code></span>
+    <span>實作：<code>f0d8bdc</code>、<code>5ea8aa7</code>、<code>a5d06ff</code></span>
+    <span>change：<code>2026-06-13-retrofit-admin-layout-spec</code>、<code>2026-06-14-add-docs-sidebar-link</code></span>
   </div>
   <div class="truth-note">本頁為人工同步的閱讀版；若與 <code>spec.md</code> 不一致，以 <code>spec.md</code> 為準。每個 Scenario 右側標註對應的自動化測試（版型多屬視圖／前端行為，部分無專屬測試）。</div>
 </header>
@@ -303,7 +304,7 @@
 
 <section class="req" id="r2" style="--c:var(--blue)">
   <h3><span class="no">R2</span>權限導向的側邊欄導覽</h3>
-  <div class="body">sidebar 每個選單連結 <span class="badge shall">SHALL</span> 以 <code>&lt;x-permission name="{Module}.index"&gt;</code> 元件包裹，僅在當前使用者持有該權限時渲染。<code>Permission::shouldRender()</code> <span class="badge shall">SHALL</span> 回傳 <code>Auth::check() &amp;&amp; hasPermissionTo($name)</code>，權限來源為登入時載入的 <code>session('auth.permissions')</code>。active 標示 <span class="badge shall">SHALL</span> 以 <code>request()-&gt;routeIs('{module}.*')</code> 判斷。</div>
+  <div class="body">sidebar 每個 <strong>權限控管</strong> 選單連結 <span class="badge shall">SHALL</span> 以 <code>&lt;x-permission name="{Module}.index"&gt;</code> 元件包裹，僅在當前使用者持有該權限時渲染。<code>Permission::shouldRender()</code> <span class="badge shall">SHALL</span> 回傳 <code>Auth::check() &amp;&amp; hasPermissionTo($name)</code>，權限來源為登入時載入的 <code>session('auth.permissions')</code>。active 標示 <span class="badge shall">SHALL</span> 以 <code>request()-&gt;routeIs('{module}.*')</code> 判斷。不進權限系統的連結（例如「系統文件」入口，見 R3）<span class="badge mustnot">SHALL NOT</span> 以 <code>&lt;x-permission&gt;</code> 包裹。</div>
   <details class="scn"><summary>有權限者可見對應選單<span class="testref none">無直接測試 — 元件 shouldRender 邏輯</span></summary>
     <div class="scn-body">
       <div class="gwt"><span class="kw given">GIVEN</span><span>持有 <code>Shop.index</code> 權限的使用者</span></div>
@@ -328,7 +329,38 @@
 </section>
 
 <section class="req" id="r3" style="--c:var(--blue)">
-  <h3><span class="no">R3</span>頂部列使用者識別與登出</h3>
+  <h3><span class="no">R3</span>系統文件側邊欄入口</h3>
+  <div class="body">在 <code>local</code> 環境，sidebar 導覽列（<code>&lt;nav&gt;</code>）最上方（位於「儀表板」之前）<span class="badge shall">SHALL</span> 包含一個指向 <code>route('docs.index')</code> 的「系統文件」連結；此連結為開發人員導向，<span class="badge shall">SHALL</span> 以 Blade <code>@env('local')</code> 包裹，於 <strong>非 <code>local</code> 環境 <span class="badge mustnot">SHALL NOT</span> 渲染</strong>。因 <code>/docs</code> 路由置於 <code>permission</code> middleware 之外（登入即可瀏覽、不進權限系統），此連結 <span class="badge mustnot">SHALL NOT</span> 以 <code>&lt;x-permission&gt;</code> 包裹，且在 <code>local</code> 環境 <span class="badge shall">SHALL</span> 對所有已登入使用者顯示（含無任何管理權限者）。其 active 標示 <span class="badge shall">SHALL</span> 以 <code>request()-&gt;routeIs('docs.*')</code> 判斷，套用與其他導覽連結一致的 <code>bg-blue-50 text-blue-600</code> 樣式。</div>
+  <details class="scn"><summary>local 環境一般登入者可見系統文件入口<span class="testref">DocsTest::test_docs_sidebar_link_visible_in_local</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span><code>local</code> 環境下已登入但未持有任何管理權限的使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/docs</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>sidebar 顯示指向 <code>route('docs.index')</code> 的「系統文件」連結</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>非 local 環境不顯示系統文件入口<span class="testref">DocsTest::test_docs_sidebar_link_hidden_outside_local</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>非 <code>local</code> 環境（如 <code>production</code>、<code>testing</code>）的已登入使用者</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/docs</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>sidebar 不渲染「系統文件」連結</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>系統文件入口不受權限控管<span class="testref">DocsTest::test_docs_sidebar_link_visible_in_local</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>於 <code>local</code> 環境渲染 sidebar</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>「系統文件」連結未被 <code>&lt;x-permission&gt;</code> 包裹，對所有登入者一致顯示</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>進入文件頁時 active 樣式<span class="testref none">無直接測試 — 前端視覺</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>使用者於 <code>local</code> 環境 GET <code>/docs</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>sidebar 中「系統文件」連結含 <code>bg-blue-50 text-blue-600</code> 樣式</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r4" style="--c:var(--blue)">
+  <h3><span class="no">R4</span>頂部列使用者識別與登出</h3>
   <div class="body">頂部列 <span class="badge shall">SHALL</span> 顯示當前頁面標題、<code>Auth::user()-&gt;name</code>、session 倒數計時器，以及一個 POST 至 <code>route('logout')</code> 的登出表單（含 <code>@csrf</code>）。</div>
   <details class="scn"><summary>顯示登入者姓名<span class="testref none">無直接測試 — 目視 admin.blade.php</span></summary>
     <div class="scn-body">
@@ -348,8 +380,8 @@
 <!-- ============ 視覺與互動 ============ -->
 <h2 class="section" style="--c:var(--amber)">視覺與互動</h2>
 
-<section class="req" id="r4" style="--c:var(--amber)">
-  <h3><span class="no">R4</span>Admin Sidebar 視覺主題</h3>
+<section class="req" id="r5" style="--c:var(--amber)">
+  <h3><span class="no">R5</span>Admin Sidebar 視覺主題</h3>
   <div class="body"><code>layouts/admin.blade.php</code> 的 sidebar <span class="badge shall">SHALL</span> 採用淺色 + 藍品牌主題：</div>
   <ul>
     <li>容器：白底 + 右側細邊框（<code>bg-white border-r border-slate-200</code>）</li>
@@ -381,8 +413,8 @@
   </details>
 </section>
 
-<section class="req" id="r5" style="--c:var(--amber)">
-  <h3><span class="no">R5</span>Session 倒數計時器</h3>
+<section class="req" id="r6" style="--c:var(--amber)">
+  <h3><span class="no">R6</span>Session 倒數計時器</h3>
   <div class="body"><code>resources/js/layouts/admin.js</code> <span class="badge shall">SHALL</span> 讀取 <code>session-lifetime</code> meta 作為起始秒數，於頂部列以 <code>HH:MM:SS</code> 每秒遞減顯示。剩餘 &le; 300 秒時 <span class="badge shall">SHALL</span> 由 <code>text-slate-400</code> 切換為 <code>text-red-500</code>，&gt; 300 秒時 <span class="badge shall">SHALL</span> 還原為 <code>text-slate-400</code>；歸零時 <span class="badge shall">SHALL</span> 導向 <code>login-url</code> meta（值 = <code>route('login')</code>，fallback <code>/login</code>）。顏色 class <span class="badge shall">SHALL</span> 與 markup 一致採 <code>slate-*</code>（修正先前 <code>text-gray-400</code> 的 no-op remove 死碼）。</div>
   <div class="note">此為純前端視覺提示，伺服器端 session 失效仍由 Laravel session middleware 權威處理。</div>
   <details class="scn"><summary>倒數歸零導向登入頁<span class="testref none">無直接測試 — 前端行為</span></summary>
@@ -404,8 +436,8 @@
 <!-- ============ 輔助頁面 ============ -->
 <h2 class="section" style="--c:var(--green)">輔助頁面</h2>
 
-<section class="req" id="r6" style="--c:var(--green)">
-  <h3><span class="no">R6</span>無角色 fallback 頁</h3>
+<section class="req" id="r7" style="--c:var(--green)">
+  <h3><span class="no">R7</span>無角色 fallback 頁</h3>
   <div class="body"><code>GET /no-role</code>（route name <code>no-role</code>）<span class="badge shall">SHALL</span> 渲染無角色提示頁，繼承 <code>layouts.admin</code> 並提供 POST 登出表單。此路由 <span class="badge shall">SHALL</span> 受 <code>auth</code> 保護但 <strong>不</strong> 進入 <code>permission</code> middleware 群組（避免無角色者被反覆導向）。當已登入使用者 <code>role_id</code> 為 null 時，<code>permission</code> middleware <span class="badge shall">SHALL</span> 將其導向此頁。</div>
   <details class="scn"><summary>無角色使用者被導向 no-role 頁<span class="testref">PermissionTest::test_user_without_role_is_redirected_to_no_role_page</span></summary>
     <div class="scn-body">
@@ -422,8 +454,8 @@
   </details>
 </section>
 
-<section class="req" id="r7" style="--c:var(--green)">
-  <h3><span class="no">R7</span>訪客版型</h3>
+<section class="req" id="r8" style="--c:var(--green)">
+  <h3><span class="no">R8</span>訪客版型</h3>
   <div class="body">登入、忘記密碼、重設密碼等 guest 頁面 <span class="badge shall">SHALL</span> 繼承 <code>layouts/app.blade.php</code>——置中、無 sidebar、僅載入 <code>app.css</code> 與 <code>app.js</code> 的精簡骨架，與後台 <code>layouts.admin</code> 分離。</div>
   <details class="scn"><summary>登入頁使用訪客版型<span class="testref">LoginTest::login_screen_can_be_rendered</span></summary>
     <div class="scn-body">
@@ -438,7 +470,7 @@
 <p class="section-desc">以下為依威脅模型與簡化考量刻意排除的功能，避免後人誤判為待補項目。</p>
 
 <section class="req excluded" id="excluded" style="--c:var(--gray)">
-  <h3><span class="no">R8</span>刻意不做的範圍界線</h3>
+  <h3><span class="no">R9</span>刻意不做的範圍界線</h3>
   <div class="body">基於內部後台、非公網暴露的威脅模型與簡化考量，本版型 <span class="badge shall">SHALL</span> 明確界定下列刻意不實作的範圍：</div>
   <div class="nots">
     <div class="not-card"><span class="x">Session 活動式重置 / heartbeat</span><small>計時器為單純倒數，<span class="badge mustnot">MUST NOT</span> 因使用者操作而重置（伺服器端到期仍由 Laravel session 處理）</small></div>
@@ -460,8 +492,8 @@
 </section>
 
 <footer>
-  產生自 <code>openspec/specs/admin-layout/spec.md</code>（change <code>2026-06-13-retrofit-admin-layout-spec</code>）。8 項 Requirement、17 個 Scenario。
-  間接測試對應：<code>tests/Feature/DashboardTest.php</code>、<code>tests/Feature/PermissionTest.php</code>、<code>tests/Feature/Auth/LoginTest.php</code>。
+  產生自 <code>openspec/specs/admin-layout/spec.md</code>（change <code>2026-06-13-retrofit-admin-layout-spec</code>、<code>2026-06-14-add-docs-sidebar-link</code>）。9 項 Requirement、21 個 Scenario。
+  間接測試對應：<code>tests/Feature/DashboardTest.php</code>、<code>tests/Feature/PermissionTest.php</code>、<code>tests/Feature/Auth/LoginTest.php</code>、<code>tests/Feature/DocsTest.php</code>。
   本頁為人工同步版本，內容以 <code>spec.md</code> 為準。
 </footer>
 </main>
