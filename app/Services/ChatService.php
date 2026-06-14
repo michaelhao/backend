@@ -36,20 +36,21 @@ class ChatService
     /** @return array<int, array<string, mixed>> */
     public function listConversations(int $userId): array
     {
+        $unreadCounts = $this->messageRepository->unreadCountsByConversation($userId);
+
         return $this->conversationRepository->forUser($userId)
-            ->map(function (ChatConversation $conversation) use ($userId): array {
+            ->map(function (ChatConversation $conversation) use ($userId, $unreadCounts): array {
                 $otherId = $conversation->otherUserId($userId);
                 $other = $conversation->user_one_id === $otherId
                     ? $conversation->userOne
                     : $conversation->userTwo;
-                $lastReadAt = $this->participantRepository->lastReadAt($conversation->id, $userId);
 
                 return [
                     'id' => $conversation->id,
                     'other_user' => ['id' => $other->id, 'name' => $other->name],
                     'last_message' => $conversation->lastMessage?->body,
                     'last_message_at' => $conversation->last_message_at?->toIso8601String(),
-                    'unread_count' => $this->messageRepository->unreadCountFor($conversation->id, $userId, $lastReadAt),
+                    'unread_count' => $unreadCounts[$conversation->id] ?? 0,
                 ];
             })
             ->all();
@@ -91,7 +92,7 @@ class ChatService
     {
         $this->assertParticipant($conversationId, $senderId);
 
-        $conversation = ChatConversation::findOrFail($conversationId);
+        $conversation = $this->conversationRepository->findOrFail($conversationId);
 
         $message = DB::transaction(function () use ($conversation, $senderId, $body): ChatMessage {
             $message = $this->messageRepository->create([

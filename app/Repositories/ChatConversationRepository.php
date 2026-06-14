@@ -19,6 +19,11 @@ class ChatConversationRepository
             ->first();
     }
 
+    public function findOrFail(int $id): ChatConversation
+    {
+        return ChatConversation::findOrFail($id);
+    }
+
     public function createWithParticipants(int $userOneId, int $userTwoId): ChatConversation
     {
         [$min, $max] = $this->orderPair($userOneId, $userTwoId);

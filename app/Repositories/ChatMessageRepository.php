@@ -33,6 +33,28 @@ class ChatMessageRepository
             ->count();
     }
 
+    /**
+     * @return array<int, int> conversationId => unread count
+     */
+    public function unreadCountsByConversation(int $userId): array
+    {
+        return ChatMessage::query()
+            ->join('chat_conversation_participants as p', function ($join) use ($userId) {
+                $join->on('p.conversation_id', '=', 'chat_messages.conversation_id')
+                    ->where('p.user_id', '=', $userId);
+            })
+            ->where('chat_messages.sender_id', '!=', $userId)
+            ->where(function ($query) {
+                $query->whereNull('p.last_read_at')
+                    ->orWhereColumn('chat_messages.created_at', '>', 'p.last_read_at');
+            })
+            ->groupBy('chat_messages.conversation_id')
+            ->selectRaw('chat_messages.conversation_id as conversation_id, COUNT(*) as aggregate')
+            ->pluck('aggregate', 'conversation_id')
+            ->map(fn ($count) => (int) $count)
+            ->all();
+    }
+
     public function totalUnreadFor(int $userId): int
     {
         return ChatMessage::query()

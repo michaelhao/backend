@@ -71,6 +71,21 @@ class ChatServiceTest extends TestCase
         });
     }
 
+    public function test_list_conversations_includes_unread_count_and_other_user(): void
+    {
+        $me = User::factory()->create();
+        $b = User::factory()->create();
+        $conv = $this->service()->getOrCreateConversation($me->id, $b->id);
+        ChatMessage::factory()->count(2)->create(['conversation_id' => $conv->id, 'sender_id' => $b->id]);
+
+        $list = $this->service()->listConversations($me->id);
+
+        $this->assertCount(1, $list);
+        $this->assertSame($conv->id, $list[0]['id']);
+        $this->assertSame($b->id, $list[0]['other_user']['id']);
+        $this->assertSame(2, $list[0]['unread_count']);
+    }
+
     public function test_total_unread_counts_across_conversations(): void
     {
         $me = User::factory()->create();
