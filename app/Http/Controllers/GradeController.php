@@ -81,7 +81,7 @@ class GradeController extends Controller
     {
         $grade = $this->gradeService->findGradeById($id);
         if (! $grade) {
-            return response()->json(['message' => '找不到該版本'], 422);
+            return response()->json(['message' => '找不到該版本'], 404);
         }
 
         $this->gradeService->toggleStatus($grade);

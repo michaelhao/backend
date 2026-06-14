@@ -335,14 +335,14 @@ class GradeCruTest extends TestCase
         $response->assertSessionHas('error', '找不到該版本');
     }
 
-    public function test_toggle_nonexistent_grade_returns_422(): void
+    public function test_toggle_nonexistent_grade_returns_404(): void
     {
         $this->seedPermissions();
         $this->createUserWithRole('Admin');
 
         $response = $this->patch(route('grades.toggle', ['id' => 9999]));
 
-        $response->assertStatus(422);
+        $response->assertStatus(404);
         $response->assertJson(['message' => '找不到該版本']);
     }
 
