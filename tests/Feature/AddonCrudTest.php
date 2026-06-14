@@ -12,13 +12,10 @@ use App\Jobs\SyncShopAddonsForGrade;
 use App\Models\Addon;
 use App\Models\AddonImage;
 use App\Models\Grade;
-use App\Models\Role;
 use App\Models\Shop;
 use App\Models\ShopAdmin;
-use App\Models\User;
-use Database\Seeders\PermissionSeeder;
 use Illuminate\Bus\Batch;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -29,24 +26,7 @@ use Tests\TestCase;
 
 class AddonCrudTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private function seedPermissions(): void
-    {
-        $this->seed(PermissionSeeder::class);
-    }
-
-    private function createUserWithRole(string $roleName): User
-    {
-        $role = Role::where('name', $roleName)->firstOrFail();
-
-        $user = User::factory()->create(['role_id' => $role->id]);
-
-        $this->actingAs($user);
-        $user->loadPermissionsToSession();
-
-        return $user;
-    }
+    use LazilyRefreshDatabase;
 
     private function validAddonData(array $overrides = []): array
     {

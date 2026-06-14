@@ -2,36 +2,22 @@
 
 namespace Tests\Feature\Bill;
 
-use App\Enums\BillDetailType;
 use App\Enums\BillPaymentStatus;
 use App\Models\Bill;
 use App\Models\BillDetail;
 use App\Models\BillFutureEffect;
 use App\Models\Grade;
-use App\Models\Role;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\BillPaymentService;
 use App\Services\BillService;
-use Database\Seeders\PermissionSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class BillEndpointsTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private function actingAsAdmin(): User
-    {
-        $this->seed(PermissionSeeder::class);
-        $role = Role::where('name', 'Admin')->firstOrFail();
-        $user = User::factory()->create(['role_id' => $role->id]);
-        $this->actingAs($user);
-        $user->loadPermissionsToSession();
-
-        return $user;
-    }
+    use LazilyRefreshDatabase;
 
     private function makeBillWithDetail(User $user, array $billAttrs = [], array $detailAttrs = []): array
     {

@@ -8,32 +8,15 @@ use App\Models\Bill;
 use App\Models\BillDetail;
 use App\Models\BillFutureEffect;
 use App\Models\Grade;
-use App\Models\Role;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\BillPaymentService;
-use Database\Seeders\PermissionSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 class BillPaymentTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private function seedPermissions(): void
-    {
-        $this->seed(PermissionSeeder::class);
-    }
-
-    private function createAdminUser(): User
-    {
-        $role = Role::where('name', 'Admin')->firstOrFail();
-        $user = User::factory()->create(['role_id' => $role->id]);
-        $this->actingAs($user);
-        $user->loadPermissionsToSession();
-
-        return $user;
-    }
+    use LazilyRefreshDatabase;
 
     private function createShopWithGrade(User $salesUser): array
     {
@@ -50,7 +33,7 @@ class BillPaymentTest extends TestCase
     public function test_future_detail_creates_future_effect_record(): void
     {
         $this->seedPermissions();
-        $user = $this->createAdminUser();
+        $user = $this->createUserWithRole('Admin');
         [$shop, $grade] = $this->createShopWithGrade($user);
 
         $bill = Bill::factory()->create([
@@ -86,7 +69,7 @@ class BillPaymentTest extends TestCase
     public function test_past_start_at_detail_installs_immediately_on_payment(): void
     {
         $this->seedPermissions();
-        $user = $this->createAdminUser();
+        $user = $this->createUserWithRole('Admin');
         [$shop, $grade] = $this->createShopWithGrade($user);
 
         $bill = Bill::factory()->create([
@@ -125,7 +108,7 @@ class BillPaymentTest extends TestCase
     public function test_install_detail_is_idempotent(): void
     {
         $this->seedPermissions();
-        $user = $this->createAdminUser();
+        $user = $this->createUserWithRole('Admin');
         [$shop, $grade] = $this->createShopWithGrade($user);
 
         $bill = Bill::factory()->create([
@@ -160,7 +143,7 @@ class BillPaymentTest extends TestCase
     public function test_writeoff_marks_detail_ineffective(): void
     {
         $this->seedPermissions();
-        $user = $this->createAdminUser();
+        $user = $this->createUserWithRole('Admin');
         [$shop, $grade] = $this->createShopWithGrade($user);
 
         $bill = Bill::factory()->create([
@@ -190,7 +173,7 @@ class BillPaymentTest extends TestCase
     public function test_cannot_transition_invalid_bill_to_paid(): void
     {
         $this->seedPermissions();
-        $user = $this->createAdminUser();
+        $user = $this->createUserWithRole('Admin');
         [$shop] = $this->createShopWithGrade($user);
 
         $bill = Bill::factory()->create([
@@ -210,7 +193,7 @@ class BillPaymentTest extends TestCase
     public function test_invalid_bill_is_terminal_and_cannot_be_reactivated(): void
     {
         $this->seedPermissions();
-        $user = $this->createAdminUser();
+        $user = $this->createUserWithRole('Admin');
         [$shop] = $this->createShopWithGrade($user);
 
         $bill = Bill::factory()->create([
@@ -232,7 +215,7 @@ class BillPaymentTest extends TestCase
     public function test_update_to_paid_installs_details(): void
     {
         $this->seedPermissions();
-        $user = $this->createAdminUser();
+        $user = $this->createUserWithRole('Admin');
         [$shop, $grade] = $this->createShopWithGrade($user);
 
         $bill = Bill::factory()->create([
@@ -264,7 +247,7 @@ class BillPaymentTest extends TestCase
     public function test_cannot_downgrade_paid_bill_status(): void
     {
         $this->seedPermissions();
-        $user = $this->createAdminUser();
+        $user = $this->createUserWithRole('Admin');
         [$shop, $grade] = $this->createShopWithGrade($user);
 
         $bill = Bill::factory()->create([
@@ -285,7 +268,7 @@ class BillPaymentTest extends TestCase
     public function test_process_future_effects_installs_past_due_detail(): void
     {
         $this->seedPermissions();
-        $user = $this->createAdminUser();
+        $user = $this->createUserWithRole('Admin');
         [$shop, $grade] = $this->createShopWithGrade($user);
 
         $bill = Bill::factory()->create([
@@ -326,7 +309,7 @@ class BillPaymentTest extends TestCase
     public function test_writeoff_rejects_detail_from_other_bill(): void
     {
         $this->seedPermissions();
-        $user = $this->createAdminUser();
+        $user = $this->createUserWithRole('Admin');
         [$shop, $grade] = $this->createShopWithGrade($user);
 
         $bill = Bill::factory()->create([

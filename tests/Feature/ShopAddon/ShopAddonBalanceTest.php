@@ -5,13 +5,13 @@ namespace Tests\Feature\ShopAddon;
 use App\Models\Addon;
 use App\Models\Shop;
 use App\Repositories\ShopAddonBalanceRepository;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class ShopAddonBalanceTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     private ShopAddonBalanceRepository $repository;
 

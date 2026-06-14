@@ -5,31 +5,14 @@ namespace Tests\Feature\Bill;
 use App\Enums\BillPaymentMethod;
 use App\Enums\BillPaymentStatus;
 use App\Models\Bill;
-use App\Models\Role;
 use App\Models\Shop;
 use App\Models\User;
-use Database\Seeders\PermissionSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 class BillIndexTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private function seedPermissions(): void
-    {
-        $this->seed(PermissionSeeder::class);
-    }
-
-    private function createUserWithRole(string $roleName): User
-    {
-        $role = Role::where('name', $roleName)->firstOrFail();
-        $user = User::factory()->create(['role_id' => $role->id]);
-        $this->actingAs($user);
-        $user->loadPermissionsToSession();
-
-        return $user;
-    }
+    use LazilyRefreshDatabase;
 
     private function makeBill(array $attrs = []): Bill
     {
@@ -66,7 +49,7 @@ class BillIndexTest extends TestCase
         $this->seedPermissions();
         $this->createUserWithRole('Viewer');
 
-        $this->get(route('bills.create'))->assertStatus(302);
+        $this->get(route('bills.create'))->assertRedirect();
     }
 
     public function test_viewer_cannot_writeoff(): void
@@ -76,7 +59,7 @@ class BillIndexTest extends TestCase
         $bill = $this->makeBill();
 
         $this->post(route('bills.writeoff', $bill->id), ['detail_ids' => [1]])
-            ->assertStatus(302);
+            ->assertRedirect();
 
         $this->assertEquals(BillPaymentStatus::Pending, $bill->fresh()->payment_status);
     }

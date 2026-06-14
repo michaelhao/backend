@@ -5,33 +5,13 @@ namespace Tests\Feature\Conference;
 use App\Enums\ConferenceStatus;
 use App\Models\Conference;
 use App\Models\Permission;
-use App\Models\Role;
-use App\Models\User;
-use Database\Seeders\PermissionSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class ConferenceCrudTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private function seedPermissions(): void
-    {
-        $this->seed(PermissionSeeder::class);
-    }
-
-    private function createUserWithRole(string $roleName): User
-    {
-        $role = Role::where('name', $roleName)->firstOrFail();
-
-        $user = User::factory()->create(['role_id' => $role->id]);
-
-        $this->actingAs($user);
-        $user->loadPermissionsToSession();
-
-        return $user;
-    }
+    use LazilyRefreshDatabase;
 
     private function validConferenceData(array $overrides = []): array
     {
