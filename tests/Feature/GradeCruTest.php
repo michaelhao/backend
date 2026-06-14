@@ -4,32 +4,12 @@ namespace Tests\Feature;
 
 use App\Enums\GradeStatus;
 use App\Models\Grade;
-use App\Models\Role;
-use App\Models\User;
-use Database\Seeders\PermissionSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 class GradeCruTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private function seedPermissions(): void
-    {
-        $this->seed(PermissionSeeder::class);
-    }
-
-    private function createUserWithRole(string $roleName): User
-    {
-        $role = Role::where('name', $roleName)->firstOrFail();
-
-        $user = User::factory()->create(['role_id' => $role->id]);
-
-        $this->actingAs($user);
-        $user->loadPermissionsToSession();
-
-        return $user;
-    }
+    use LazilyRefreshDatabase;
 
     public function test_admin_can_access_grade_index(): void
     {
@@ -47,9 +27,9 @@ class GradeCruTest extends TestCase
         $this->createUserWithRole('Admin');
 
         $response = $this->post(route('grades.store'), [
-            'code'   => 'grade_test',
-            'name'   => '測試版本',
-            'price'  => 5000,
+            'code' => 'grade_test',
+            'name' => '測試版本',
+            'price' => 5000,
             'weight' => 50,
             'status' => 1,
         ]);
@@ -70,9 +50,9 @@ class GradeCruTest extends TestCase
         $grade = Grade::factory()->create();
 
         $response = $this->put(route('grades.update', $grade), [
-            'code'   => 'grade_updated',
-            'name'   => '更新版本',
-            'price'  => 8888,
+            'code' => 'grade_updated',
+            'name' => '更新版本',
+            'price' => 8888,
             'weight' => $grade->weight,
             'status' => 0,
         ]);
@@ -111,9 +91,9 @@ class GradeCruTest extends TestCase
         $grade = Grade::factory()->create(['code' => 'mycode', 'name' => 'myname']);
 
         $response = $this->put(route('grades.update', $grade), [
-            'code'   => 'mycode',
-            'name'   => 'myname',
-            'price'  => 9999,
+            'code' => 'mycode',
+            'name' => 'myname',
+            'price' => 9999,
             'weight' => $grade->weight,
             'status' => 1,
         ]);
@@ -161,9 +141,9 @@ class GradeCruTest extends TestCase
         Grade::factory()->create(['weight' => 77]);
 
         $response = $this->post(route('grades.store'), [
-            'code'   => 'grade_dupe_w',
-            'name'   => '權重重複',
-            'price'  => 2000,
+            'code' => 'grade_dupe_w',
+            'name' => '權重重複',
+            'price' => 2000,
             'weight' => 77,
             'status' => 1,
         ]);
@@ -178,9 +158,9 @@ class GradeCruTest extends TestCase
         $grade = Grade::factory()->create(['weight' => 88]);
 
         $response = $this->put(route('grades.update', $grade), [
-            'code'   => $grade->code,
-            'name'   => $grade->name,
-            'price'  => $grade->price,
+            'code' => $grade->code,
+            'name' => $grade->name,
+            'price' => $grade->price,
             'weight' => 88,
             'status' => $grade->status->value,
         ]);
@@ -324,9 +304,9 @@ class GradeCruTest extends TestCase
         $this->createUserWithRole('Admin');
 
         $response = $this->put(route('grades.update', ['id' => 9999]), [
-            'code'   => 'grade_ghost',
-            'name'   => '幽靈版本',
-            'price'  => 2000,
+            'code' => 'grade_ghost',
+            'name' => '幽靈版本',
+            'price' => 2000,
             'weight' => 66,
             'status' => 1,
         ]);
@@ -358,8 +338,8 @@ class GradeCruTest extends TestCase
         $response->assertJson([
             'duplicate' => true,
             'conflicting_grade' => [
-                'id'     => $grade->id,
-                'name'   => $grade->name,
+                'id' => $grade->id,
+                'name' => $grade->name,
                 'weight' => 77,
             ],
         ]);
@@ -388,7 +368,7 @@ class GradeCruTest extends TestCase
         $grade = Grade::factory()->create(['weight' => 77]);
 
         $response = $this->getJson(route('grades.check-weight', [
-            'weight'     => 77,
+            'weight' => 77,
             'exclude_id' => $grade->id,
         ]));
 
@@ -421,9 +401,9 @@ class GradeCruTest extends TestCase
         $this->createUserWithRole('Admin');
 
         $response = $this->post(route('grades.store'), [
-            'code'   => 'grade_noweight',
-            'name'   => '無權重版本',
-            'price'  => 2000,
+            'code' => 'grade_noweight',
+            'name' => '無權重版本',
+            'price' => 2000,
             'status' => 1,
         ]);
 
@@ -436,9 +416,9 @@ class GradeCruTest extends TestCase
         $this->createUserWithRole('Admin');
 
         $response = $this->post(route('grades.store'), [
-            'code'   => 'grade_zero_w',
-            'name'   => '零權重版本',
-            'price'  => 2000,
+            'code' => 'grade_zero_w',
+            'name' => '零權重版本',
+            'price' => 2000,
             'weight' => 0,
             'status' => 1,
         ]);
@@ -452,9 +432,9 @@ class GradeCruTest extends TestCase
         $this->createUserWithRole('Admin');
 
         $response = $this->post(route('grades.store'), [
-            'code'   => 'grade_neg',
-            'name'   => '負價版本',
-            'price'  => -100,
+            'code' => 'grade_neg',
+            'name' => '負價版本',
+            'price' => -100,
             'weight' => 60,
             'status' => 1,
         ]);

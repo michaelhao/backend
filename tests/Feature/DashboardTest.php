@@ -9,7 +9,7 @@ use App\Models\Shop;
 use App\Models\ShopAdmin;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -17,7 +17,7 @@ use Tests\TestCase;
 
 class DashboardTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     protected function setUp(): void
     {
@@ -30,16 +30,6 @@ class DashboardTest extends TestCase
     {
         Carbon::setTestNow();
         parent::tearDown();
-    }
-
-    private function createUserWithRole(string $roleName): User
-    {
-        $role = Role::where('name', $roleName)->firstOrFail();
-        $user = User::factory()->create(['role_id' => $role->id]);
-        $this->actingAs($user);
-        $user->loadPermissionsToSession();
-
-        return $user;
     }
 
     /** @param string[] $permissionNames */

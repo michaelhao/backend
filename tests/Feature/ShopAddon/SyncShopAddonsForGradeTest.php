@@ -10,13 +10,13 @@ use App\Models\Grade;
 use App\Models\Shop;
 use App\Models\ShopAdmin;
 use App\Services\ShopAddonSyncService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class SyncShopAddonsForGradeTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     private function createShopWithAdmin(Grade $grade): Shop
     {

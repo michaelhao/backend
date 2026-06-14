@@ -5,32 +5,14 @@ namespace Tests\Feature;
 use App\Models\Bill;
 use App\Models\Role;
 use App\Models\User;
-use Database\Seeders\PermissionSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class UserCrudTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private function seedPermissions(): void
-    {
-        $this->seed(PermissionSeeder::class);
-    }
-
-    private function createUserWithRole(string $roleName): User
-    {
-        $role = Role::where('name', $roleName)->firstOrFail();
-
-        $user = User::factory()->create(['role_id' => $role->id]);
-
-        $this->actingAs($user);
-        $user->loadPermissionsToSession();
-
-        return $user;
-    }
+    use LazilyRefreshDatabase;
 
     public function test_admin_can_access_user_index(): void
     {
@@ -145,7 +127,7 @@ class UserCrudTest extends TestCase
 
         $response->assertOk();
         $response->assertExactJson(['message' => '使用者已刪除']);
-        $this->assertDatabaseMissing('users', ['id' => $target->id]);
+        $this->assertModelMissing($target);
     }
 
     public function test_destroy_returns_404_for_missing_user(): void
@@ -194,7 +176,7 @@ class UserCrudTest extends TestCase
 
         $response->assertStatus(422);
         $response->assertExactJson(['message' => '該使用者為帳單業務，無法刪除']);
-        $this->assertDatabaseHas('users', ['id' => $target->id]);
+        $this->assertModelExists($target);
     }
 
     public function test_admin_cannot_delete_self(): void
@@ -207,7 +189,7 @@ class UserCrudTest extends TestCase
 
         $response->assertStatus(422);
         $response->assertExactJson(['message' => '無法刪除自己的帳號']);
-        $this->assertDatabaseHas('users', ['id' => $admin->id]);
+        $this->assertModelExists($admin);
     }
 
     public function test_admin_cannot_change_own_role(): void
@@ -298,7 +280,7 @@ class UserCrudTest extends TestCase
         $response = $this->delete(route('users.destroy', $target));
 
         $response->assertRedirect();
-        $this->assertDatabaseHas('users', ['id' => $target->id]);
+        $this->assertModelExists($target);
     }
 
     public function test_edit_redirects_with_error_for_missing_user(): void

@@ -6,33 +6,15 @@ use App\Enums\ShopAddonSource;
 use App\Enums\ShopAddonStatus;
 use App\Models\Addon;
 use App\Models\Grade;
-use App\Models\Role;
 use App\Models\Shop;
 use App\Models\ShopAdmin;
-use App\Models\User;
-use Database\Seeders\PermissionSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class ShopAddonSyncTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private function seedPermissions(): void
-    {
-        $this->seed(PermissionSeeder::class);
-    }
-
-    private function createAdminUser(): User
-    {
-        $role = Role::where('name', 'Admin')->firstOrFail();
-        $user = User::factory()->create(['role_id' => $role->id]);
-        $this->actingAs($user);
-        $user->loadPermissionsToSession();
-
-        return $user;
-    }
+    use LazilyRefreshDatabase;
 
     private function createShopWithAdmin(Grade $grade): Shop
     {
@@ -84,7 +66,7 @@ class ShopAddonSyncTest extends TestCase
     public function test_grade_change_removes_old_grade_addons(): void
     {
         $this->seedPermissions();
-        $this->createAdminUser();
+        $this->createUserWithRole('Admin');
 
         $gradeA = Grade::factory()->create();
         $gradeB = Grade::factory()->create();
@@ -115,7 +97,7 @@ class ShopAddonSyncTest extends TestCase
     public function test_grade_change_adds_new_grade_addons(): void
     {
         $this->seedPermissions();
-        $this->createAdminUser();
+        $this->createUserWithRole('Admin');
 
         $gradeA = Grade::factory()->create();
         $gradeB = Grade::factory()->create();
@@ -138,7 +120,7 @@ class ShopAddonSyncTest extends TestCase
     public function test_grade_change_upgrades_purchased_addon_to_grade(): void
     {
         $this->seedPermissions();
-        $this->createAdminUser();
+        $this->createUserWithRole('Admin');
 
         $gradeA = Grade::factory()->create();
         $gradeB = Grade::factory()->create();
@@ -165,7 +147,7 @@ class ShopAddonSyncTest extends TestCase
     public function test_grade_change_leaves_other_purchased_addons_untouched(): void
     {
         $this->seedPermissions();
-        $this->createAdminUser();
+        $this->createUserWithRole('Admin');
 
         $gradeA = Grade::factory()->create();
         $gradeB = Grade::factory()->create();
@@ -198,7 +180,7 @@ class ShopAddonSyncTest extends TestCase
     public function test_shop_update_without_grade_change_does_not_touch_addons(): void
     {
         $this->seedPermissions();
-        $this->createAdminUser();
+        $this->createUserWithRole('Admin');
 
         $grade = Grade::factory()->create();
         $addon = Addon::factory()->create();

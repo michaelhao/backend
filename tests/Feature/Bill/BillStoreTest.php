@@ -11,28 +11,15 @@ use App\Models\Bill;
 use App\Models\BillDetail;
 use App\Models\BillDiscount;
 use App\Models\Grade;
-use App\Models\Role;
 use App\Models\Shop;
 use App\Models\User;
 use Carbon\Carbon;
-use Database\Seeders\PermissionSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 class BillStoreTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private function actingAsAdmin(): User
-    {
-        $this->seed(PermissionSeeder::class);
-        $role = Role::where('name', 'Admin')->firstOrFail();
-        $user = User::factory()->create(['role_id' => $role->id]);
-        $this->actingAs($user);
-        $user->loadPermissionsToSession();
-
-        return $user;
-    }
+    use LazilyRefreshDatabase;
 
     private function makeShop(User $sales, int $weight = 10, int $price = 1000, ?Carbon $expiredAt = null): array
     {

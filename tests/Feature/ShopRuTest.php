@@ -5,35 +5,17 @@ namespace Tests\Feature;
 use App\Enums\GradeStatus;
 use App\Enums\ShopStatus;
 use App\Models\Grade;
-use App\Models\Role;
 use App\Models\Shop;
 use App\Models\ShopAdmin;
-use App\Models\User;
 use App\Support\Mask;
-use Database\Seeders\PermissionSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class ShopRuTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private function seedPermissions(): void
-    {
-        $this->seed(PermissionSeeder::class);
-    }
-
-    private function createUserWithRole(string $roleName): User
-    {
-        $role = Role::where('name', $roleName)->firstOrFail();
-        $user = User::factory()->create(['role_id' => $role->id]);
-        $this->actingAs($user);
-        $user->loadPermissionsToSession();
-
-        return $user;
-    }
+    use LazilyRefreshDatabase;
 
     private function createShopWithAdmin(array $shopAttrs = [], array $adminAttrs = []): Shop
     {
