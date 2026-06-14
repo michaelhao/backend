@@ -1,0 +1,17 @@
+@layer components {
+    .card {
+        @apply bg-white rounded-lg shadow overflow-hidden;
+    }
+
+    .table {
+        @apply w-full text-sm text-left;
+    }
+
+    .table-head {
+        @apply bg-gray-50 text-gray-600 uppercase text-xs;
+    }
+
+    .page-title {
+        @apply text-2xl font-bold text-gray-800;
+    }
+}

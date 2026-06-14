@@ -4,26 +4,26 @@
 
 @section('content')
     <div class="mb-6 flex items-center justify-between">
-        <h2 class="text-2xl font-bold text-gray-800">版本管理</h2>
+        <h2 class="page-title">版本管理</h2>
         <x-permission name="Grade.create">
             <a href="{{ route('grades.create') }}"
-               class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+               class="btn-primary">
                 新增版本
             </a>
         </x-permission>
     </div>
 
     @if (session('success'))
-        <div class="mb-4 rounded-lg bg-green-50 p-4 text-sm text-green-700 transition-opacity duration-500 flash-message">{{ session('success') }}</div>
+        <div class="flash flash-success flash-message">{{ session('success') }}</div>
     @endif
 
     @if (session('error'))
-        <div class="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700 transition-opacity duration-500 flash-message">{{ session('error') }}</div>
+        <div class="flash flash-error flash-message">{{ session('error') }}</div>
     @endif
 
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-        <table class="w-full text-sm text-left">
-            <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+    <div class="card">
+        <table class="table">
+            <thead class="table-head">
                 <tr>
                     <th class="px-6 py-3">代碼</th>
                     <th class="px-6 py-3">名稱</th>
@@ -71,14 +71,14 @@
             </tbody>
         </table>
     </div>
-    <div id="toggle-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+    <div id="toggle-modal" class="modal-overlay hidden">
+        <div class="modal-panel">
             <h3 class="text-lg font-semibold text-gray-800 mb-2">確認狀態切換</h3>
             <p class="text-sm text-gray-600 mb-6">
                 確定要<span id="toggle-modal-action" class="font-medium text-gray-900"></span>「<span id="toggle-modal-name" class="font-medium text-gray-900"></span>」嗎？
             </p>
-            <div class="flex justify-end gap-3">
-                <button id="toggle-modal-cancel" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">取消</button>
+            <div class="modal-actions">
+                <button id="toggle-modal-cancel" class="btn-cancel">取消</button>
                 <button id="toggle-modal-confirm" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors">確認</button>
             </div>
         </div>

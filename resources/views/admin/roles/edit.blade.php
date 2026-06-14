@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="mb-6">
-        <h2 class="text-2xl font-bold text-gray-800">編輯角色：{{ $role->name }}</h2>
+        <h2 class="page-title">編輯角色：{{ $role->name }}</h2>
     </div>
 
     @include('admin.roles._form', [

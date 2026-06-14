@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="mb-6 flex items-center justify-between">
-        <h2 class="text-2xl font-bold text-gray-800">建立帳單</h2>
+        <h2 class="page-title">建立帳單</h2>
         <a href="{{ route('bills.index') }}" class="text-sm text-gray-500 hover:text-gray-700">← 返回列表</a>
     </div>
 
@@ -17,7 +17,7 @@
             <div class="flex gap-2">
                 <x-form-input id="shop-keyword" placeholder="輸入商店 ID、代碼或名稱關鍵字" class="flex-1" />
                 <button id="shop-search-btn"
-                        class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                        class="btn-primary">
                     搜尋
                 </button>
             </div>

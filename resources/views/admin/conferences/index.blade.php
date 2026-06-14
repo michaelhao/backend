@@ -4,10 +4,10 @@
 
 @section('content')
     <div class="mb-6 flex items-center justify-between">
-        <h2 class="text-2xl font-bold text-gray-800">說明會管理</h2>
+        <h2 class="page-title">說明會管理</h2>
         <x-permission name="Conference.create">
             <a href="{{ route('conferences.create') }}"
-               class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+               class="btn-primary">
                 新增說明會
             </a>
         </x-permission>
@@ -15,11 +15,11 @@
 
     <div class="flash-area">
         @if (session('success'))
-            <div class="mb-4 rounded-lg bg-green-50 p-4 text-sm text-green-700 transition-opacity duration-500 flash-message">{{ session('success') }}</div>
+            <div class="flash flash-success flash-message">{{ session('success') }}</div>
         @endif
 
         @if (session('error'))
-            <div class="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700 transition-opacity duration-500 flash-message">{{ session('error') }}</div>
+            <div class="flash flash-error flash-message">{{ session('error') }}</div>
         @endif
     </div>
 
@@ -69,9 +69,9 @@
         @endforeach
     </form>
 
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-        <table class="w-full text-sm text-left">
-            <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+    <div class="card">
+        <table class="table">
+            <thead class="table-head">
                 <tr>
                     <th class="px-6 py-3">名稱</th>
                     <th class="px-6 py-3">狀態</th>

@@ -37,5 +37,5 @@
     </button>
 </div>
 @error($name)
-    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+    <p class="form-error">{{ $message }}</p>
 @enderror

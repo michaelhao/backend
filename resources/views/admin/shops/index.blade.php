@@ -4,11 +4,11 @@
 
 @section('content')
     <div class="mb-6 flex items-center justify-between">
-        <h2 class="text-2xl font-bold text-gray-800">商店管理</h2>
+        <h2 class="page-title">商店管理</h2>
     </div>
 
     @if (session('success'))
-        <div class="mb-4 rounded-lg bg-green-50 p-4 text-sm text-green-700 transition-opacity duration-500 flash-message">{{ session('success') }}</div>
+        <div class="flash flash-success flash-message">{{ session('success') }}</div>
     @endif
 
     {{-- 搜尋區塊 --}}
@@ -74,9 +74,9 @@
     </form>
 
     {{-- 資料表格 --}}
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-        <table class="w-full text-sm text-left">
-            <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+    <div class="card">
+        <table class="table">
+            <thead class="table-head">
                 <tr>
                     <th class="px-6 py-3">商店名稱</th>
                     <th class="px-6 py-3">版本</th>
@@ -141,8 +141,8 @@
     @endif
 
     {{-- 認證詳情 Modal --}}
-    <div id="cert-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+    <div id="cert-modal" class="modal-overlay hidden">
+        <div class="modal-panel">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">認證資訊</h3>
             <div class="space-y-3 text-sm">
                 <div class="flex gap-2">
