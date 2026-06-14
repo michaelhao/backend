@@ -76,6 +76,9 @@ git diff --stat
 
 Ready to commit. 可以下手了。
 完成後 `/spec-ship <name>` 歸檔。
+
+🧭 explore → propose → finalize →（討論）→ build → ship → push/PR
+   ▸ 你在「build」。下一步：commit 實作 → /spec-ship <name>。隨時 /spec-status 查看目前階段與下一步。
 ```
 
 ---

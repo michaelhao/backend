@@ -102,6 +102,9 @@ git status
 
 下一步：拿 `/docs/<name>` 與他人討論。
 要調整 spec → 改 delta 後**重跑 `/spec-finalize`** 重生 HTML；確認無誤再 `/spec-build <name>` 實作。
+
+🧭 explore → propose → finalize →（討論）→ build → ship → push/PR
+   ▸ 你在「finalize / 討論」。下一步：討論確認後 /spec-build <name>。隨時 /spec-status 查看目前階段與下一步。
 ```
 
 ---

@@ -92,6 +92,9 @@ git status
 **Commit:** <hash> <subject>
 
 Branch 已可推送 / 開 PR。
+
+🧭 explore → propose → finalize →（討論）→ build → ship → push/PR
+   ▸ 你在「ship 完成」。下一步：git push → 開 PR（base: master）。隨時 /spec-status 查看目前階段與下一步。
 ```
 
 ---
