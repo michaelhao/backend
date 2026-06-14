@@ -1,0 +1,14 @@
+@layer components {
+    /* `hidden` 不收進此類別:modal 顯示/隱藏靠 JS 切換 element 上的 hidden utility */
+    .modal-overlay {
+        @apply fixed inset-0 z-50 flex items-center justify-center bg-overlay;
+    }
+
+    .modal-panel {
+        @apply bg-white rounded-lg shadow-xl w-full max-w-sm p-6;
+    }
+
+    .modal-actions {
+        @apply flex justify-end gap-3;
+    }
+}

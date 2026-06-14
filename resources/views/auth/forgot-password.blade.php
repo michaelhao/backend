@@ -17,10 +17,10 @@
             @csrf
 
             <div class="mb-4">
-                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">電子郵件</label>
+                <label for="email" class="form-label">電子郵件</label>
                 <x-form-input type="email" name="email" :value="old('email')" required autofocus class="w-full" />
                 @error('email')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    <p class="form-error">{{ $message }}</p>
                 @enderror
             </div>
 

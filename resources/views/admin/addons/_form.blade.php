@@ -7,15 +7,15 @@
 
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div>
-            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">功能名稱</label>
+            <label for="name" class="form-label">功能名稱</label>
             <x-form-input name="name" :value="old('name', $addon->name ?? '')" class="w-full" />
             @error('name')
-                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                <p class="form-error">{{ $message }}</p>
             @enderror
         </div>
 
         <div>
-            <label for="type" class="block text-sm font-medium text-gray-700 mb-1">類型</label>
+            <label for="type" class="form-label">類型</label>
             <x-form-select name="type" class="w-full">
                 @foreach ($types as $type)
                     <option value="{{ $type->value }}"
@@ -25,28 +25,28 @@
                 @endforeach
             </x-form-select>
             @error('type')
-                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                <p class="form-error">{{ $message }}</p>
             @enderror
         </div>
 
         <div>
-            <label for="price" class="block text-sm font-medium text-gray-700 mb-1">售價</label>
+            <label for="price" class="form-label">售價</label>
             <x-form-input type="number" name="price" :value="old('price', $addon->price ?? '')" min="0" class="w-full" />
             @error('price')
-                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                <p class="form-error">{{ $message }}</p>
             @enderror
         </div>
 
         <div>
-            <label for="unit" class="block text-sm font-medium text-gray-700 mb-1">單位 <span class="text-gray-400 text-xs">（選填）</span></label>
+            <label for="unit" class="form-label">單位 <span class="text-gray-400 text-xs">（選填）</span></label>
             <x-form-input name="unit" :value="old('unit', $addon->unit ?? '')" class="w-full" />
             @error('unit')
-                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                <p class="form-error">{{ $message }}</p>
             @enderror
         </div>
 
         <div>
-            <label for="status" class="block text-sm font-medium text-gray-700 mb-1">狀態</label>
+            <label for="status" class="form-label">狀態</label>
             <x-form-select name="status" class="w-full">
                 @foreach ($statuses as $status)
                     <option value="{{ $status->value }}"
@@ -56,7 +56,7 @@
                 @endforeach
             </x-form-select>
             @error('status')
-                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                <p class="form-error">{{ $message }}</p>
             @enderror
         </div>
     </div>
@@ -77,7 +77,7 @@
             @endforeach
         </div>
         @error('grade_ids')
-            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            <p class="form-error">{{ $message }}</p>
         @enderror
     </div>
 
@@ -140,13 +140,13 @@
         </div>
 
         @error('image')
-            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            <p class="form-error">{{ $message }}</p>
         @enderror
     </div>
 
     <div class="flex items-center gap-4">
         <button type="submit"
-                class="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                class="btn-primary px-6">
             {{ $submitLabel }}
         </button>
         <a href="{{ route('addons.index') }}" class="text-sm text-gray-500 hover:text-gray-700">取消</a>

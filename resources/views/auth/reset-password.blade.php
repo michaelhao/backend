@@ -11,20 +11,20 @@
             <input type="hidden" name="token" value="{{ $token }}">
 
             <div class="mb-4">
-                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">電子郵件</label>
+                <label for="email" class="form-label">電子郵件</label>
                 <x-form-input type="email" name="email" :value="old('email', $email)" required autofocus class="w-full" />
                 @error('email')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    <p class="form-error">{{ $message }}</p>
                 @enderror
             </div>
 
             <div class="mb-4">
-                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">新密碼</label>
+                <label for="password" class="form-label">新密碼</label>
                 <x-password-input name="password" :required="true" />
             </div>
 
             <div class="mb-6">
-                <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">確認新密碼</label>
+                <label for="password_confirmation" class="form-label">確認新密碼</label>
                 <x-password-input name="password_confirmation" :required="true" />
             </div>
 

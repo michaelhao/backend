@@ -4,10 +4,10 @@
 
 @section('content')
     <div class="mb-6 flex items-center justify-between">
-        <h2 class="text-2xl font-bold text-gray-800">附加功能管理</h2>
+        <h2 class="page-title">附加功能管理</h2>
         <x-permission name="Addon.create">
             <a href="{{ route('addons.create') }}"
-               class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+               class="btn-primary">
                 新增附加功能
             </a>
         </x-permission>
@@ -15,11 +15,11 @@
 
     <div class="flash-area">
         @if (session('success'))
-            <div class="mb-4 rounded-lg bg-green-50 p-4 text-sm text-green-700 transition-opacity duration-500 flash-message">{{ session('success') }}</div>
+            <div class="flash flash-success flash-message">{{ session('success') }}</div>
         @endif
 
         @if (session('error'))
-            <div class="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700 transition-opacity duration-500 flash-message">{{ session('error') }}</div>
+            <div class="flash flash-error flash-message">{{ session('error') }}</div>
         @endif
     </div>
 
@@ -89,9 +89,9 @@
         @endforeach
     </form>
 
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-        <table class="w-full text-sm text-left">
-            <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+    <div class="card">
+        <table class="table">
+            <thead class="table-head">
                 <tr>
                     <th class="px-6 py-3">圖片</th>
                     <th class="px-6 py-3">名稱</th>
@@ -172,15 +172,15 @@
     </div>
 @endsection
 
-<div id="delete-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+<div id="delete-modal" class="modal-overlay hidden">
+    <div class="modal-panel">
         <h3 class="text-lg font-semibold text-gray-800 mb-2">確認刪除</h3>
         <p class="text-sm text-gray-600 mb-6">
             確定要刪除「<span id="delete-modal-name" class="font-medium text-gray-900"></span>」嗎？此操作無法復原。
         </p>
-        <div class="flex justify-end gap-3">
+        <div class="modal-actions">
             <button id="delete-modal-cancel"
-                    class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">
+                    class="btn-cancel">
                 取消
             </button>
             <button id="delete-modal-confirm"

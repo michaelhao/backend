@@ -4,20 +4,20 @@
 
 @section('content')
     <div class="mb-6 flex items-center justify-between">
-        <h2 class="text-2xl font-bold text-gray-800">帳務管理</h2>
+        <h2 class="page-title">帳務管理</h2>
         <x-permission name="Bill.create">
             <a href="{{ route('bills.create') }}"
-               class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+               class="btn-primary">
                 建立帳單
             </a>
         </x-permission>
     </div>
 
     @if (session('success'))
-        <div class="mb-4 rounded-lg bg-green-50 p-4 text-sm text-green-700 flash-message">{{ session('success') }}</div>
+        <div class="flash flash-success flash-message">{{ session('success') }}</div>
     @endif
     @if (session('error'))
-        <div class="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700 flash-message">{{ session('error') }}</div>
+        <div class="flash flash-error flash-message">{{ session('error') }}</div>
     @endif
 
     {{-- 搜尋列 --}}
@@ -70,9 +70,9 @@
         @endif
     </form>
 
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-        <table class="w-full text-sm text-left">
-            <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+    <div class="card">
+        <table class="table">
+            <thead class="table-head">
                 <tr>
                     <th class="px-6 py-3">帳單編號</th>
                     <th class="px-6 py-3">商店</th>
@@ -158,7 +158,7 @@
     </div>
 
     {{-- 帳單明細 Modal --}}
-    <div id="detail-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
+    <div id="detail-modal" class="modal-overlay hidden">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl p-6 max-h-[90vh] flex flex-col">
             <div class="flex items-start justify-between mb-4">
                 <div>
@@ -170,7 +170,7 @@
             <div id="detail-modal-meta" class="text-sm text-gray-600 grid grid-cols-2 gap-x-6 gap-y-1 mb-4"></div>
             <hr class="mb-4">
             <div class="overflow-auto flex-1">
-                <table class="w-full text-sm text-left">
+                <table class="table">
                     <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
                         <tr>
                             <th class="px-3 py-2">項目名稱</th>
@@ -187,7 +187,7 @@
                         <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">作廢項目</span>
                         <div class="flex-1 border-t border-dashed border-gray-200"></div>
                     </div>
-                    <table class="w-full text-sm text-left">
+                    <table class="table">
                         <thead class="text-gray-400 text-xs uppercase">
                             <tr>
                                 <th class="px-3 py-2">項目名稱</th>
@@ -213,13 +213,13 @@
     </div>
 
     {{-- 銷帳 Modal --}}
-    <div id="writeoff-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
+    <div id="writeoff-modal" class="modal-overlay hidden">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl p-6 max-h-[90vh] flex flex-col">
             <h3 class="text-lg font-semibold text-gray-800 mb-1">銷帳</h3>
             <p id="writeoff-modal-no" class="text-xs text-gray-500 font-mono mb-4"></p>
             <hr class="mb-4">
             <div class="overflow-auto flex-1">
-                <table class="w-full text-sm text-left">
+                <table class="table">
                     <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
                         <tr>
                             <th class="px-3 py-2 w-8"></th>
@@ -234,16 +234,16 @@
                 </table>
             </div>
             <hr class="mt-4 mb-4">
-            <div class="flex justify-end gap-3">
-                <button id="writeoff-cancel" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">取消</button>
+            <div class="modal-actions">
+                <button id="writeoff-cancel" class="btn-cancel">取消</button>
                 <button id="writeoff-confirm" class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors">進行銷帳</button>
             </div>
         </div>
     </div>
 
     {{-- 編輯帳務 Modal --}}
-    <div id="edit-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+    <div id="edit-modal" class="modal-overlay hidden">
+        <div class="modal-panel">
             <h3 class="text-lg font-semibold text-gray-800 mb-1">編輯帳務</h3>
             <p id="edit-modal-no" class="text-xs text-gray-500 font-mono mb-4"></p>
             <div class="space-y-4">
@@ -268,14 +268,14 @@
                            class="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
             </div>
-            <div class="flex justify-end gap-3 mt-6">
-                <button id="edit-cancel" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">取消</button>
+            <div class="modal-actions mt-6">
+                <button id="edit-cancel" class="btn-cancel">取消</button>
                 <button id="edit-confirm" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors">儲存</button>
             </div>
         </div>
     </div>
     {{-- Export Modal --}}
-    <div id="export-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
+    <div id="export-modal" class="modal-overlay hidden">
         <div class="bg-white rounded-xl shadow-xl px-10 py-8 flex flex-col items-center gap-3 min-w-48">
             <p id="export-modal-msg" class="text-sm font-medium text-gray-700"></p>
         </div>

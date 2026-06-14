@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="mb-6">
-        <h2 class="text-2xl font-bold text-gray-800">新增使用者</h2>
+        <h2 class="page-title">新增使用者</h2>
     </div>
 
     @include('admin.users._form', [

@@ -6,7 +6,7 @@
     {{-- Greeting --}}
     <div class="mb-6">
         <p class="text-sm text-gray-400 mb-1">{{ $today }}</p>
-        <h2 class="text-2xl font-bold text-gray-800">嗨，歡迎回來，{{ Auth::user()->name }}！👋</h2>
+        <h2 class="page-title">嗨，歡迎回來，{{ Auth::user()->name }}！👋</h2>
         <p class="text-gray-500 mt-1">以下是您今日的重要資訊總覽</p>
     </div>
 
@@ -46,7 +46,7 @@
                 @if(count($overview['new_shops']) === 0)
                     <p class="px-5 py-6 text-sm text-gray-400 text-center">今日無新增負責商店</p>
                 @else
-                    <table class="w-full text-sm text-left">
+                    <table class="table">
                         <thead class="bg-gray-50 text-gray-500 text-xs">
                             <tr>
                                 <th class="px-5 py-3">商店名稱</th>
@@ -93,7 +93,7 @@
                 @if(count($overview['today_conferences']) === 0)
                     <p class="px-5 py-6 text-sm text-gray-400 text-center">今日無說明會</p>
                 @else
-                    <table class="w-full text-sm text-left">
+                    <table class="table">
                         <thead class="bg-gray-50 text-gray-500 text-xs">
                             <tr>
                                 <th class="px-5 py-3">說明會名稱</th>
@@ -138,7 +138,7 @@
                 @if(count($overview['expiring_shops']) === 0)
                     <p class="px-5 py-6 text-sm text-gray-400 text-center">暫無半年內到期的負責商店</p>
                 @else
-                    <table class="w-full text-sm text-left">
+                    <table class="table">
                         <thead class="bg-gray-50 text-gray-500 text-xs">
                             <tr>
                                 <th class="px-5 py-3">商店名稱</th>

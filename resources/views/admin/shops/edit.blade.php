@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="mb-6">
-        <h2 class="text-2xl font-bold text-gray-800">編輯商店</h2>
+        <h2 class="page-title">編輯商店</h2>
     </div>
 
     @if ($errors->any())
@@ -31,7 +31,7 @@
             <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 {{-- name --}}
                 <div>
-                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">商店名稱</label>
+                    <label for="name" class="form-label">商店名稱</label>
                     <input id="name" type="text" name="name" value="{{ old('name', $shop->name) }}"
                            class="w-full rounded-md border @error('name') border-red-400 @else border-gray-300 @enderror px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
                     @error('name')
@@ -41,7 +41,7 @@
 
                 {{-- email --}}
                 <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">商店信箱</label>
+                    <label for="email" class="form-label">商店信箱</label>
                     <input id="email" type="email" name="email" value="{{ old('email', $shop->email) }}"
                            class="w-full rounded-md border @error('email') border-red-400 @else border-gray-300 @enderror px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
                     @error('email')
@@ -51,7 +51,7 @@
 
                 {{-- grade_id --}}
                 <div>
-                    <label for="grade_id" class="block text-sm font-medium text-gray-700 mb-1">版本</label>
+                    <label for="grade_id" class="form-label">版本</label>
                     <select id="grade_id" name="grade_id"
                             class="w-full rounded-md border @error('grade_id') border-red-400 @else border-gray-300 @enderror px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
                         @foreach ($grades as $grade)
@@ -67,7 +67,7 @@
 
                 {{-- status --}}
                 <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">狀態</label>
+                    <label for="status" class="form-label">狀態</label>
                     <select id="status" name="status"
                             class="w-full rounded-md border @error('status') border-red-400 @else border-gray-300 @enderror px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
                         @foreach ($statuses as $statusCase)
@@ -90,7 +90,7 @@
             <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 {{-- admin name --}}
                 <div>
-                    <label for="admin_name" class="block text-sm font-medium text-gray-700 mb-1">管理員姓名</label>
+                    <label for="admin_name" class="form-label">管理員姓名</label>
                     <input id="admin_name" type="text" name="admin[name]" value="{{ old('admin.name', $shop->admin?->name) }}"
                            class="w-full rounded-md border @error('admin.name') border-red-400 @else border-gray-300 @enderror px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
                     @error('admin.name')
@@ -100,7 +100,7 @@
 
                 {{-- admin email (masked display + hidden real value + toggle edit) --}}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">管理員信箱</label>
+                    <label class="form-label">管理員信箱</label>
                     <div class="flex items-center gap-2">
                         {{-- masked display (read-only, shown by default) --}}
                         <span id="admin-email-masked"
@@ -123,7 +123,7 @@
 
                 {{-- business_number (readonly masked display + hidden input) --}}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                    <label class="form-label">
                         統一編號
                         @if ($shop->admin?->business_number)
                             <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
@@ -151,7 +151,7 @@
 
                 {{-- company_name (readonly + hidden input) --}}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">公司名稱</label>
+                    <label class="form-label">公司名稱</label>
                     <input type="text" id="company-name-display"
                            value="{{ old('admin.company_name', $shop->admin?->company_name) }}"
                            readonly placeholder="尚未認證"
@@ -177,12 +177,12 @@
     </form>
 
     {{-- 認證 Modal --}}
-    <div id="cert-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+    <div id="cert-modal" class="modal-overlay hidden">
+        <div class="modal-panel">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">商家認證</h3>
 
             <div class="mb-4">
-                <label for="cert-business-number" class="block text-sm font-medium text-gray-700 mb-1">統一編號（8 位數字）</label>
+                <label for="cert-business-number" class="form-label">統一編號（8 位數字）</label>
                 <x-form-input id="cert-business-number" maxlength="8" inputmode="numeric" pattern="\d{8}"
                               placeholder="請輸入統一編號"
                               class="w-full font-mono" />
@@ -191,7 +191,7 @@
 
             <div id="cert-result" class="hidden mb-4 rounded-md p-3 text-sm"></div>
 
-            <div class="flex justify-end gap-3">
+            <div class="modal-actions">
                 <button id="cert-modal-close"
                         class="bg-gray-100 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors">
                     取消
