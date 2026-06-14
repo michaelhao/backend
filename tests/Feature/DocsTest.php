@@ -24,8 +24,10 @@ class DocsTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('系統文件');
+        $response->assertSee('規格文件');
+        $response->assertSee('開發流程');
         $response->assertSee('auth-spec.html');
-        $response->assertSee('auth Specification');
+        $response->assertSee('登入 / 節流 / 密碼重設');
     }
 
     public function test_authenticated_user_can_view_a_doc(): void
