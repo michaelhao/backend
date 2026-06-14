@@ -82,6 +82,32 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ---
 
+## 前端 CSS 設計系統規範 (Tailwind v4)
+
+本專案採 Tailwind v4(`@tailwindcss/vite`),**沒有 `tailwind.config.js`**。新增/修改前端樣式時遵循以下規範,避免 utility class 到處重複、改一個值要全站手改。
+
+1. **設計 token 寫在 `@theme`**:顏色、字型等 token 一律定義在 `resources/css/app.css` 的 `@theme` 區塊(v4 取代 `tailwind.config.js` 的方式)。
+
+2. **顏色走 token,不寫死**:blade 用 `bg-primary`、`bg-overlay` 等語意色,**禁止**直接寫 `bg-black/50`、`bg-blue-600` 這類品牌/語意色。現有 token:`--color-overlay`、`--color-primary`、`--color-primary-hover`。需要新語意色先在 `@theme` 加 token。
+
+3. **重複樣式抽元件類別**:同一串 utility 重複 **3 次以上** 才抽(遵守 Simplicity First,單次使用不抽)。抽到 `resources/css/components/<群組>.css`,用 `@layer components` + `@apply`,並在 `app.css` `@import`。維持純 CSS `@apply` 作法,**不**改用 Blade 元件(與既有 `.form-control` 先例一致)。
+
+4. **造新類別前先查現有的可重用清單**:
+   - 表單:`.form-control` / `.form-label` / `.form-error`
+   - Modal:`.modal-overlay` / `.modal-panel` / `.modal-actions`
+   - 按鈕:`.btn-primary`(大尺寸用 `btn-primary px-6`)/ `.btn-cancel`
+   - 版面:`.card` / `.table` / `.table-head` / `.page-title`
+   - Flash:`.flash` + `.flash-success` / `.flash-error`
+
+5. **JS 契約類別不可包進元件類**:被 JS 切換或查詢的 class/id 必須以字面 utility 留在 element 上。
+   - `hidden`(modal 顯示/隱藏靠 `classList` 切換)→ 寫 `class="modal-overlay hidden"`,**不可**把 `hidden` 放進 `.modal-overlay`。
+   - `.flash-message`、`.flash-area`、`#delete-modal*`、`.delete-btn` 等 hook 維持原樣。
+   - flash 動態樣式產生在 `resources/js/utils/flash.js`,改 flash 樣式時 blade 與此 JS 要同步。
+
+6. **改色驗證**:改 token 後跑 `docker compose exec backend-api npm run build`,確認全站同步生效。
+
+---
+
 ## Migrate rules
 
 - Replace timestamps with created_at and updated_at.
