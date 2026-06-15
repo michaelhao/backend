@@ -21,6 +21,21 @@ class ChatConversationTest extends TestCase
         $this->getJson(route('chats.unread-count'))->assertOk();
     }
 
+    public function test_admin_can_open_chat_index_view(): void
+    {
+        $this->actingAsAdmin();
+
+        $this->get(route('chats.index'))->assertOk();
+    }
+
+    public function test_viewer_can_open_chat_index_view(): void
+    {
+        $this->seedPermissions();
+        $this->createUserWithRole('Viewer');
+
+        $this->get(route('chats.index'))->assertOk();
+    }
+
     public function test_guest_is_redirected_to_login(): void
     {
         $this->get(route('chats.index'))->assertRedirect(route('login'));

@@ -21,6 +21,7 @@ export default defineConfig({
                 'resources/js/bills/index.js',
                 'resources/js/bills/create.js',
                 'resources/js/conferences/index.js',
+                'resources/js/chats/index.js',
             ],
             refresh: true,
         }),

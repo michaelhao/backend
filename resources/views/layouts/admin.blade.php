@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="session-lifetime" content="{{ config('session.lifetime') * 60 }}">
     <meta name="login-url" content="{{ route('login') }}">
+    <meta name="user-id" content="{{ Auth::id() }}">
     <title>@yield('page-title', 'Dashboard') - {{ config('app.name', 'Laravel') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/layouts/admin.js'])
 </head>
@@ -81,6 +82,15 @@
                        class="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
                               {{ request()->routeIs('conferences.*') ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700' }}">
                         說明會管理
+                    </a>
+                </x-permission>
+                <x-permission name="Chat.index">
+                    <a href="{{ route('chats.index') }}"
+                       class="flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
+                              {{ request()->routeIs('chats.*') ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700' }}">
+                        <span>聊天</span>
+                        <span id="chat-unread-badge"
+                              class="hidden inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-xs"></span>
                     </a>
                 </x-permission>
             </nav>
