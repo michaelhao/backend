@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>聊天即時架構說明 — WebSocket / Node.js / Redis</title>
+<style>
+  :root {
+    --ink: #1e293b;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --blue: #2563eb;   --blue-bg: #eff6ff;   --blue-line: #bfdbfe;
+    --amber: #d97706;  --amber-bg: #fffbeb;  --amber-line: #fde68a;
+    --green: #059669;  --green-bg: #ecfdf5;  --green-line: #a7f3d0;
+    --gray: #6b7280;   --gray-bg: #f3f4f6;   --gray-line: #d1d5db;
+    --red: #dc2626;    --red-bg: #fef2f2;
+    --sidebar-w: 264px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.75;
+    font-size: 15px;
+  }
+  code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 0.86em;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+
+  /* ===== 版面 ===== */
+  .layout { display: flex; min-height: 100vh; }
+  nav.toc {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: sticky; top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: #0f172a;
+    color: #cbd5e1;
+    padding: 20px 0 32px;
+  }
+  main {
+    flex: 1;
+    min-width: 0;
+    max-width: 900px;
+    padding: 32px 40px 96px;
+  }
+
+  /* ===== 側欄 ===== */
+  .toc-title { padding: 0 20px 12px; font-weight: 700; color: #fff; font-size: 16px; }
+  .toc-title small { display: block; font-weight: 400; color: #94a3b8; font-size: 11px; margin-top: 2px; }
+  .toc-group { margin-top: 14px; }
+  .toc-group-label {
+    padding: 0 20px; font-size: 11px; letter-spacing: .08em;
+    color: #94a3b8; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .toc a {
+    display: block; padding: 5px 20px 5px 34px;
+    color: #cbd5e1; text-decoration: none; font-size: 13px;
+    border-left: 3px solid transparent;
+  }
+  .toc a:hover { color: #fff; background: rgba(255,255,255,.06); }
+  .toc a.active { color: #fff; background: rgba(255,255,255,.1); border-left-color: #60a5fa; }
+
+  /* ===== Header ===== */
+  header h1 { font-size: 26px; margin: 0 0 4px; }
+  header .sub { color: var(--muted); margin-bottom: 16px; }
+  .threat-banner {
+    background: var(--amber-bg); border: 1px solid var(--amber-line);
+    border-radius: 10px; padding: 12px 16px; font-size: 14px; margin-bottom: 20px;
+  }
+  .threat-banner strong { color: var(--amber); }
+
+  /* ===== 區段標題 ===== */
+  h2.section {
+    font-size: 20px; margin: 46px 0 8px;
+    padding-left: 12px; border-left: 5px solid var(--c, var(--blue));
+  }
+  h3.sub { font-size: 16px; margin: 26px 0 6px; color: var(--ink); }
+  .section-desc { color: var(--muted); font-size: 13.5px; margin: 0 0 16px 17px; }
+  p { margin: 8px 0; }
+  .card-box {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 20px; margin: 12px 0 16px;
+  }
+  ul { margin: 8px 0 8px; padding-left: 22px; }
+  li { margin: 4px 0; }
+  .tag { display:inline-block; font-size:11px; font-weight:700; border-radius:5px; padding:0 7px; }
+  .tag.ok { background: var(--green-bg); color: var(--green); border:1px solid var(--green-line); }
+  .tag.warn { background: var(--amber-bg); color: var(--amber); border:1px solid var(--amber-line); }
+  .tag.bad { background: var(--red-bg); color: var(--red); border:1px solid #fecaca; }
+
+  /* ===== 流程圖(沿用 spec 系列元件) ===== */
+  .flow {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px 24px; margin: 12px 0 18px; overflow-x: auto;
+  }
+  .flow h4 { margin: 0 0 16px; font-size: 14px; }
+  .frow { display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap; min-width: max-content; }
+  .fnode {
+    border: 1.5px solid var(--blue-line); background: var(--blue-bg);
+    border-radius: 8px; padding: 8px 12px; font-size: 13px;
+    display: flex; flex-direction: column; justify-content: center;
+    text-align: center; max-width: 200px;
+  }
+  .fnode small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+  .fnode.start { border-color: #94a3b8; background: #f1f5f9; font-weight: 600; }
+  .fnode.ok { border-color: var(--green-line); background: var(--green-bg); }
+  .fnode.fail { border-color: #fecaca; background: var(--red-bg); }
+  .fnode.gate { border-color: var(--amber-line); background: var(--amber-bg); }
+  .farrow {
+    align-self: center; padding: 0 8px; color: var(--muted);
+    font-size: 12px; text-align: center; flex-shrink: 0; line-height: 1.3;
+  }
+  .farrow::after { content: "→"; display: block; font-size: 16px; color: #94a3b8; }
+
+  /* ===== 比較表 ===== */
+  table.cmp { border-collapse: collapse; width: 100%; font-size: 13.5px; margin: 10px 0 18px; }
+  table.cmp th, table.cmp td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  table.cmp th { background: #f1f5f9; font-size: 12.5px; }
+  table.cmp tr.hl td { background: var(--blue-bg); }
+
+  /* ===== 程式碼區塊 ===== */
+  pre.code {
+    background: #0f172a; color: #e2e8f0; border-radius: 10px;
+    padding: 16px 18px; overflow-x: auto; margin: 10px 0 20px;
+    font-size: 12.5px; line-height: 1.65;
+  }
+  pre.code code {
+    background: none; border: none; padding: 0; color: inherit;
+    white-space: pre; font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: inherit;
+  }
+  .code-label { font-size: 12.5px; color: var(--muted); margin: 16px 0 0; font-weight: 600; }
+
+  /* ===== 檢查清單 ===== */
+  .checklist { list-style: none; padding-left: 0; }
+  .checklist li { padding-left: 26px; position: relative; margin: 7px 0; font-size: 14px; }
+  .checklist li::before { content: "✓"; position: absolute; left: 0; color: var(--green); font-weight: 700; }
+
+  footer { margin-top: 56px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+  @media (max-width: 860px) {
+    nav.toc { display: none; }
+    main { padding: 20px 18px 64px; }
+  }
+  @media print {
+    nav.toc { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <div class="toc-title">聊天即時架構說明<small>WebSocket / Node.js / Redis</small></div>
+  <div class="toc-group">
+    <div class="toc-group-label">總覽</div>
+    <a href="#overview">架構總覽</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--blue)"></span>一、訊息生命週期</div>
+    <a href="#s1">流程總圖</a>
+    <a href="#s1-1">1. 發送端</a>
+    <a href="#s1-2">2. 傳輸與路由</a>
+    <a href="#s1-3">3. 持久化與廣播</a>
+    <a href="#s1-4">4. 接收端</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--amber)"></span>二、技術與機制</div>
+    <a href="#s2-1">協定選型(WebSocket)</a>
+    <a href="#s2-2">交握與心跳</a>
+    <a href="#s2-3">前端渲染優化</a>
+    <a href="#s2-4">儲存策略</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--green)"></span>三、關鍵程式碼</div>
+    <a href="#s3-1">前端 ChatClient</a>
+    <a href="#s3-2">後端 Node.js / ws</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--gray)"></span>四、安全與極端狀況</div>
+    <a href="#s4">檢查清單</a>
+  </div>
+</nav>
+
+<main>
+<header>
+  <h1>聊天即時架構說明</h1>
+  <div class="sub">現代化即時通訊(IM)聊天功能:訊息生命週期、技術機制與關鍵實作</div>
+  <div class="threat-banner">
+    <strong>技術主軸:</strong>WebSocket(全雙工) + Node.js + Redis(Pub/Sub・Presence・快取) + PostgreSQL(歷史)。本文為架構說明文件,程式碼為示意範例。
+  </div>
+</header>
+
+<!-- ===== 總覽 ===== -->
+<h2 class="section" id="overview" style="--c:#94a3b8">架構總覽</h2>
+<p class="section-desc">一則訊息從「使用者按下送出」到「對方螢幕渲染出來」會經過四階段;先看全貌,再逐段深入。</p>
+<div class="flow">
+  <h4>系統元件與資料流</h4>
+  <div class="frow">
+    <div class="fnode start">瀏覽器 A<small>樂觀渲染</small></div>
+    <div class="farrow"></div>
+    <div class="fnode">WS Server(Node)<small>鑑權・房間路由</small></div>
+    <div class="farrow"></div>
+    <div class="fnode gate">PostgreSQL<small>先寫入(權威)<br>取得 server_id / seq</small></div>
+    <div class="farrow"></div>
+    <div class="fnode">Redis Pub/Sub<small>跨節點扇出</small></div>
+    <div class="farrow"></div>
+    <div class="fnode ok">瀏覽器 B<small>去重・渲染・未讀</small></div>
+  </div>
+</div>
+
+<!-- ===== 一、生命週期 ===== -->
+<h2 class="section" id="s1" style="--c:var(--blue)">一、訊息完整生命週期</h2>
+<p class="section-desc">送訊息主流程(含失敗分支)。</p>
+<div class="flow">
+  <h4>送訊息流程</h4>
+  <div class="frow">
+    <div class="fnode start">送出<small>產生 client_msg_id<br>UI 樂觀渲染 sending</small></div>
+    <div class="farrow"></div>
+    <div class="fnode gate">伺服器鑑權<small>socket 綁定的 userId<br>是否房間成員</small></div>
+    <div class="farrow">通過</div>
+    <div class="fnode">寫入 DB<small>以 client_msg_id 冪等</small></div>
+    <div class="farrow"></div>
+    <div class="fnode">回 ACK 給送出者<br>+ Redis 扇出</div>
+    <div class="farrow">在線</div>
+    <div class="fnode ok">接收端渲染<small>去重・未讀・捲動</small></div>
+  </div>
+  <div class="frow" style="margin-top:12px">
+    <div class="fnode fail">鑑權失敗:拒絕</div>
+    <div class="farrow"></div>
+    <div class="fnode fail">對方離線:訊息已落地 DB,上線補拉</div>
+  </div>
+</div>
+
+<h3 class="sub" id="s1-1">1. 客戶端發送端</h3>
+<ul>
+  <li><strong>樂觀更新(Optimistic Update):</strong>送出時先在本地產生 <code>client_msg_id</code>(UUID),立即以 <code>status: 'sending'</code> 渲染,不等伺服器回應 → UI 無延遲感。</li>
+  <li><strong>資料封裝:</strong><code>{ type, client_msg_id, room_id, body, sent_at }</code>。<code>client_msg_id</code> 是後續<strong>冪等與去重</strong>的關鍵。</li>
+  <li><strong>觸發傳輸:</strong>連線為 <code>OPEN</code> 直接送;斷線中則塞入<strong>離線佇列(outbox)</strong>,重連後補送。</li>
+</ul>
+
+<h3 class="sub" id="s1-2">2. 傳輸與路由層</h3>
+<ul>
+  <li>訊息以 WebSocket frame 經持久連線抵達伺服器。</li>
+  <li><strong>身分不可偽造:</strong>伺服器<strong>不信任</strong> frame 內的 <code>sender_id</code>,一律使用連線鑑權後綁定在該 socket 上的 <code>userId</code>。</li>
+  <li><strong>房間路由:</strong>檢查該 socket 是否為 <code>room_id</code> 成員(權限),再決定扇出對象。</li>
+</ul>
+
+<h3 class="sub" id="s1-3">3. 持久化與廣播</h3>
+<ul>
+  <li><strong>先持久化、後廣播:</strong>先寫 DB 取得 <code>server_id</code> / <code>seq</code> 再廣播;即使對方當下離線,訊息已落地,上線可補拉。</li>
+  <li><strong>冪等:</strong>DB 對 <code>(room_id, client_msg_id)</code> 設唯一鍵;重送同一 id 不產生重複列。</li>
+  <li><strong>跨節點扇出:</strong>多台 WS server 時,A 連 server-1、B 連 server-2 → server-1 寫完 DB 後 <code>PUBLISH</code> 到 Redis <code>room:{id}</code>,所有節點 <code>SUBSCRIBE</code> 後各自推給手上的連線。</li>
+</ul>
+
+<h3 class="sub" id="s1-4">4. 客戶端接收端</h3>
+<ul>
+  <li><strong>去重:</strong>以 <code>server_id</code> 比對已渲染集合,避免「自己送的」既被樂觀渲染又被廣播回來而重複。</li>
+  <li><strong>XSS 安全渲染:</strong>一律 <code>textContent</code> / 跳脫,<strong>絕不</strong>把 <code>body</code> 直接塞 <code>innerHTML</code>。</li>
+  <li><strong>未讀計數:</strong>非當前房間 → 該房未讀 +1、總 badge 更新;當前房間且可見 → 直接標記已讀。</li>
+  <li><strong>自動捲動:</strong>只有原本貼底時才捲到底;使用者正在翻歷史時不可強拉,改顯示「↓ 新訊息」浮標。</li>
+</ul>
+
+<!-- ===== 二、技術與機制 ===== -->
+<h2 class="section" id="s2-1" style="--c:var(--amber)">二、技術選型與運作機制</h2>
+
+<h3 class="sub">協定選型:為何是 WebSocket</h3>
+<table class="cmp">
+  <tr><th>協定</th><th>方向</th><th>連線</th><th>即時性</th><th>IM 適用</th></tr>
+  <tr><td>HTTP 短輪詢</td><td>請求/回應</td><td>每次新建</td><td>差</td><td><span class="tag bad">低</span> 大量空請求</td></tr>
+  <tr><td>長輪詢</td><td>半雙工模擬</td><td>掛住到有資料</td><td>中</td><td><span class="tag warn">過渡</span></td></tr>
+  <tr><td>SSE</td><td>僅伺服器→客戶端</td><td>持久 HTTP 串流</td><td>高(下行)</td><td><span class="tag warn">通知佳</span> 上行需另開</td></tr>
+  <tr class="hl"><td><strong>WebSocket</strong></td><td><strong>全雙工</strong></td><td>一條持久 TCP</td><td>最高</td><td><span class="tag ok">首選</span></td></tr>
+</table>
+<p><strong>理由:</strong>聊天是<strong>雙向高頻</strong>(雙方都會發訊、打字中、已讀回條)。WebSocket 在單一 TCP 連線上雙向傳輸,免去 HTTP 每次請求的標頭開銷,延遲最低。</p>
+
+<h3 class="sub" id="s2-2">交握(Handshake)與心跳(Heartbeat)</h3>
+<div class="card-box">
+  <p><strong>交握底層:</strong>借用 HTTP 升級,之後脫離 HTTP 走自有 frame 協定。</p>
+  <ul>
+    <li>客戶端送帶 <code>Upgrade: websocket</code> 的 GET,附隨機 <code>Sec-WebSocket-Key</code>。</li>
+    <li>伺服器把 key 串上固定魔術字串 <code>258EAFA5-E914-47DA-95CA-C5AB0DC85B11</code>,做 <strong>SHA-1 後 base64</strong> 放進 <code>Sec-WebSocket-Accept</code>,回 <strong>101 Switching Protocols</strong>。此計算<strong>非為安全</strong>,而是證明對方理解 WS 協定、防快取代理誤判。</li>
+    <li>之後以 <strong>frame</strong> 通訊:opcode <code>0x1</code> 文字、<code>0x2</code> 二進位、<code>0x8</code> 關閉、<code>0x9</code> ping、<code>0xA</code> pong。<strong>客戶端→伺服器的 frame 必須 masking</strong>,防代理快取污染攻擊。</li>
+  </ul>
+  <p><strong>心跳為何必要:</strong>TCP 可能變「半開(half-open)」—— 一端已死但另一端不知,連線看似存在卻送不到;且 NAT / 代理 / LB 會對<strong>閒置</strong>連線設逾時而悄悄掐斷。</p>
+  <ul>
+    <li>伺服器每 N 秒對每條連線送 <strong>ping(0x9)</strong>,客戶端協定層自動回 <strong>pong(0xA)</strong>。</li>
+    <li>伺服器為每條連線維護 <code>isAlive</code>:送 ping 前若上輪仍為 <code>false</code> → 判定死連線,<code>terminate()</code> 釋放資源。</li>
+    <li>心跳同時<strong>保活</strong>:定期流量讓 NAT/代理不把連線當閒置切斷。</li>
+  </ul>
+</div>
+
+<h3 class="sub" id="s2-3">前端狀態管理與渲染優化</h3>
+<ul>
+  <li><strong>虛擬列表(Virtual List):</strong>歷史可能上萬則 → 只渲染可視範圍 DOM(加緩衝),捲動時回收重用,避免記憶體爆量與捲動卡頓。</li>
+  <li><strong>樂觀更新:</strong>送出即渲染 <code>sending</code>,收 ACK 後以 <code>client_msg_id</code> 對位更新為 <code>sent</code>,失敗標 <code>failed</code> 可重送。</li>
+  <li><strong>防抖 / 節流:</strong>「輸入中」用 throttle(例如每 2 秒一次);捲動載入歷史、resize 用 debounce。</li>
+  <li><strong>批次渲染:</strong>極高頻時收集多則後以一次 <code>requestAnimationFrame</code> / DocumentFragment 批次插入,減少 reflow。</li>
+  <li><strong>去重與順序:</strong>用 <code>seq</code>(伺服器單調遞增序號)排序與補洞,避免亂序或重複。</li>
+</ul>
+
+<h3 class="sub" id="s2-4">資料儲存策略:Redis 與持久 DB 的分工</h3>
+<table class="cmp">
+  <tr><th>用途</th><th>元件</th><th>機制</th></tr>
+  <tr><td>跨節點扇出</td><td>Redis Pub/Sub(或 Streams/Kafka)</td><td><code>PUBLISH/SUBSCRIBE room:{id}</code>,解決「雙方連在不同機器」</td></tr>
+  <tr><td>線上狀態 Presence</td><td>Redis(SET + TTL)</td><td><code>online:{userId}</code> 帶 TTL,心跳續期</td></tr>
+  <tr><td>未讀計數</td><td>Redis(原子 INCR)</td><td>高頻讀寫,原子操作避免競態</td></tr>
+  <tr><td>近期訊息快取</td><td>Redis(List)</td><td>開房間秒載最近 N 則,不打 DB</td></tr>
+  <tr><td>歷史(真相來源)</td><td>PostgreSQL / MongoDB</td><td>永久保存、可查詢分頁;寫入是「訊息已送達系統」的權威依據</td></tr>
+</table>
+<p><strong>心法:</strong>Redis 管「快、即時、可丟失」(presence、計數、扇出、快取);持久 DB 管「慢、永久、要正確」(歷史)。寫入路徑為「先寫 DB(權威)→ 再經 Redis 扇出」,確保推播失敗也不遺失,離線者上線可補拉。</p>
+
+<!-- ===== 三、關鍵程式碼 ===== -->
+<h2 class="section" id="s3-1" style="--c:var(--green)">三、關鍵核心實作</h2>
+
+<h3 class="sub">3-1. 前端客戶端(JavaScript)</h3>
+<p class="section-desc">重點:指數退避重連(Exponential Backoff + Jitter)、樂觀更新、離線佇列、XSS 安全渲染、心跳偵測。</p>
+<pre class="code"><code>/**
+ * ChatClient — 封裝 WebSocket 連線、收送訊息、斷線重連。
+ * 安全重點:渲染一律走 escapeHtml;身分由連線時的 token 決定,不在訊息內帶 sender_id。
+ */
+class ChatClient {
+  constructor({ url, token, onMessage, onStatus }) {
+    this.url = url;                 // wss://example.com/ws
+    this.token = token;            // 鑑權用(JWT),放在連線 query 或子協定
+    this.onMessage = onMessage;
+    this.onStatus = onStatus;      // 連線狀態回呼(connecting/open/closed)
+    this.ws = null;
+    this.outbox = [];              // 離線時暫存待送訊息
+    this.seen = new Set();         // 已渲染的訊息 id,用於去重
+    this.retries = 0;              // 重連次數(指數退避用)
+    this.maxRetries = 10;
+    this.manualClose = false;      // 主動關閉時不重連
+    this.missedPongTimer = null;   // 偵測伺服器是否還活著
+  }
+
+  connect() {
+    this.manualClose = false;
+    this.onStatus?.('connecting');
+    // token 放 query 僅為範例;正式環境建議用 Sec-WebSocket-Protocol 或先換短期票券,避免 token 進 log/referrer
+    this.ws = new WebSocket(`${this.url}?token=${encodeURIComponent(this.token)}`);
+
+    this.ws.onopen = () =&gt; {
+      this.retries = 0;                 // 連上即重置退避
+      this.onStatus?.('open');
+      this._flushOutbox();              // 補送離線期間累積的訊息
+      this._armPongWatchdog();          // 啟動「伺服器是否還活著」看門狗
+    };
+
+    this.ws.onmessage = (evt) =&gt; {
+      let data;
+      try { data = JSON.parse(evt.data); } catch { return; } // 壞封包直接丟棄
+
+      if (data.type === 'ping') {       // 應用層心跳(若伺服器走應用層 ping)
+        this._send({ type: 'pong' });
+        this._armPongWatchdog();
+        return;
+      }
+      if (data.type === 'ack') {        // 伺服器確認:把樂觀訊息標記為已送達
+        this.onMessage?.({ kind: 'ack', clientMsgId: data.client_msg_id, serverId: data.server_id, seq: data.seq });
+        return;
+      }
+      if (data.type === 'message') {
+        if (this.seen.has(data.server_id)) return; // 去重(自己送的會被廣播回來)
+        this.seen.add(data.server_id);
+        this._armPongWatchdog();        // 收到任何資料都代表連線健康
+        this.onMessage?.({ kind: 'message', msg: data });
+      }
+    };
+
+    this.ws.onclose = () =&gt; {
+      this.onStatus?.('closed');
+      clearTimeout(this.missedPongTimer);
+      if (!this.manualClose) this._scheduleReconnect();
+    };
+
+    // onerror 後瀏覽器一定會接著觸發 onclose,重連邏輯統一放 onclose
+    this.ws.onerror = () =&gt; this.ws?.close();
+  }
+
+  /** 發送訊息:樂觀更新 + 離線佇列 */
+  send(roomId, body) {
+    const clientMsgId = crypto.randomUUID();
+    const payload = { type: 'message', client_msg_id: clientMsgId, room_id: roomId, body, sent_at: Date.now() };
+    // 先回呼讓 UI 樂觀渲染(status=sending)
+    this.onMessage?.({ kind: 'optimistic', msg: { ...payload, status: 'sending' } });
+
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this._send(payload);
+    } else {
+      this.outbox.push(payload);        // 斷線中:先存起來,重連後補送
+    }
+    return clientMsgId;
+  }
+
+  _send(obj) {
+    try { this.ws.send(JSON.stringify(obj)); }
+    catch { this.outbox.push(obj); }    // 送失敗也丟回佇列
+  }
+
+  _flushOutbox() {
+    const pending = this.outbox;
+    this.outbox = [];
+    pending.forEach((p) =&gt; this._send(p));
+  }
+
+  /**
+   * 指數退避重連:1s, 2s, 4s, 8s ... 上限 30s,並加入 jitter(隨機抖動)
+   * 避免「驚群效應」—— 伺服器重啟時所有客戶端同一秒一起重連把它壓垮。
+   */
+  _scheduleReconnect() {
+    if (this.retries &gt;= this.maxRetries) { this.onStatus?.('failed'); return; }
+    const base = Math.min(1000 * 2 ** this.retries, 30000);
+    const jitter = Math.random() * 0.3 * base;   // ±30% 抖動
+    const delay = base + jitter;
+    this.retries += 1;
+    this.onStatus?.(`reconnecting in ${Math.round(delay / 1000)}s`);
+    setTimeout(() =&gt; this.connect(), delay);
+  }
+
+  /** 看門狗:一段時間沒收到任何訊息/心跳 → 視為連線已死,主動關閉觸發重連 */
+  _armPongWatchdog() {
+    clearTimeout(this.missedPongTimer);
+    this.missedPongTimer = setTimeout(() =&gt; {
+      if (this.ws?.readyState === WebSocket.OPEN) this.ws.close(); // → onclose → 重連
+    }, 35000); // 須 &gt; 伺服器 ping 間隔
+  }
+
+  close() { this.manualClose = true; this.ws?.close(); }
+}
+
+/** XSS 防護:渲染訊息一律跳脫,絕不用 innerHTML 直塞 body */
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text ?? '';   // 瀏覽器自動跳脫 &lt; &gt; &amp; " '
+  return div.innerHTML;
+}
+
+/** 自動捲動:只有原本貼底時才捲到底,避免打斷正在翻歷史的使用者 */
+function appendMessage(container, msg) {
+  const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight &lt; 80;
+  const el = document.createElement('div');
+  el.dataset.id = msg.server_id ?? msg.client_msg_id;
+  el.innerHTML = `&lt;span class="body"&gt;${escapeHtml(msg.body)}&lt;/span&gt;`; // body 已跳脫
+  container.appendChild(el);
+  if (nearBottom) container.scrollTop = container.scrollHeight;
+  else showNewMessagePill();      // 否則顯示「↓ 新訊息」提示
+}</code></pre>
+
+<h3 class="sub" id="s3-2">3-2. 後端伺服器端(Node.js + ws)</h3>
+<p class="section-desc">重點:交握時鑑權(verifyClient)、房間管理、伺服器層 ping/pong 清死連線、先持久化後廣播 + Redis 跨節點扇出、不信任客戶端身分。</p>
+<pre class="code"><code>const http = require('http');
+const { WebSocketServer } = require('ws');
+const jwt = require('jsonwebtoken');
+const Redis = require('ioredis');
+
+const JWT_SECRET = process.env.JWT_SECRET;
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN;
+
+// 兩條 Redis 連線:一條 publish、一條 subscribe(同一條不能同時收發)
+const pub = new Redis(process.env.REDIS_URL);
+const sub = new Redis(process.env.REDIS_URL);
+
+const server = http.createServer();
+const wss = new WebSocketServer({
+  server,
+  // 交握階段鑑權:驗證失敗直接拒絕升級,連線根本不會建立
+  verifyClient: (info, done) =&gt; {
+    // 1. Origin 檢查,擋掉跨站的惡意 WS 連線(CSWSH)
+    if (ALLOWED_ORIGIN &amp;&amp; info.origin !== ALLOWED_ORIGIN) return done(false, 403, 'Forbidden origin');
+    // 2. 驗 token
+    try {
+      const url = new URL(info.req.url, 'http://localhost');
+      const token = url.searchParams.get('token');
+      const payload = jwt.verify(token, JWT_SECRET);
+      info.req.userId = payload.sub;   // 把可信的 userId 綁到 request,後面 socket 沿用
+      return done(true);
+    } catch {
+      return done(false, 401, 'Unauthorized');
+    }
+  },
+});
+
+// ===== 房間管理 =====
+// rooms: roomId -&gt; Set&lt;ws&gt;(本節點上屬於該房間的連線)
+const rooms = new Map();
+function joinRoom(roomId, ws) {
+  if (!rooms.has(roomId)) rooms.set(roomId, new Set());
+  rooms.get(roomId).add(ws);
+  ws.rooms.add(roomId);
+}
+function leaveAllRooms(ws) {
+  for (const roomId of ws.rooms) rooms.get(roomId)?.delete(ws);
+  ws.rooms.clear();
+}
+/** 把訊息推給「本節點」上該房間的所有連線(可排除送出者自己) */
+function broadcastLocal(roomId, data, exceptUserId = null) {
+  const set = rooms.get(roomId);
+  if (!set) return;
+  const raw = JSON.stringify(data);
+  for (const client of set) {
+    if (client.readyState === client.OPEN &amp;&amp; client.userId !== exceptUserId) {
+      client.send(raw);
+    }
+  }
+}
+
+// ===== 跨節點扇出:訂閱 Redis,收到別台 publish 的訊息就在本節點廣播 =====
+sub.psubscribe('room:*');
+sub.on('pmessage', (_pattern, channel, message) =&gt; {
+  const roomId = channel.split(':')[1];
+  broadcastLocal(roomId, JSON.parse(message));
+});
+
+// ===== 連線生命週期 =====
+wss.on('connection', (ws, req) =&gt; {
+  ws.userId = req.userId;     // 可信身分(來自交握鑑權,客戶端無法偽造)
+  ws.rooms = new Set();
+  ws.isAlive = true;
+  ws.on('pong', () =&gt; { ws.isAlive = true; }); // 協定層 pong 回來 → 標記存活
+
+  ws.on('message', async (raw) =&gt; {
+    let data;
+    try { data = JSON.parse(raw); } catch { return; }      // 壞封包丟棄
+
+    // ---- 加入房間(需驗證該 user 確實是房間成員)----
+    if (data.type === 'join') {
+      if (await isMember(data.room_id, ws.userId)) joinRoom(data.room_id, ws);
+      return;
+    }
+
+    // ---- 送訊息 ----
+    if (data.type === 'message') {
+      // 輸入驗證:長度上限、型別
+      const body = typeof data.body === 'string' ? data.body.slice(0, 5000) : '';
+      if (!body.trim()) return;
+      // 權限:必須是該房間成員(不信任客戶端)
+      if (!(await isMember(data.room_id, ws.userId))) return;
+
+      // 1) 先持久化(以 client_msg_id 冪等),取得權威 server_id / seq
+      const saved = await persistMessage({
+        roomId: data.room_id,
+        senderId: ws.userId,          // 用連線上的可信 userId,不用 data 裡的
+        clientMsgId: data.client_msg_id,
+        body,
+      });
+
+      const out = {
+        type: 'message',
+        server_id: saved.id,
+        seq: saved.seq,
+        room_id: data.room_id,
+        sender_id: ws.userId,
+        body,                         // 後端不需 HTML 跳脫,但前端渲染時必須跳脫
+        created_at: saved.createdAt,
+      };
+
+      // 2) 對送出者回 ACK(讓其樂觀訊息轉為 sent)
+      ws.send(JSON.stringify({ type: 'ack', client_msg_id: data.client_msg_id, server_id: saved.id, seq: saved.seq }));
+
+      // 3) 跨節點扇出(本節點也會經 psubscribe 收到並廣播,故這裡只 publish)
+      await pub.publish(`room:${data.room_id}`, JSON.stringify(out));
+    }
+  });
+
+  ws.on('close', () =&gt; leaveAllRooms(ws));
+  ws.on('error', () =&gt; ws.terminate());
+});
+
+// ===== 心跳:每 30 秒掃一次,清掉沒回 pong 的死連線 =====
+const heartbeat = setInterval(() =&gt; {
+  for (const ws of wss.clients) {
+    if (ws.isAlive === false) { leaveAllRooms(ws); ws.terminate(); continue; } // 上輪沒回 pong → 死連線
+    ws.isAlive = false;     // 預設死,等這輪 pong 回來才翻 true
+    ws.ping();              // 送協定層 ping frame(0x9),客戶端會自動回 pong
+  }
+}, 30000);
+wss.on('close', () =&gt; clearInterval(heartbeat));
+
+server.listen(8080, () =&gt; console.log('WS server on :8080'));
+
+// ===== 以下為示意,實際接你的 DB/權限層 =====
+async function isMember(roomId, userId) { /* 查 room_members,回 boolean */ }
+async function persistMessage({ roomId, senderId, clientMsgId, body }) {
+  /*
+    INSERT INTO messages(room_id, sender_id, client_msg_id, body)
+    VALUES (...) ON CONFLICT (room_id, client_msg_id) DO UPDATE SET body = messages.body
+    RETURNING id, seq, created_at;   -- 冪等:重送同一 client_msg_id 回既有那筆
+  */
+}</code></pre>
+
+<!-- ===== 四、安全與極端狀況 ===== -->
+<h2 class="section" id="s4" style="--c:var(--gray)">四、安全與極端狀況檢查清單</h2>
+
+<h3 class="sub">安全</h3>
+<ul class="checklist">
+  <li><strong>XSS:</strong>訊息一律 <code>textContent</code> / 跳脫渲染,絕不 <code>innerHTML</code> 直塞使用者輸入。</li>
+  <li><strong>身分不可偽造:</strong><code>sender_id</code> 取自連線鑑權後綁定的 <code>userId</code>,忽略客戶端 frame 內的任何 id。</li>
+  <li><strong>交握即鑑權 + Origin 檢查:</strong>擋 Cross-Site WebSocket Hijacking;token 建議用短期票券或子協定,避免進 URL log。</li>
+  <li><strong>傳輸加密(WSS/TLS)、輸入長度上限、發訊頻率限制(rate limit)。</strong></li>
+</ul>
+
+<h3 class="sub">極端狀況</h3>
+<ul class="checklist">
+  <li><strong>斷線:</strong>指數退避 + jitter 重連、離線 outbox 補送、未 ACK 訊息標 <code>failed</code> 可重送。</li>
+  <li><strong>半開連線:</strong>雙向心跳(伺服器 ping/pong 清死連線 + 客戶端看門狗)。</li>
+  <li><strong>重複投遞:</strong><code>client_msg_id</code> 冪等寫入 + 前端 <code>server_id</code> 去重。</li>
+  <li><strong>訊息亂序:</strong>伺服器單調 <code>seq</code> 排序、補洞;重連後以 <code>last_seq</code> 向 DB 補拉。</li>
+  <li><strong>驚群效應:</strong>重連退避加隨機抖動,避免伺服器重啟瞬間被同時重連壓垮。</li>
+  <li><strong>水平擴展:</strong>多 WS 節點 + Redis Pub/Sub 扇出,確保不同節點上的使用者互通。</li>
+</ul>
+
+<footer>
+  聊天即時架構說明(WebSocket / Node.js / Redis / PostgreSQL)。本文為架構教學文件,程式碼為示意範例。
+  與本專案實作對應:Laravel Reverb 走 Pusher 協定,概念一致(交握 → 私有/presence 頻道授權 → ShouldBroadcastNow 扇出 → 前端 Echo 訂閱);詳見 <code>/docs/chat-spec</code>。
+</footer>
+</main>
+</div>
+
+<script>
+// 側欄 scroll-spy
+const links = [...document.querySelectorAll('.toc a')];
+const targets = links
+  .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+  .filter(Boolean);
+const byId = Object.fromEntries(links.map(a => [a.getAttribute('href').slice(1), a]));
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(a => a.classList.remove('active'));
+      byId[e.target.id]?.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -75% 0px' });
+targets.forEach(t => observer.observe(t));
+</script>
+</body>
+</html>
