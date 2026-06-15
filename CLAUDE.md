@@ -23,6 +23,10 @@
 ### Superpowers 工作流銜接
 - 跑 superpowers 流程 skill 時,以「該 skill 的終點狀態」為準;plan mode 的 ExitPlanMode 核准 **不等於** 可以開始寫 code。
 - `brainstorming` 的終點是呼叫 `writing-plans`(產出實作計畫),**不是**直接實作。
+- **`brainstorming` 定案 spec 後、進 `writing-plans` 前,新增一步:產生互動式 HTML spec 供 PM/前端討論。**
+  - 路徑 `docs/<topic>-spec.html`(沿用既有 `docs/*-spec.html` 系列命名)。
+  - 硬規格沿用 `/spec-retrofit` Phase 4「互動式 HTML 文件」、範本 `docs/auth-spec.html`:單檔自包含、**零外部資源**(no-outbound-internet)、深色 sidebar TOC + scroll-spy、SHALL / MUST NOT badge、可摺疊 Scenario、「刻意不做」區塊。
+  - 目的:與 PM / 前端討論;若討論後修訂 spec,**重跑此步重生 HTML**(idempotent)。確認無誤後才進 `writing-plans`。
 - 動任何實作工具(Edit/Write 原始碼、`artisan make:*`)之前,必須先有 `writing-plans` 產出的計畫,且已明確選定執行方式(subagent-driven / executing-plans)。動工前自我檢核:「計畫有了嗎?執行方式選了嗎?」否則退回補齊。
 - 走 superpowers 整套流程時,優先**不要同時開 plan mode**,讓 skill 自己驅動 brainstorming → writing-plans → 執行;plan mode 留給不套 skill 的單純探查/小修。
 
