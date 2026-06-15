@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\BillController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ConferenceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocsController;
@@ -98,5 +99,14 @@ Route::middleware('auth')->group(function () {
         Route::post('/conferences', [ConferenceController::class, 'store'])->name('conferences.store');
         Route::get('/conferences/{id}/edit', [ConferenceController::class, 'edit'])->name('conferences.edit');
         Route::put('/conferences/{id}', [ConferenceController::class, 'update'])->name('conferences.update');
+
+        // 即時聊天
+        Route::get('/chats', [ChatController::class, 'index'])->name('chats.index');
+        Route::get('/chats/conversations', [ChatController::class, 'conversations'])->name('chats.conversations');
+        Route::get('/chats/unread-count', [ChatController::class, 'unreadCount'])->name('chats.unread-count');
+        Route::post('/chats/start', [ChatController::class, 'start'])->name('chats.start');
+        Route::get('/chats/{conversation}/messages', [ChatController::class, 'messages'])->name('chats.messages');
+        Route::post('/chats/{conversation}/messages', [ChatController::class, 'store'])->name('chats.store');
+        Route::patch('/chats/{conversation}/read', [ChatController::class, 'markRead'])->name('chats.read');
     });
 });
