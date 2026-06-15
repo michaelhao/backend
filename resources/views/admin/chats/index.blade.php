@@ -91,10 +91,7 @@
                     <p class="text-xs text-slate-400">送出第一則訊息開始對話</p>
                 </div>
 
-                <button id="scroll-to-latest" type="button"
-                        class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1
-                               px-3 py-1.5 rounded-full bg-primary text-white text-xs font-medium shadow-lg
-                               hover:bg-primary-hover transition-colors cursor-pointer">
+                <button id="scroll-to-latest" type="button" class="chat-scroll-pill hidden">
                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                     </svg>

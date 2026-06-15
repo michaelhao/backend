@@ -244,7 +244,7 @@ if (root) {
         return row;
     };
 
-    const appendMessage = (msg) => {
+    const appendMessage = (msg, { live = false } = {}) => {
         // 以訊息 id 去重：本地送出已 append 的訊息，廣播回來時不重複顯示
         if (msg.id != null) {
             if (renderedMessageIds.has(msg.id)) {
@@ -283,7 +283,8 @@ if (root) {
 
         if (near) {
             forceScrollBottom();
-        } else {
+        } else if (live && !mine) {
+            // 只有對方的即時新訊息才提示;歷史載入與自己的訊息不顯示按鈕
             els.scrollPill.classList.remove('hidden');
         }
     };
@@ -389,6 +390,7 @@ if (root) {
         lastRenderedSenderId = null;
         renderedMessageIds.clear();
         els.thread.innerHTML = '';
+        els.scrollPill.classList.add('hidden');
 
         els.emptyNone.classList.add('hidden');
         els.header.classList.remove('hidden');
@@ -434,7 +436,7 @@ if (root) {
         messages
             .slice()
             .reverse()
-            .forEach(appendMessage);
+            .forEach((m) => appendMessage(m));
         forceScrollBottom();
         // 以實際渲染內容判斷空狀態:涵蓋 GET 進行中經廣播插入的訊息,避免遮罩蓋住真實訊息
         els.emptyMessages.classList.toggle('hidden', els.thread.children.length > 0);
@@ -502,7 +504,7 @@ if (root) {
     window.addEventListener('chat:message', (e) => {
         const msg = e.detail;
         if (Number(msg.conversation_id) === activeId) {
-            appendMessage(msg); // 去重保證本分頁自送訊息不會重複
+            appendMessage(msg, { live: true }); // 去重保證本分頁自送訊息不會重複
             window.axios.patch(`/chats/${activeId}/read`).then(() => window.refreshChatBadge?.());
         }
         scheduleListReload();

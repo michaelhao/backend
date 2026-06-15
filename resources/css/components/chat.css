@@ -68,6 +68,13 @@
         animation-delay: 0.4s;
     }
 
+    /* 跳到最新 pill：display 走 inline-flex,放 component 層讓 utility 層的 hidden 能覆蓋(顯示/隱藏靠 JS 切換 hidden) */
+    .chat-scroll-pill {
+        @apply absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1
+               px-3 py-1.5 rounded-full bg-primary text-white text-xs font-medium shadow-lg
+               hover:bg-primary-hover transition-colors cursor-pointer;
+    }
+
     /* 載入骨架 */
     .chat-skeleton {
         @apply rounded bg-slate-200;
