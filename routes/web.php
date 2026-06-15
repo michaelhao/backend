@@ -36,7 +36,7 @@ Route::middleware('auth')->group(function () {
     // 系統文件（docs/*.html，登入即可瀏覽、不進權限系統）
     Route::get('/docs', [DocsController::class, 'index'])->name('docs.index');
     Route::get('/docs/{name}', [DocsController::class, 'show'])
-        ->where('name', '[A-Za-z0-9_\-]+')->name('docs.show');
+        ->where('name', '[A-Za-z0-9_\-/]+')->name('docs.show');
 
     // 需要權限檢查的 routes — middleware 自動推斷權限
     Route::middleware('permission')->group(function () {

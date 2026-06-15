@@ -10,10 +10,12 @@ class DocsController extends Controller
 {
     public function index(): View
     {
-        $docs = collect(File::glob(base_path('docs/*.html')))
-            ->map(function (string $path): array {
-                $name = basename($path, '.html');
-                $title = preg_match('/<title>(.*?)<\/title>/s', File::get($path), $matches)
+        $docs = collect(File::allFiles(base_path('docs')))
+            ->filter(fn ($file): bool => $file->getExtension() === 'html')
+            ->map(function ($file): array {
+                // 相對 docs/ 的名稱(含子資料夾、去掉 .html),例如 chat/chat-spec
+                $name = substr(str_replace('\\', '/', $file->getRelativePathname()), 0, -strlen('.html'));
+                $title = preg_match('/<title>(.*?)<\/title>/s', $file->getContents(), $matches)
                     ? trim($matches[1])
                     : $name;
 
@@ -28,7 +30,7 @@ class DocsController extends Controller
                     'name' => $name,
                     'heading' => $heading,
                     'category' => $isSpec ? 'spec' : 'flow',
-                    'modified' => date('Y-m-d', File::lastModified($path)),
+                    'modified' => date('Y-m-d', $file->getMTime()),
                 ];
             })
             ->sortBy('heading')
