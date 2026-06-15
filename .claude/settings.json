@@ -1,5 +1,17 @@
 {
   "enabledPlugins": {
     "ui-ux-pro-max@ui-ux-pro-max-skill": true
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/bin/superpowers-status.sh --hook"
+          }
+        ]
+      }
+    ]
   }
 }

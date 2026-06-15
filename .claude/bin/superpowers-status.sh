@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # superpowers-status: 唯讀推導目前在 superpowers 工作流的哪一階段 + 下一步。
-# 用法: superpowers-status.sh [--line]
-#   --line   單行模式(給 Stop hook);不在進行中工作流時「靜默」(無輸出)
-#   (無參數)  完整區塊(給人手動看)
+# 用法: superpowers-status.sh [--line|--hook]
+#   --line   單行純文字(給人/管線);不在進行中工作流時「靜默」
+#   --hook   輸出 {"systemMessage": "..."} JSON(給 Stop hook 顯示);不在工作流時靜默
+#   (無參數)  完整區塊(給人手動看 / slash command)
 set -uo pipefail
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
@@ -10,6 +11,8 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 cd "$ROOT" || exit 0
 
 MODE="${1:-full}"
+case "$MODE" in --line|--hook) COMPACT=1 ;; *) COMPACT=0 ;; esac
+
 BRANCH="$(git branch --show-current 2>/dev/null || true)"
 PLAN="$(ls -t docs/superpowers/plans/*.md 2>/dev/null | head -1 || true)"
 
@@ -23,31 +26,38 @@ else
 fi
 
 emit() { # $1=stage $2=next
-  if [ "$MODE" = "--line" ]; then
-    printf '📍 superpowers｜%s · 下一步:%s\n' "$1" "$2"
-  else
-    printf '## Superpowers Status\n\n'
-    printf '**分支:** %s\n' "${BRANCH:-(none)}"
-    printf '**計畫:** %s\n' "${PLAN:-(無)}"
-    printf '**階段:** %s\n\n' "$1"
-    printf '🧭 brainstorming → writing-plans → execute → code-review → finish\n'
-    printf '   ▸ 下一步:%s\n' "$2"
-  fi
+  case "$MODE" in
+    --line)
+      printf '📍 superpowers｜%s · 下一步:%s\n' "$1" "$2"
+      ;;
+    --hook)
+      # 字串內無雙引號/反斜線,可安全內嵌 JSON;suppressOutput 避免原始 JSON 也被印到 transcript
+      printf '{"systemMessage": "📍 superpowers｜%s · 下一步:%s", "suppressOutput": true}\n' "$1" "$2"
+      ;;
+    *)
+      printf '## Superpowers Status\n\n'
+      printf '**分支:** %s\n' "${BRANCH:-(none)}"
+      printf '**計畫:** %s\n' "${PLAN:-(無)}"
+      printf '**階段:** %s\n\n' "$1"
+      printf '🧭 brainstorming → writing-plans → execute → code-review → finish\n'
+      printf '   ▸ 下一步:%s\n' "$2"
+      ;;
+  esac
 }
 
 # 無計畫檔
 if [ -z "$PLAN" ]; then
-  # 在 base 分支或無分支、又無計畫 → 視為不在工作流;line 模式靜默
-  if [ "$MODE" = "--line" ] && { [ -z "$BRANCH" ] || [ "$BRANCH" = "$BASE" ]; }; then
+  # 在 base 分支或無分支、又無計畫 → 視為不在工作流;compact 模式靜默
+  if [ "$COMPACT" = 1 ] && { [ -z "$BRANCH" ] || [ "$BRANCH" = "$BASE" ]; }; then
     exit 0
   fi
   emit "發想/規劃前" "跑 /superpowers:brainstorming,接著 writing-plans 產出計畫"
   exit 0
 fi
 
-# 分支已併入 base → 完成;line 模式靜默
+# 分支已併入 base → 完成;compact 模式靜默
 if [ -n "$BRANCH" ] && [ -n "$BASE" ] && git merge-base --is-ancestor "$BRANCH" "$BASE" 2>/dev/null; then
-  [ "$MODE" = "--line" ] && exit 0
+  [ "$COMPACT" = 1 ] && exit 0
   emit "完成(已併入 ${BASE})" "—"
   exit 0
 fi
