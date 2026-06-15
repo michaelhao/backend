@@ -11,6 +11,7 @@ use App\Repositories\ChatConversationRepository;
 use App\Repositories\ChatMessageRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 class ChatService
@@ -39,11 +40,16 @@ class ChatService
         $unreadCounts = $this->messageRepository->unreadCountsByConversation($userId);
 
         return $this->conversationRepository->forUser($userId)
-            ->map(function (ChatConversation $conversation) use ($userId, $unreadCounts): array {
+            ->map(function (ChatConversation $conversation) use ($userId, $unreadCounts): ?array {
                 $otherId = $conversation->otherUserId($userId);
                 $other = $conversation->user_one_id === $otherId
                     ? $conversation->userOne
                     : $conversation->userTwo;
+
+                // 對方使用者已被刪除（本專案無 DB 外鍵）→ 略過此孤兒對話，避免存取 null 而 500
+                if (! $other) {
+                    return null;
+                }
 
                 return [
                     'id' => $conversation->id,
@@ -53,6 +59,8 @@ class ChatService
                     'unread_count' => $unreadCounts[$conversation->id] ?? 0,
                 ];
             })
+            ->filter()
+            ->values()
             ->all();
     }
 
@@ -63,16 +71,41 @@ class ChatService
             throw new ChatOperationException('無法與自己建立對話');
         }
 
-        return $this->conversationRepository->findPair($userId, $targetUserId)
-            ?? $this->conversationRepository->createWithParticipants($userId, $targetUserId);
+        $existing = $this->conversationRepository->findPair($userId, $targetUserId);
+        if ($existing) {
+            return $existing;
+        }
+
+        try {
+            return $this->conversationRepository->createWithParticipants($userId, $targetUserId);
+        } catch (QueryException $e) {
+            // 並發下另一請求已建立同一對話（撞 unique index）→ 取回既有的，而非回 500
+            $conversation = $this->conversationRepository->findPair($userId, $targetUserId);
+            if (! $conversation) {
+                throw $e;
+            }
+
+            return $conversation;
+        }
     }
 
-    /** @throws ChatOperationException */
-    public function assertParticipant(int $conversationId, int $userId): void
+    /**
+     * 確認對話存在且 user 為其參與者，並回傳該對話。
+     * 對話不存在 → ModelNotFoundException（404）；存在但非參與者 → ChatOperationException（403）。
+     * 參與者即 canonical pair 的 user_one_id / user_two_id，故以對話自身欄位判斷，省一次 participants 查詢。
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     * @throws ChatOperationException
+     */
+    public function assertParticipant(int $conversationId, int $userId): ChatConversation
     {
-        if (! $this->conversationRepository->isParticipant($conversationId, $userId)) {
+        $conversation = $this->conversationRepository->findOrFail($conversationId);
+
+        if ($conversation->user_one_id !== $userId && $conversation->user_two_id !== $userId) {
             throw new ChatOperationException('無權存取此對話');
         }
+
+        return $conversation;
     }
 
     /**
@@ -90,9 +123,7 @@ class ChatService
     /** @throws ChatOperationException */
     public function sendMessage(int $conversationId, int $senderId, string $body): ChatMessage
     {
-        $this->assertParticipant($conversationId, $senderId);
-
-        $conversation = $this->conversationRepository->findOrFail($conversationId);
+        $conversation = $this->assertParticipant($conversationId, $senderId);
 
         $message = DB::transaction(function () use ($conversation, $senderId, $body): ChatMessage {
             $message = $this->messageRepository->create([

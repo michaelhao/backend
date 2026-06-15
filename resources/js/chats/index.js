@@ -1,6 +1,6 @@
 const root = document.getElementById('chat-app');
 
-if (root && window.Echo) {
+if (root) {
     const meId = Number(root.dataset.userId);
 
     const els = {
@@ -18,7 +18,9 @@ if (root && window.Echo) {
     let activeOtherId = null;
     let conversationChannelId = null;
     let hideTypingTimer = null;
+    let listReloadTimer = null;
     const onlineUsers = new Set();
+    const renderedMessageIds = new Set();
 
     const escapeHtml = (text) => {
         const div = document.createElement('div');
@@ -28,17 +30,6 @@ if (root && window.Echo) {
 
     const updateOnlineDot = () => {
         els.onlineDot.classList.toggle('hidden', !(activeOtherId && onlineUsers.has(activeOtherId)));
-    };
-
-    const refreshGlobalBadge = () => {
-        const badge = document.getElementById('chat-unread-badge');
-        if (!badge) {
-            return;
-        }
-        window.axios.get('/chats/unread-count').then(({ data }) => {
-            badge.textContent = data.unread_count;
-            badge.classList.toggle('hidden', data.unread_count <= 0);
-        });
     };
 
     const renderConversations = (conversations) => {
@@ -62,7 +53,20 @@ if (root && window.Echo) {
     const loadConversations = () =>
         window.axios.get('/chats/conversations').then(({ data }) => renderConversations(data.conversations));
 
+    // 收到多則訊息時把列表重抓收斂成一次，避免每則訊息都整包重載
+    const scheduleListReload = () => {
+        clearTimeout(listReloadTimer);
+        listReloadTimer = setTimeout(loadConversations, 300);
+    };
+
     const appendMessage = (msg) => {
+        // 以訊息 id 去重：本地送出已 append 的訊息，廣播回來時不重複顯示
+        if (msg.id != null) {
+            if (renderedMessageIds.has(msg.id)) {
+                return;
+            }
+            renderedMessageIds.add(msg.id);
+        }
         const mine = Number(msg.sender_id) === meId;
         const wrap = document.createElement('div');
         wrap.className = `flex ${mine ? 'justify-end' : 'justify-start'}`;
@@ -72,7 +76,7 @@ if (root && window.Echo) {
     };
 
     const subscribeConversationChannel = (id) => {
-        if (conversationChannelId === id) {
+        if (!window.Echo || conversationChannelId === id) {
             return;
         }
         if (conversationChannelId) {
@@ -89,11 +93,11 @@ if (root && window.Echo) {
     const openConversation = async (id, otherId, otherName) => {
         activeId = id;
         activeOtherId = Number(otherId);
-        window.chatActiveConversationId = id;
         els.title.textContent = otherName;
         els.form.classList.remove('hidden');
         els.typing.classList.add('hidden');
         els.thread.innerHTML = '';
+        renderedMessageIds.clear();
 
         const { data } = await window.axios.get(`/chats/${id}/messages`);
         data.messages
@@ -106,7 +110,7 @@ if (root && window.Echo) {
 
         await window.axios.patch(`/chats/${id}/read`);
         loadConversations();
-        refreshGlobalBadge();
+        window.refreshChatBadge?.();
     };
 
     els.form.addEventListener('submit', async (e) => {
@@ -118,11 +122,11 @@ if (root && window.Echo) {
         els.input.value = '';
         const { data } = await window.axios.post(`/chats/${activeId}/messages`, { body });
         appendMessage(data.message);
-        loadConversations();
+        scheduleListReload();
     });
 
     els.input.addEventListener('input', () => {
-        if (!activeId) {
+        if (!activeId || !window.Echo) {
             return;
         }
         window.Echo.private(`chat.conversation.${activeId}`).whisper('typing', { from: meId });
@@ -141,30 +145,32 @@ if (root && window.Echo) {
         openConversation(data.conversation_id, Number(targetId), name);
     });
 
-    // 來自 bootstrap.js 全站 chat.user 訂閱的新訊息
+    // 來自 bootstrap.js 全站 chat.user 訂閱的新訊息（含自己其他分頁送出的訊息）
     window.addEventListener('chat:message', (e) => {
         const msg = e.detail;
         if (Number(msg.conversation_id) === activeId) {
-            appendMessage(msg);
-            window.axios.patch(`/chats/${activeId}/read`).then(refreshGlobalBadge);
+            appendMessage(msg); // 去重保證本分頁自送訊息不會重複
+            window.axios.patch(`/chats/${activeId}/read`).then(() => window.refreshChatBadge?.());
         }
-        loadConversations();
+        scheduleListReload();
     });
 
-    // Presence：全後台線上狀態
-    window.Echo.join('chat.online')
-        .here((users) => {
-            users.forEach((u) => onlineUsers.add(Number(u.id)));
-            updateOnlineDot();
-        })
-        .joining((u) => {
-            onlineUsers.add(Number(u.id));
-            updateOnlineDot();
-        })
-        .leaving((u) => {
-            onlineUsers.delete(Number(u.id));
-            updateOnlineDot();
-        });
+    // 即時功能（線上狀態 / 輸入中）僅在 Echo 可用時啟用；沒設定 Reverb 時頁面仍可正常載入與送訊息
+    if (window.Echo) {
+        window.Echo.join('chat.online')
+            .here((users) => {
+                users.forEach((u) => onlineUsers.add(Number(u.id)));
+                updateOnlineDot();
+            })
+            .joining((u) => {
+                onlineUsers.add(Number(u.id));
+                updateOnlineDot();
+            })
+            .leaving((u) => {
+                onlineUsers.delete(Number(u.id));
+                updateOnlineDot();
+            });
+    }
 
     loadConversations();
 }

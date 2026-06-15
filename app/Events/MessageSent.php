@@ -19,10 +19,18 @@ class MessageSent implements ShouldBroadcastNow
         public int $recipientId,
     ) {}
 
-    /** @return array<int, Channel> */
+    /**
+     * 廣播給接收者（驅動其未讀/即時顯示），同時也廣播給送出者自己的頻道，
+     * 讓送出者的其他分頁/裝置也能即時看到剛送出的訊息（前端以訊息 id 去重避免重複顯示）。
+     *
+     * @return array<int, Channel>
+     */
     public function broadcastOn(): array
     {
-        return [new PrivateChannel('chat.user.'.$this->recipientId)];
+        return [
+            new PrivateChannel('chat.user.'.$this->recipientId),
+            new PrivateChannel('chat.user.'.$this->message->sender_id),
+        ];
     }
 
     public function broadcastAs(): string

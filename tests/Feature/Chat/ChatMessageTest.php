@@ -89,4 +89,11 @@ class ChatMessageTest extends TestCase
         $ids = collect($response->json('messages'))->pluck('id');
         $this->assertTrue($ids->every(fn ($id) => $id < $thirdId));
     }
+
+    public function test_messages_on_missing_conversation_returns_404(): void
+    {
+        $this->actingAsAdmin();
+
+        $this->getJson(route('chats.messages', 999999))->assertStatus(404);
+    }
 }

@@ -103,4 +103,17 @@ class ChatServiceTest extends TestCase
         $this->service()->markAsRead($conv1->id, $me->id);
         $this->assertSame(1, $this->service()->totalUnread($me->id));
     }
+
+    public function test_list_conversations_skips_conversation_whose_other_user_was_deleted(): void
+    {
+        $me = User::factory()->create();
+        $other = User::factory()->create();
+        $this->service()->getOrCreateConversation($me->id, $other->id);
+
+        $other->delete(); // 對方使用者被刪除（本專案無 DB 外鍵）
+
+        $list = $this->service()->listConversations($me->id);
+
+        $this->assertSame([], $list);
+    }
 }
