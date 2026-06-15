@@ -19,6 +19,7 @@
 - When in plan mode and user says '更新 spec' or similar, update the spec file directly — do not write to a separate plan file.
 - Before implementing, confirm the direction of relationships/ownership (e.g., which model 'manages' which) to avoid reversed designs.
 - Do not create additional memory files to patch rules; edit CLAUDE.md directly.
+- 同一功能的文件 HTML 放 `docs/<feature>/`(例:`docs/chat/chat-spec.html`);`/docs` 會遞迴列出,網址為 `/docs/<feature>/<name>`。
 
 ### Superpowers 工作流銜接
 - 跑 superpowers 流程 skill 時,以「該 skill 的終點狀態」為準;plan mode 的 ExitPlanMode 核准 **不等於** 可以開始寫 code。
