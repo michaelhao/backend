@@ -40,6 +40,12 @@
                 <p class="text-xs text-slate-400">從上方「開新對話」開始</p>
             </div>
 
+            {{-- 列表載入失敗狀態 --}}
+            <div id="convo-error" class="hidden flex-1 flex flex-col items-center justify-center px-6 text-center">
+                <p class="text-sm text-slate-500">對話載入失敗</p>
+                <button id="convo-retry" type="button" class="btn-primary mt-3">重新載入</button>
+            </div>
+
             <ul id="conversation-list" class="hidden flex-1 overflow-y-auto"></ul>
         </div>
 
@@ -67,6 +73,12 @@
                 <div class="flex justify-end"><div class="chat-skeleton h-8 w-40 rounded-2xl"></div></div>
                 <div class="flex justify-start"><div class="chat-skeleton h-12 w-56 rounded-2xl"></div></div>
                 <div class="flex justify-end"><div class="chat-skeleton h-8 w-32 rounded-2xl"></div></div>
+            </div>
+
+            {{-- 訊息載入失敗狀態 --}}
+            <div id="thread-error" class="hidden flex-1 flex flex-col items-center justify-center text-center px-6">
+                <p class="text-sm text-slate-500">訊息載入失敗</p>
+                <button id="thread-retry" type="button" class="btn-primary mt-3">重新載入</button>
             </div>
 
             {{-- 訊息串（含跳到最新 pill） --}}

@@ -7,9 +7,13 @@ if (root) {
         list: document.getElementById('conversation-list'),
         convoSkeleton: document.getElementById('convo-skeleton'),
         convoEmpty: document.getElementById('convo-empty'),
+        convoError: document.getElementById('convo-error'),
+        convoRetry: document.getElementById('convo-retry'),
         thread: document.getElementById('message-thread'),
         threadWrap: document.getElementById('thread-wrap'),
         threadSkeleton: document.getElementById('thread-skeleton'),
+        threadError: document.getElementById('thread-error'),
+        threadRetry: document.getElementById('thread-retry'),
         emptyNone: document.getElementById('chat-empty-none'),
         emptyMessages: document.getElementById('chat-empty-messages'),
         scrollPill: document.getElementById('scroll-to-latest'),
@@ -33,6 +37,7 @@ if (root) {
     let lastRenderedSenderId = null;
     const onlineUsers = new Set();
     const renderedMessageIds = new Set();
+    const pendingSends = []; // 進行中的樂觀送出：{ body, row, statusEl, settled }
 
     // ── 格式化工具（zh-TW，零外部套件）────────────────────────────
     const timeFmt = new Intl.DateTimeFormat('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -153,10 +158,23 @@ if (root) {
     };
 
     const loadConversations = () =>
-        window.axios.get('/chats/conversations').then(({ data }) => {
-            els.convoSkeleton.classList.add('hidden');
-            renderConversations(data.conversations);
-        });
+        window.axios
+            .get('/chats/conversations')
+            .then(({ data }) => {
+                els.convoSkeleton.classList.add('hidden');
+                els.convoError.classList.add('hidden');
+                renderConversations(data.conversations);
+            })
+            .catch(() => {
+                // 載入失敗:隱藏骨架。已有列表內容(背景重載失敗)就保留,避免閃成錯誤畫面;
+                // 初次載入(列表為空)才顯示可重試的錯誤狀態,而非永遠卡在骨架。
+                els.convoSkeleton.classList.add('hidden');
+                if (els.list.children.length === 0) {
+                    els.list.classList.add('hidden');
+                    els.convoEmpty.classList.add('hidden');
+                    els.convoError.classList.remove('hidden');
+                }
+            });
 
     // 收到多則訊息時把列表重抓收斂成一次，避免每則訊息都整包重載
     const scheduleListReload = () => {
@@ -232,6 +250,16 @@ if (root) {
             if (renderedMessageIds.has(msg.id)) {
                 return;
             }
+            // 自身送出的廣播：認領對應的樂觀泡泡(以 body 依序配對),沿用該列不另渲染。
+            // 同時避免「廣播先到 → 重複泡泡」與移除樂觀列造成的分組間距錯亂。
+            if (Number(msg.sender_id) === meId) {
+                const pending = pendingSends.find((p) => !p.settled && p.body === msg.body);
+                if (pending) {
+                    renderedMessageIds.add(msg.id);
+                    settle(pending, 'sent');
+                    return;
+                }
+            }
             renderedMessageIds.add(msg.id);
         }
         els.emptyMessages.classList.add('hidden');
@@ -282,6 +310,20 @@ if (root) {
         }
     };
 
+    // 樂觀送出的單一收斂點:POST 成功或自身廣播認領皆可結算。已結算者不再重複處理,
+    // 避免「廣播認領為已送達」後 POST 回應遺失又被誤判為失敗而提供重送(造成重複送出)。
+    const settle = (pending, status, retry) => {
+        if (pending.settled) {
+            return;
+        }
+        pending.settled = true;
+        const i = pendingSends.indexOf(pending);
+        if (i !== -1) {
+            pendingSends.splice(i, 1);
+        }
+        setStatus(pending.statusEl, status, retry);
+    };
+
     const sendBody = async (body) => {
         const targetId = activeId;
         if (!body || !targetId) {
@@ -296,6 +338,8 @@ if (root) {
 
         const row = buildMessageRow({ mine: true, grouped, body, time: formatTime(date), withStatus: true });
         const statusEl = row.querySelector('.chat-status');
+        const pending = { body, row, statusEl, settled: false };
+        pendingSends.push(pending);
         setStatus(statusEl, 'sending');
         els.thread.appendChild(row);
         forceScrollBottom();
@@ -303,21 +347,18 @@ if (root) {
         try {
             const { data } = await window.axios.post(`/chats/${targetId}/messages`, { body });
             const id = data.message?.id;
-            // 自身廣播（chat.user.{meId}）可能比 POST 回應先抵達並已渲染同一則 →
-            // 此時 id 已在去重集合中，移除樂觀泡泡避免重複顯示
-            if (id != null && renderedMessageIds.has(id)) {
-                row.remove();
-                scheduleListReload();
-                return;
-            }
             if (id != null) {
-                renderedMessageIds.add(id); // 之後廣播回來時去重
+                renderedMessageIds.add(id); // 之後/已到的自身廣播據此去重
             }
-            setStatus(statusEl, 'sent');
+            settle(pending, 'sent'); // 若廣播已先認領,settled 為 true,這裡會跳過
             scheduleListReload();
         } catch (e) {
-            setStatus(statusEl, 'failed', () => {
-                row.remove();
+            // 廣播已確認送達 → 只是回應遺失,視為成功,不提供重送(避免重複送出)
+            if (pending.settled) {
+                return;
+            }
+            settle(pending, 'failed', () => {
+                pending.row.remove();
                 sendBody(body);
             });
         }
@@ -358,17 +399,18 @@ if (root) {
 
         // 載入中骨架
         els.threadWrap.classList.add('hidden');
+        els.threadError.classList.add('hidden');
         els.emptyMessages.classList.add('hidden');
         els.form.classList.add('hidden');
         els.typing.classList.add('hidden');
         els.threadSkeleton.classList.remove('hidden');
 
-        let messages = [];
+        let messages = null; // null = 載入失敗,不可當成空對話
         try {
             const { data } = await window.axios.get(`/chats/${id}/messages`);
             messages = data.messages;
         } catch (e) {
-            messages = [];
+            messages = null;
         }
 
         // 載入期間使用者已切換對話 → 放棄這次渲染
@@ -377,6 +419,15 @@ if (root) {
         }
 
         els.threadSkeleton.classList.add('hidden');
+
+        // 載入失敗:顯示錯誤 + 重試,不要假裝成空對話讓使用者誤送
+        if (messages === null) {
+            els.threadWrap.classList.add('hidden');
+            els.form.classList.add('hidden');
+            els.threadError.classList.remove('hidden');
+            return;
+        }
+
         els.threadWrap.classList.remove('hidden');
         els.form.classList.remove('hidden');
 
@@ -385,7 +436,8 @@ if (root) {
             .reverse()
             .forEach(appendMessage);
         forceScrollBottom();
-        els.emptyMessages.classList.toggle('hidden', messages.length > 0);
+        // 以實際渲染內容判斷空狀態:涵蓋 GET 進行中經廣播插入的訊息,避免遮罩蓋住真實訊息
+        els.emptyMessages.classList.toggle('hidden', els.thread.children.length > 0);
 
         subscribeConversationChannel(id);
         els.input.focus();
@@ -420,6 +472,18 @@ if (root) {
     });
 
     els.scrollPill.addEventListener('click', forceScrollBottom);
+
+    els.convoRetry.addEventListener('click', () => {
+        els.convoError.classList.add('hidden');
+        els.convoSkeleton.classList.remove('hidden');
+        loadConversations();
+    });
+
+    els.threadRetry.addEventListener('click', () => {
+        if (activeId) {
+            openConversation(activeId, activeOtherId, activeOtherName);
+        }
+    });
 
     els.userSelect.addEventListener('change', async () => {
         const targetId = els.userSelect.value;
