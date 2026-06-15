@@ -20,6 +20,12 @@
 - Before implementing, confirm the direction of relationships/ownership (e.g., which model 'manages' which) to avoid reversed designs.
 - Do not create additional memory files to patch rules; edit CLAUDE.md directly.
 
+### Superpowers 工作流銜接
+- 跑 superpowers 流程 skill 時,以「該 skill 的終點狀態」為準;plan mode 的 ExitPlanMode 核准 **不等於** 可以開始寫 code。
+- `brainstorming` 的終點是呼叫 `writing-plans`(產出實作計畫),**不是**直接實作。
+- 動任何實作工具(Edit/Write 原始碼、`artisan make:*`)之前,必須先有 `writing-plans` 產出的計畫,且已明確選定執行方式(subagent-driven / executing-plans)。動工前自我檢核:「計畫有了嗎?執行方式選了嗎?」否則退回補齊。
+- 走 superpowers 整套流程時,優先**不要同時開 plan mode**,讓 skill 自己驅動 brainstorming → writing-plans → 執行;plan mode 留給不套 skill 的單純探查/小修。
+
 ## Coding Behavior Guidelines
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
