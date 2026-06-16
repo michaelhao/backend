@@ -13,6 +13,19 @@ cd "$ROOT" || exit 0
 MODE="${1:-full}"
 case "$MODE" in --line|--hook) COMPACT=1 ;; *) COMPACT=0 ;; esac
 
+# Stop hook:用本次 session transcript 判斷「有沒有真的在用 superpowers」,沒有就靜默。
+# Stop hook 從 stdin 傳入 JSON(含 transcript_path);真正啟用 superpowers 會留下
+# tool_use(name:"Skill", input.skill:"superpowers:...");skill 清單只是純文字,不含此結構。
+if [ "$MODE" = "--hook" ]; then
+  STDIN_JSON="$(cat)"
+  TRANSCRIPT="$(printf '%s' "$STDIN_JSON" \
+    | sed -n 's/.*"transcript_path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
+  if [ -z "$TRANSCRIPT" ] || [ ! -f "$TRANSCRIPT" ] \
+     || ! grep -q '"skill":"superpowers:' "$TRANSCRIPT"; then
+    exit 0
+  fi
+fi
+
 BRANCH="$(git branch --show-current 2>/dev/null || true)"
 PLAN="$(ls -t docs/superpowers/plans/*.md 2>/dev/null | head -1 || true)"
 
