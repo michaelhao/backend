@@ -4,6 +4,7 @@
 @import './components/button.css';
 @import './components/flash.css';
 @import './components/layout.css';
+@import './components/chat.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
@@ -17,4 +18,6 @@
     --color-overlay: rgb(0 0 0 / 0.5);
     --color-primary: var(--color-blue-600);
     --color-primary-hover: var(--color-blue-700);
+    --color-online: var(--color-green-500);
+    --color-unread: var(--color-red-500);
 }

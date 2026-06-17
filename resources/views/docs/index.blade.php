@@ -34,7 +34,7 @@
                         </h2>
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             @foreach ($items as $doc)
-                                <a href="{{ route('docs.show', $doc['name']) }}" target="_blank"
+                                <a href="{{ url('docs/'.$doc['name']) }}" target="_blank"
                                    data-search="{{ mb_strtolower($doc['heading'].' '.$doc['name']) }}"
                                    class="block rounded-lg border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:shadow-md">
                                     <div class="flex items-start gap-3">

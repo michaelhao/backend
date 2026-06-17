@@ -1,0 +1,119 @@
+@layer components {
+    /* 訊息氣泡：寄出 / 收到 */
+    .chat-bubble {
+        @apply px-3 py-2 rounded-2xl text-sm leading-relaxed break-words;
+    }
+
+    .chat-bubble-out {
+        @apply bg-primary text-white rounded-br-md;
+    }
+
+    .chat-bubble-in {
+        @apply bg-white border border-slate-200 text-slate-700 rounded-bl-md;
+    }
+
+    /* 氣泡下方時間戳 */
+    .chat-bubble-time {
+        @apply mt-0.5 text-[11px] text-slate-400;
+    }
+
+    /* 頭像 monogram（列表項 / 群組首則 / 標題列） */
+    .chat-avatar {
+        @apply inline-flex items-center justify-center w-9 h-9 rounded-full
+               bg-slate-200 text-slate-600 text-sm font-semibold select-none flex-shrink-0;
+    }
+
+    .chat-avatar-sm {
+        @apply w-8 h-8 text-xs;
+    }
+
+    /* 對話列表項（可聚焦 button） */
+    .chat-convo-item {
+        @apply w-full text-left px-3 py-2.5 border-b border-slate-100 cursor-pointer
+               flex items-center gap-2.5 transition-colors
+               hover:bg-slate-50 focus:outline-none focus-visible:bg-slate-100
+               focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary;
+    }
+
+    .chat-convo-item-active {
+        @apply bg-blue-50 hover:bg-blue-50;
+    }
+
+    /* 未讀數 pill */
+    .chat-badge {
+        @apply inline-flex items-center justify-center min-w-5 h-5 px-1.5
+               rounded-full bg-unread text-white text-xs font-medium flex-shrink-0;
+    }
+
+    /* 線上綠點 */
+    .chat-online-dot {
+        @apply w-2.5 h-2.5 rounded-full bg-online ring-2 ring-white;
+    }
+
+    /* 打字提示：三點跳動 */
+    .chat-typing-dots {
+        @apply inline-flex items-center gap-1;
+    }
+
+    .chat-typing-dots span {
+        @apply w-1.5 h-1.5 rounded-full bg-slate-400;
+        animation: chat-typing 1.2s infinite ease-in-out;
+    }
+
+    .chat-typing-dots span:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .chat-typing-dots span:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    /* 跳到最新 pill：display 走 inline-flex,放 component 層讓 utility 層的 hidden 能覆蓋(顯示/隱藏靠 JS 切換 hidden) */
+    .chat-scroll-pill {
+        @apply absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1
+               px-3 py-1.5 rounded-full bg-primary text-white text-xs font-medium shadow-lg
+               hover:bg-primary-hover transition-colors cursor-pointer;
+    }
+
+    /* 載入骨架 */
+    .chat-skeleton {
+        @apply rounded bg-slate-200;
+        background-image: linear-gradient(
+            90deg,
+            var(--color-slate-200) 0%,
+            var(--color-slate-100) 50%,
+            var(--color-slate-200) 100%
+        );
+        background-size: 200% 100%;
+        animation: chat-shimmer 1.4s infinite linear;
+    }
+}
+
+@keyframes chat-typing {
+    0%,
+    60%,
+    100% {
+        transform: translateY(0);
+        opacity: 0.5;
+    }
+    30% {
+        transform: translateY(-3px);
+        opacity: 1;
+    }
+}
+
+@keyframes chat-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .chat-typing-dots span,
+    .chat-skeleton {
+        animation: none;
+    }
+}

@@ -1,0 +1,119 @@
+<?php
+
+namespace Tests\Feature\Chat;
+
+use App\Events\MessageSent;
+use App\Exceptions\ChatOperationException;
+use App\Models\ChatConversation;
+use App\Models\ChatMessage;
+use App\Models\User;
+use App\Services\ChatService;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Event;
+use Tests\TestCase;
+
+class ChatServiceTest extends TestCase
+{
+    use LazilyRefreshDatabase;
+
+    private function service(): ChatService
+    {
+        return app(ChatService::class);
+    }
+
+    public function test_get_or_create_is_idempotent(): void
+    {
+        $a = User::factory()->create();
+        $b = User::factory()->create();
+
+        $first = $this->service()->getOrCreateConversation($a->id, $b->id);
+        $second = $this->service()->getOrCreateConversation($b->id, $a->id);
+
+        $this->assertSame($first->id, $second->id);
+        $this->assertSame(1, ChatConversation::count());
+    }
+
+    public function test_get_or_create_rejects_self(): void
+    {
+        $a = User::factory()->create();
+
+        $this->expectException(ChatOperationException::class);
+        $this->service()->getOrCreateConversation($a->id, $a->id);
+    }
+
+    public function test_assert_participant_throws_for_outsider(): void
+    {
+        $a = User::factory()->create();
+        $b = User::factory()->create();
+        $outsider = User::factory()->create();
+        $conversation = $this->service()->getOrCreateConversation($a->id, $b->id);
+
+        $this->expectException(ChatOperationException::class);
+        $this->service()->assertParticipant($conversation->id, $outsider->id);
+    }
+
+    public function test_send_message_persists_updates_last_message_and_dispatches_event(): void
+    {
+        $a = User::factory()->create();
+        $b = User::factory()->create();
+        $conversation = $this->service()->getOrCreateConversation($a->id, $b->id);
+
+        Event::fake([MessageSent::class]);
+
+        $message = $this->service()->sendMessage($conversation->id, $a->id, 'hello');
+
+        $this->assertSame('hello', $message->body);
+        $this->assertSame($message->id, $conversation->fresh()->last_message_id);
+        $this->assertNotNull($conversation->fresh()->last_message_at);
+
+        Event::assertDispatched(MessageSent::class, function (MessageSent $event) use ($message, $b) {
+            return $event->message->id === $message->id && $event->recipientId === $b->id;
+        });
+    }
+
+    public function test_list_conversations_includes_unread_count_and_other_user(): void
+    {
+        $me = User::factory()->create();
+        $b = User::factory()->create();
+        $conv = $this->service()->getOrCreateConversation($me->id, $b->id);
+        ChatMessage::factory()->count(2)->create(['conversation_id' => $conv->id, 'sender_id' => $b->id]);
+
+        $list = $this->service()->listConversations($me->id);
+
+        $this->assertCount(1, $list);
+        $this->assertSame($conv->id, $list[0]['id']);
+        $this->assertSame($b->id, $list[0]['other_user']['id']);
+        $this->assertSame(2, $list[0]['unread_count']);
+    }
+
+    public function test_total_unread_counts_across_conversations(): void
+    {
+        $me = User::factory()->create();
+        $b = User::factory()->create();
+        $c = User::factory()->create();
+        $conv1 = $this->service()->getOrCreateConversation($me->id, $b->id);
+        $conv2 = $this->service()->getOrCreateConversation($me->id, $c->id);
+
+        ChatMessage::factory()->count(2)->create(['conversation_id' => $conv1->id, 'sender_id' => $b->id]);
+        ChatMessage::factory()->create(['conversation_id' => $conv2->id, 'sender_id' => $c->id]);
+        ChatMessage::factory()->create(['conversation_id' => $conv1->id, 'sender_id' => $me->id]);
+
+        $this->assertSame(3, $this->service()->totalUnread($me->id));
+
+        $this->service()->markAsRead($conv1->id, $me->id);
+        $this->assertSame(1, $this->service()->totalUnread($me->id));
+    }
+
+    public function test_list_conversations_skips_conversation_whose_other_user_was_deleted(): void
+    {
+        $me = User::factory()->create();
+        $other = User::factory()->create();
+        $this->service()->getOrCreateConversation($me->id, $other->id);
+
+        $other->delete(); // 對方使用者被刪除（本專案無 DB 外鍵）
+
+        $list = $this->service()->listConversations($me->id);
+
+        $this->assertSame([], $list);
+    }
+}

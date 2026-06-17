@@ -28,6 +28,7 @@ class DocsTest extends TestCase
         $response->assertSee('開發流程');
         $response->assertSee('auth-spec.html');
         $response->assertSee('登入 / 節流 / 密碼重設');
+        $response->assertSee('chat/chat-spec.html'); // 子資料夾文件遞迴列出
     }
 
     public function test_authenticated_user_can_view_a_doc(): void
@@ -35,6 +36,16 @@ class DocsTest extends TestCase
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->get(route('docs.show', 'auth-spec'));
+
+        $response->assertStatus(200);
+        $this->assertStringStartsWith('text/html', $response->headers->get('content-type'));
+    }
+
+    public function test_authenticated_user_can_view_a_nested_doc(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get('/docs/chat/chat-spec');
 
         $response->assertStatus(200);
         $this->assertStringStartsWith('text/html', $response->headers->get('content-type'));

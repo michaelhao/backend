@@ -77,6 +77,12 @@ class PermissionSeeder extends Seeder
                 'update' => '編輯',
             ],
         ],
+        'Chat' => [
+            'label' => '聊天',
+            'actions' => [
+                'index' => '聊天',
+            ],
+        ],
     ];
 
     public function run(): void

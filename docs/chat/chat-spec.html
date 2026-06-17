@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>chat Specification — 後台一對一即時聊天</title>
+<style>
+  :root {
+    --ink: #1e293b;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --blue: #2563eb;   --blue-bg: #eff6ff;   --blue-line: #bfdbfe;
+    --amber: #d97706;  --amber-bg: #fffbeb;  --amber-line: #fde68a;
+    --green: #059669;  --green-bg: #ecfdf5;  --green-line: #a7f3d0;
+    --gray: #6b7280;   --gray-bg: #f3f4f6;   --gray-line: #d1d5db;
+    --red: #dc2626;    --red-bg: #fef2f2;
+    --sidebar-w: 264px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 0.86em;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+
+  /* ===== 版面 ===== */
+  .layout { display: flex; min-height: 100vh; }
+  nav.toc {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: sticky; top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: #0f172a;
+    color: #cbd5e1;
+    padding: 20px 0 32px;
+  }
+  main {
+    flex: 1;
+    min-width: 0;
+    max-width: 880px;
+    padding: 32px 40px 96px;
+  }
+
+  /* ===== 側欄 ===== */
+  .toc-title { padding: 0 20px 12px; font-weight: 700; color: #fff; font-size: 16px; }
+  .toc-title small { display: block; font-weight: 400; color: #94a3b8; font-size: 11px; margin-top: 2px; }
+  .toc-group { margin-top: 14px; }
+  .toc-group-label {
+    padding: 0 20px; font-size: 11px; letter-spacing: .08em;
+    color: #94a3b8; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .toc a {
+    display: block; padding: 5px 20px 5px 34px;
+    color: #cbd5e1; text-decoration: none; font-size: 13px;
+    border-left: 3px solid transparent;
+  }
+  .toc a:hover { color: #fff; background: rgba(255,255,255,.06); }
+  .toc a.active { color: #fff; background: rgba(255,255,255,.1); border-left-color: #60a5fa; }
+
+  /* ===== Header ===== */
+  header h1 { font-size: 26px; margin: 0 0 4px; }
+  header .sub { color: var(--muted); margin-bottom: 16px; }
+  .threat-banner {
+    background: var(--amber-bg); border: 1px solid var(--amber-line);
+    border-radius: 10px; padding: 12px 16px; font-size: 14px; margin-bottom: 12px;
+  }
+  .threat-banner strong { color: var(--amber); }
+  .meta { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; }
+  .meta span { white-space: nowrap; }
+  .truth-note { font-size: 12.5px; color: var(--muted); margin-bottom: 24px; }
+
+  /* ===== 工具列 ===== */
+  .toolbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: flex-end; padding: 8px 0; background: linear-gradient(var(--bg) 80%, transparent); }
+  .toolbar button {
+    font: inherit; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card);
+    border-radius: 8px; padding: 6px 14px; color: var(--ink);
+  }
+  .toolbar button:hover { border-color: #94a3b8; }
+
+  /* ===== 區段標題 ===== */
+  h2.section {
+    font-size: 19px; margin: 44px 0 6px;
+    padding-left: 12px; border-left: 5px solid var(--c, var(--blue));
+  }
+  .section-desc { color: var(--muted); font-size: 13.5px; margin: 0 0 18px 17px; }
+
+  /* ===== 流程圖 ===== */
+  .flow {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px 24px; margin-bottom: 18px; overflow-x: auto;
+  }
+  .flow h3 { margin: 0 0 16px; font-size: 15px; }
+  .frow { display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap; min-width: max-content; }
+  .fnode {
+    border: 1.5px solid var(--blue-line); background: var(--blue-bg);
+    border-radius: 8px; padding: 7px 12px; font-size: 13px;
+    display: flex; flex-direction: column; justify-content: center;
+    text-align: center; max-width: 190px;
+  }
+  .fnode small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+  .fnode.start { border-color: #94a3b8; background: #f1f5f9; font-weight: 600; }
+  .fnode.ok { border-color: var(--green-line); background: var(--green-bg); }
+  .fnode.fail { border-color: #fecaca; background: var(--red-bg); }
+  .fnode.gate { border-color: var(--amber-line); background: var(--amber-bg); }
+  .farrow {
+    align-self: center; padding: 0 8px; color: var(--muted);
+    font-size: 12px; text-align: center; flex-shrink: 0; line-height: 1.3;
+  }
+  .farrow::after { content: "→"; display: block; font-size: 16px; color: #94a3b8; }
+  .fbranches { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+  .fbranch { display: flex; align-items: center; }
+
+  /* ===== Requirement 卡片 ===== */
+  .req {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 5px solid var(--c, var(--blue));
+    border-radius: 12px; padding: 18px 22px 14px; margin-bottom: 16px;
+    scroll-margin-top: 56px;
+  }
+  .req h3 { margin: 0 0 8px; font-size: 16px; display: flex; align-items: baseline; gap: 10px; }
+  .req h3 .no { color: var(--muted); font-size: 13px; font-weight: 600; }
+  .req .body { font-size: 14.5px; margin-bottom: 12px; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    border-radius: 5px; padding: 0 7px; vertical-align: 1px;
+  }
+  .badge.shall { background: var(--blue); color: #fff; }
+  .badge.mustnot { background: var(--red); color: #fff; }
+  .note { font-size: 13px; color: var(--muted); background: var(--gray-bg); border-radius: 8px; padding: 8px 12px; margin-top: 8px; }
+
+  /* ===== Scenario ===== */
+  details.scn { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: #fcfdfe; }
+  details.scn summary {
+    cursor: pointer; padding: 9px 14px; font-size: 13.5px; font-weight: 600;
+    list-style: none; display: flex; align-items: center; gap: 8px;
+  }
+  details.scn summary::-webkit-details-marker { display: none; }
+  details.scn summary::before { content: "▸"; color: #94a3b8; transition: transform .15s; }
+  details.scn[open] summary::before { transform: rotate(90deg); }
+  .scn-body { padding: 2px 14px 12px 34px; }
+  .gwt { display: flex; gap: 10px; margin: 5px 0; font-size: 13.5px; align-items: baseline; }
+  .gwt .kw {
+    flex-shrink: 0; width: 56px; text-align: center; font-size: 11px; font-weight: 700;
+    border-radius: 5px; padding: 1px 0; letter-spacing: .05em;
+  }
+  .kw.given { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-line); }
+  .kw.when  { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-line); }
+  .kw.then  { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-line); }
+  .kw.and   { background: #fff; color: var(--muted); border: 1px dashed var(--gray-line); }
+  .testref {
+    margin-left: auto; font-size: 11px; font-weight: 400; color: var(--muted);
+    background: var(--gray-bg); border-radius: 99px; padding: 1px 10px; white-space: nowrap;
+  }
+  .testref.none { background: var(--amber-bg); color: var(--amber); }
+
+  /* ===== 刻意不做 ===== */
+  .req.excluded { border-left-color: var(--gray); background: #fafafa; }
+  .nots { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+  .not-card { border: 1px dashed var(--gray-line); border-radius: 10px; padding: 10px 14px; background: var(--card); font-size: 13.5px; }
+  .not-card .x { font-weight: 700; color: var(--gray); text-decoration: line-through; }
+  .not-card small { display: block; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+  footer { margin-top: 56px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+  @media (max-width: 860px) {
+    nav.toc { display: none; }
+    main { padding: 20px 18px 64px; }
+  }
+  @media print {
+    nav.toc, .toolbar { display: none; }
+    details.scn { open: true; }
+    .req { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <div class="toc-title">chat Specification<small>後台一對一即時聊天</small></div>
+  <div class="toc-group">
+    <div class="toc-group-label">總覽</div>
+    <a href="#overview">行為流程圖</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--blue)"></span>對話與存取</div>
+    <a href="#r1">1. 聊天頁存取與權限</a>
+    <a href="#r2">2. 開始 / 取得對話</a>
+    <a href="#r3">3. 對話對象限制</a>
+    <a href="#r4">4. 對話列表</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--blue)"></span>訊息</div>
+    <a href="#r5">5. 送出訊息</a>
+    <a href="#r6">6. 訊息驗證</a>
+    <a href="#r7">7. 讀取與分頁</a>
+    <a href="#r8">8. 參與者授權</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--amber)"></span>未讀</div>
+    <a href="#r9">9. 未讀計算</a>
+    <a href="#r10">10. 未讀總數 / badge</a>
+    <a href="#r11">11. 標記已讀</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--green)"></span>即時(Reverb)</div>
+    <a href="#r12">12. 訊息廣播</a>
+    <a href="#r13">13. 頻道授權</a>
+    <a href="#r14">14. 線上狀態</a>
+    <a href="#r15">15. 輸入中提示</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--gray)"></span>韌性 / 刻意設計</div>
+    <a href="#r16">16. 孤兒對話略過</a>
+    <a href="#excluded">刻意不做的事</a>
+  </div>
+</nav>
+
+<main>
+<header>
+  <h1>chat Specification</h1>
+  <div class="sub">後台使用者之間一對一即時文字聊天的完整行為規格</div>
+  <div class="threat-banner">
+    <strong>威脅模型與限制：</strong>內部後台、非公網暴露；正式環境<strong>無對外網際網路連線</strong> —— 即時推播採<strong>自架 Laravel Reverb</strong>(WebSocket),前端 <code>pusher-js</code> 連自家 server,不連外部雲端。
+  </div>
+  <div class="meta">
+    <span>來源：<code>docs/superpowers/plans/2026-06-15-backend-chat-system.md</code></span>
+    <span>實作：<code>0e2f6e5</code> … <code>8d2ce56</code>(feat/chat-system)</span>
+    <span>測試：<code>tests/Feature/Chat/</code></span>
+  </div>
+  <div class="truth-note">本頁為供 PM / 前端討論的閱讀版;若與程式碼/測試不一致,以實際程式碼為準。每個 Scenario 右側標註對應的自動化測試(<code>none</code> 表示屬前端/即時行為,無直接後端測試)。</div>
+</header>
+
+<div class="toolbar"><button id="toggleAll" data-open="0">全部展開</button></div>
+
+<!-- ============ 總覽流程圖 ============ -->
+<h2 class="section" id="overview" style="--c:#94a3b8">行為流程圖</h2>
+<p class="section-desc">先看懂「送訊息」與「即時推播」兩條主流程,再讀下方逐項規格。</p>
+
+<div class="flow">
+  <h3>送訊息流程(POST /chats/{conversation}/messages)</h3>
+  <div class="frow">
+    <div class="fnode start">POST /chats/{id}/messages</div>
+    <div class="farrow"></div>
+    <div class="fnode gate">assertParticipant<small>對話存在?<br>我是參與者?</small></div>
+    <div class="farrow">通過</div>
+    <div class="fnode">DB transaction<small>建 message<br>更新 conversation<br>last_message_*</small></div>
+    <div class="farrow"></div>
+    <div class="fnode">dispatch MessageSent<small>ShouldBroadcastNow</small></div>
+    <div class="farrow">成功</div>
+    <div class="fnode ok">回 201 訊息<br>廣播到 chat.user.{接收者} 與 chat.user.{送出者}</div>
+  </div>
+  <div class="frow" style="margin-top:12px">
+    <div class="fnode fail">對話不存在:404</div>
+    <div class="farrow"></div>
+    <div class="fnode fail">非參與者:403</div>
+    <div class="farrow"></div>
+    <div class="fnode fail">body 空 / &gt;5000:422</div>
+  </div>
+</div>
+
+<div class="flow">
+  <h3>即時推播頻道(自架 Reverb)</h3>
+  <div class="frow">
+    <div class="fnode" style="border-color:var(--blue-line)">private<br><code>chat.user.{id}</code><small>承載 message.sent<br>→ 未讀 badge + 開啟中對話即時顯示</small></div>
+    <div class="farrow" style="visibility:hidden"></div>
+    <div class="fnode" style="border-color:var(--green-line);background:var(--green-bg)">private<br><code>chat.conversation.{id}</code><small>typing whisper(不存 DB)<br>→ 對方輸入中</small></div>
+    <div class="farrow" style="visibility:hidden"></div>
+    <div class="fnode gate">presence<br><code>chat.online</code><small>全後台線上狀態<br>→ 對話綠點</small></div>
+  </div>
+</div>
+
+<!-- ============ 對話與存取 ============ -->
+<h2 class="section" style="--c:var(--blue)">對話與存取</h2>
+
+<section class="req" id="r1" style="--c:var(--blue)">
+  <h3><span class="no">R1</span>聊天頁存取與權限</h3>
+  <div class="body"><code>GET /chats</code> <span class="badge shall">SHALL</span> 渲染聊天頁(<code>admin.chats.index</code>),受 <code>auth</code> + <code>permission</code> middleware 保護,所需權限 <code>Chat.index</code>。<strong>所有後台角色皆可聊天</strong>:<code>Chat.index</code> 為 index 類權限,Admin(全權限)與 Viewer(各 index 權限)皆自動取得。未登入者 <span class="badge shall">SHALL</span> 被導向 <code>/login</code>。</div>
+  <details class="scn"><summary>Admin 可開聊天頁<span class="testref">ChatConversationTest::test_admin_can_open_chat_index_view</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>已登入的 Admin</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/chats</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>Viewer 也有聊天權限<span class="testref">ChatConversationTest::test_viewer_can_access_chat_endpoint</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>已登入的 Viewer</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/chats/unread-count</code>(需 <code>Chat.index</code>)</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 200</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>訪客被導向登入<span class="testref">ChatConversationTest::test_guest_is_redirected_to_login</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>訪客 GET <code>/chats</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 302 導向 <code>/login</code></span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r2" style="--c:var(--blue)">
+  <h3><span class="no">R2</span>開始 / 取得對話(canonical pair)</h3>
+  <div class="body"><code>POST /chats/start</code> 帶 <code>target_user_id</code> <span class="badge shall">SHALL</span> 取得或建立與該使用者的 1:1 對話並回傳 <code>conversation_id</code>。對話以 <strong>canonical pair</strong> 儲存(<code>user_one_id &lt; user_two_id</code>),因此<strong>與順序無關、同一對組合永不重複建立</strong>,並 <span class="badge shall">SHALL</span> 建立剛好兩筆 participant。</div>
+  <details class="scn"><summary>建立對話含兩位參與者<span class="testref">ChatConversationTest::test_start_creates_conversation_with_two_participants</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/chats/start</code> 帶另一使用者 id</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>建立 1 筆 conversation</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>該 conversation 有 2 筆 participant</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>重複 / 反序回同一對話<span class="testref">ChatConversationTest::test_start_is_idempotent_regardless_of_order</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>對同一對象連續 <code>start</code> 兩次</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>兩次回傳相同 <code>conversation_id</code></span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>資料庫只有 1 筆 conversation</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>並發建立同一對話不重複<span class="testref">ChatServiceTest::test_get_or_create_is_idempotent</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>兩位使用者 A、B</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>以 (A,B) 與 (B,A) 各取得一次對話</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>得到同一筆對話(unique index 兜底,撞鍵時取回既有)</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r3" style="--c:var(--blue)">
+  <h3><span class="no">R3</span>對話對象限制</h3>
+  <div class="body"><code>target_user_id</code> <span class="badge shall">SHALL</span> 為 <code>required|integer|exists:users,id</code>,且 <span class="badge mustnot">MUST NOT</span> 等於自己。與自己建立對話或對象不存在 <span class="badge shall">SHALL</span> 回 422。</div>
+  <details class="scn"><summary>不可與自己對話<span class="testref">ChatConversationTest::test_start_rejects_self</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/chats/start</code> 帶自己的 id</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 422</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>對象須存在<span class="testref">ChatConversationTest::test_start_rejects_nonexistent_user</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST <code>/chats/start</code> 帶不存在的 user id</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 422</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>Service 層擋自我對話<span class="testref">ChatServiceTest::test_get_or_create_rejects_self</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span><code>getOrCreateConversation(uid, uid)</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>拋出 <code>ChatOperationException</code></span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r4" style="--c:var(--blue)">
+  <h3><span class="no">R4</span>對話列表</h3>
+  <div class="body"><code>GET /chats/conversations</code> <span class="badge shall">SHALL</span> 回傳目前使用者的對話清單,每筆含對方 <code>{id,name}</code>、最後訊息預覽、<code>last_message_at</code> 與未讀數,依 <code>last_message_at</code> 由新到舊排序。未讀數 <span class="badge shall">SHALL</span> 以單一查詢批次取得(避免 N+1)。</div>
+  <details class="scn"><summary>列表含對方與未讀數<span class="testref">ChatServiceTest::test_list_conversations_includes_unread_count_and_other_user</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>我與 B 的對話,B 送了 2 則</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span><code>listConversations(我)</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>該筆 <code>other_user.id</code> = B、<code>unread_count</code> = 2</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 訊息 ============ -->
+<h2 class="section" style="--c:var(--blue)">訊息</h2>
+
+<section class="req" id="r5" style="--c:var(--blue)">
+  <h3><span class="no">R5</span>送出訊息</h3>
+  <div class="body">參與者 <code>POST /chats/{conversation}/messages</code> <span class="badge shall">SHALL</span> 在<strong>單一交易</strong>內建立訊息並更新該對話的 <code>last_message_id</code> / <code>last_message_at</code>,然後 dispatch <code>MessageSent</code>,並回 201 帶該訊息。</div>
+  <details class="scn"><summary>參與者送訊息並廣播<span class="testref">ChatMessageTest::test_participant_can_send_message_and_event_is_broadcast</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>我與 B 的對話</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST 訊息 body="hi there"</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回 201、<code>chat_messages</code> 有該筆</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span>dispatch <code>MessageSent</code>,recipientId = B</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>持久化 + 更新 last_message + 發事件<span class="testref">ChatServiceTest::test_send_message_persists_updates_last_message_and_dispatches_event</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span><code>sendMessage</code> 送出一則</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>conversation 的 <code>last_message_id</code> 指向新訊息、<code>last_message_at</code> 非空</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span><code>MessageSent</code> 已 dispatch</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r6" style="--c:var(--blue)">
+  <h3><span class="no">R6</span>訊息驗證</h3>
+  <div class="body"><code>body</code> <span class="badge shall">SHALL</span> 為 <code>required|string|max:5000</code>。不合規 <span class="badge shall">SHALL</span> 回 422。</div>
+  <details class="scn"><summary>空白 body 被拒<span class="testref">ChatMessageTest::test_body_is_required</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>POST 訊息 body=""</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 422</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r7" style="--c:var(--blue)">
+  <h3><span class="no">R7</span>讀取與分頁</h3>
+  <div class="body"><code>GET /chats/{conversation}/messages</code> <span class="badge shall">SHALL</span> 回傳該對話訊息(依 id 由新到舊、單頁上限 30),並支援 <code>before_id</code> 游標往前載入更舊訊息。</div>
+  <details class="scn"><summary>以 before_id 取較舊訊息<span class="testref">ChatMessageTest::test_messages_are_paginated_with_before_id</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>對話內有 5 則訊息</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET messages 帶 <code>before_id=第3則</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回傳的訊息 id 皆 &lt; 第3則</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r8" style="--c:var(--blue)">
+  <h3><span class="no">R8</span>參與者授權(核心安全)</h3>
+  <div class="body">讀訊息 / 送訊息 / 標記已讀 <span class="badge shall">SHALL</span> 要求請求者為該對話參與者(canonical pair 之一);非參與者 <span class="badge mustnot">MUST NOT</span> 存取,回 <strong>403</strong>。對話不存在 <span class="badge shall">SHALL</span> 回 <strong>404</strong>(以 <code>findOrFail</code> 區分「找不到」與「沒權限」)。</div>
+  <details class="scn"><summary>非參與者不可送訊息<span class="testref">ChatMessageTest::test_non_participant_cannot_send_message</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>owner 與 B 的對話</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>第三人 POST 訊息到該對話</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 403</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>非參與者不可讀訊息<span class="testref">ChatMessageTest::test_non_participant_cannot_read_messages</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>第三人 GET 該對話 messages</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 403</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>對話不存在回 404<span class="testref">ChatMessageTest::test_messages_on_missing_conversation_returns_404</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET 不存在的 conversation messages</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 404</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>Service 對外人拋例外<span class="testref">ChatServiceTest::test_assert_participant_throws_for_outsider</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span><code>assertParticipant</code> 帶非參與者</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>拋出 <code>ChatOperationException</code>(→ 403)</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 未讀 ============ -->
+<h2 class="section" style="--c:var(--amber)">未讀</h2>
+
+<section class="req" id="r9" style="--c:var(--amber)">
+  <h3><span class="no">R9</span>未讀計算</h3>
+  <div class="body">某對話對某使用者的未讀數 <span class="badge shall">SHALL</span> = 該對話中 <code>sender_id != 自己</code> 且(participant 的 <code>last_read_at</code> 為 null,或 <code>created_at &gt; last_read_at</code>)的訊息數。<strong>自己送出的訊息不計入自己的未讀</strong>。</div>
+  <details class="scn"><summary>排除自己訊息、尊重 last_read_at<span class="testref">ChatRepositoryTest::test_unread_count_excludes_own_messages_and_respects_last_read</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>對方送 2 則、我送 1 則</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span><code>last_read_at</code> 為 null 計算未讀</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>未讀 = 2(我自己的不算)</span></div>
+      <div class="gwt"><span class="kw and">AND</span><span><code>last_read_at</code> = 現在時未讀 = 0</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>跨對話加總<span class="testref">ChatServiceTest::test_total_unread_counts_across_conversations</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>兩個對話分別有未讀</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span><code>totalUnread(我)</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回傳跨對話未讀總和</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r10" style="--c:var(--amber)">
+  <h3><span class="no">R10</span>未讀總數 / 側欄 badge</h3>
+  <div class="body"><code>GET /chats/unread-count</code> <span class="badge shall">SHALL</span> 回傳跨所有對話的未讀總數,用於驅動側欄紅點 badge。前端在每個後台頁面載入時與收到新訊息時向此端點抓取<strong>權威數字</strong>(不靠本地累加,避免多分頁飄移)。</div>
+  <details class="scn"><summary>未讀總數端點<span class="testref">ChatUnreadTest::test_unread_count_endpoint_returns_total</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>對方送了 2 則</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>GET <code>/chats/unread-count</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>unread_count</code> = 2</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r11" style="--c:var(--amber)">
+  <h3><span class="no">R11</span>標記已讀</h3>
+  <div class="body"><code>PATCH /chats/{conversation}/read</code> <span class="badge shall">SHALL</span> 將該參與者的 <code>last_read_at</code> 設為 <code>now()</code> 並回傳更新後的未讀總數。非參與者 <span class="badge mustnot">MUST NOT</span> 標記,回 403。</div>
+  <details class="scn"><summary>標記已讀後未讀歸零<span class="testref">ChatUnreadTest::test_mark_read_resets_unread</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>對方送了 3 則</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>PATCH <code>/chats/{id}/read</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>unread_count</code> = 0</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>非參與者不可標記<span class="testref">ChatUnreadTest::test_non_participant_cannot_mark_read</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>第三人 PATCH 該對話 read</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>系統回應 403</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 即時 ============ -->
+<h2 class="section" style="--c:var(--green)">即時(自架 Reverb)</h2>
+<p class="section-desc">即時推播以自架 Laravel Reverb 提供;<code>MessageSent</code> 為 <code>ShouldBroadcastNow</code>,免額外 queue worker。</p>
+
+<section class="req" id="r12" style="--c:var(--green)">
+  <h3><span class="no">R12</span>訊息廣播</h3>
+  <div class="body"><code>MessageSent</code> <span class="badge shall">SHALL</span> 廣播到接收者的 <code>chat.user.{recipientId}</code> <strong>與送出者的</strong> <code>chat.user.{senderId}</code>(讓送出者其他分頁同步),事件名 <code>message.sent</code>,payload 含 <code>id, conversation_id, sender_id, sender_name, body, created_at</code>。前端 <span class="badge shall">SHALL</span> 以訊息 <code>id</code> 去重,避免本地已顯示的自送訊息重複。</div>
+  <details class="scn"><summary>廣播頻道與 payload<span class="testref">ChatMessageTest::test_participant_can_send_message_and_event_is_broadcast</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>送訊息給 B</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span><code>broadcastOn</code> 第一個頻道為 <code>private-chat.user.{B}</code></span></div>
+      <div class="gwt"><span class="kw and">AND</span><span><code>broadcastWith.conversation_id</code> 正確</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r13" style="--c:var(--green)">
+  <h3><span class="no">R13</span>頻道授權</h3>
+  <div class="body">私有頻道 <code>chat.user.{id}</code> <span class="badge shall">SHALL</span> 僅授權本人;<code>chat.conversation.{id}</code> <span class="badge shall">SHALL</span> 僅授權該對話參與者;presence <code>chat.online</code> <span class="badge shall">SHALL</span> 對任何登入者授權(回 <code>{id,name}</code>)。未登入者 <span class="badge mustnot">MUST NOT</span> 通過授權。</div>
+  <details class="scn"><summary>本人可訂自己的 user 頻道<span class="testref">ChatChannelAuthTest::test_user_can_authorize_own_user_channel</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>授權 <code>private-chat.user.{自己}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>通過(200)</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>不可訂他人 user 頻道<span class="testref">ChatChannelAuthTest::test_user_cannot_authorize_another_user_channel</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>授權 <code>private-chat.user.{他人}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>拒絕(403)</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>參與者可訂對話頻道 / 外人不可<span class="testref">ChatChannelAuthTest::test_participant_can_authorize_conversation_channel · test_outsider_cannot_authorize_conversation_channel</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>授權 <code>private-chat.conversation.{id}</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>參與者通過、外人 403</span></div>
+    </div>
+  </details>
+  <details class="scn"><summary>登入者可加入 presence / 訪客不可<span class="testref">ChatChannelAuthTest::test_authenticated_user_can_join_presence_channel · test_guest_cannot_authorize_channel</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>授權 <code>presence-chat.online</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>登入者通過、訪客 403</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r14" style="--c:var(--green)">
+  <h3><span class="no">R14</span>線上狀態</h3>
+  <div class="body">前端透過 presence 頻道 <code>chat.online</code> 維護線上使用者集合;對話對象在線時 <span class="badge shall">SHALL</span> 於對話標題列顯示綠點。頻道授權已由 R13 測試涵蓋;綠點本身為前端行為。</div>
+  <details class="scn"><summary>線上綠點(前端)<span class="testref none">無直接後端測試 — 雙帳號手動驗證</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>對話雙方皆在線</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span>開啟與對方的對話</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>標題列顯示綠點;對方離線時消失</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="r15" style="--c:var(--green)">
+  <h3><span class="no">R15</span>輸入中提示</h3>
+  <div class="body">於對話頻道 <code>chat.conversation.{id}</code> 以 Echo <code>whisper('typing')</code> 傳遞「對方輸入中」,<span class="badge mustnot">MUST NOT</span> 寫入資料庫(純 client 端 whisper,逾時自動消失)。</div>
+  <details class="scn"><summary>輸入中提示(前端 whisper)<span class="testref none">無直接後端測試 — 雙帳號手動驗證</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw when">WHEN</span><span>對方在輸入框打字</span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>我看到「對方正在輸入…」,停止後約 2 秒消失</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 韌性 / 刻意設計 ============ -->
+<h2 class="section" style="--c:var(--gray)">韌性 / 刻意設計</h2>
+<p class="section-desc">以下為韌性處理與依範圍刻意排除的功能,避免後人誤判為待補項目。</p>
+
+<section class="req" id="r16" style="--c:var(--gray)">
+  <h3><span class="no">R16</span>孤兒對話略過(韌性)</h3>
+  <div class="body">本專案 user 參照欄位<strong>無 DB 外鍵</strong>且刪除為實體刪除。若對話對象使用者已被刪除,對話列表 <span class="badge shall">SHALL</span> <strong>略過</strong>該孤兒對話(對方為 null),<span class="badge mustnot">MUST NOT</span> 因存取 null 而錯誤。</div>
+  <details class="scn"><summary>對方被刪除時略過該對話<span class="testref">ChatServiceTest::test_list_conversations_skips_conversation_whose_other_user_was_deleted</span></summary>
+    <div class="scn-body">
+      <div class="gwt"><span class="kw given">GIVEN</span><span>我與 B 的對話,B 的帳號被刪除</span></div>
+      <div class="gwt"><span class="kw when">WHEN</span><span><code>listConversations(我)</code></span></div>
+      <div class="gwt"><span class="kw then">THEN</span><span>回傳不含該孤兒對話,且不拋錯</span></div>
+    </div>
+  </details>
+</section>
+
+<section class="req excluded" id="excluded" style="--c:var(--gray)">
+  <h3><span class="no">—</span>刻意不做的事(彙整)</h3>
+  <div class="nots">
+    <div class="not-card"><span class="x">群組聊天 / 頻道</span><small>本期只做 1:1 私訊;資料模型以 canonical pair 為前提</small></div>
+    <div class="not-card"><span class="x">附件 / 圖片上傳</span><small>本期純文字訊息</small></div>
+    <div class="not-card"><span class="x">編輯 / 刪除訊息</span><small>本期不提供訊息修改或撤回</small></div>
+    <div class="not-card"><span class="x">外部即時雲端(Pusher cloud)</span><small>正式環境無對外連線;改用自架 Reverb,前端 pusher-js 連自家 server</small></div>
+  </div>
+</section>
+
+<footer>
+  供 PM / 前端討論之閱讀版,來源 <code>docs/superpowers/plans/2026-06-15-backend-chat-system.md</code>(branch <code>feat/chat-system</code>)。
+  16 項 Requirement。測試對應:<code>tests/Feature/Chat/</code>(ChatConversationTest、ChatMessageTest、ChatUnreadTest、ChatChannelAuthTest、ChatServiceTest、ChatRepositoryTest,共 34 例)。
+  即時/前端行為(R14 線上、R15 輸入中)以雙帳號手動驗證。內容以實際程式碼為準。
+</footer>
+</main>
+</div>
+
+<script>
+// 全部展開 / 收合
+const btn = document.getElementById('toggleAll');
+btn.addEventListener('click', () => {
+  const open = btn.dataset.open !== '1';
+  document.querySelectorAll('details.scn').forEach(d => d.open = open);
+  btn.dataset.open = open ? '1' : '0';
+  btn.textContent = open ? '全部收合' : '全部展開';
+});
+
+// 側欄 scroll-spy
+const links = [...document.querySelectorAll('.toc a')];
+const targets = links
+  .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+  .filter(Boolean);
+const byId = Object.fromEntries(links.map(a => [a.getAttribute('href').slice(1), a]));
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(a => a.classList.remove('active'));
+      byId[e.target.id]?.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -75% 0px' });
+targets.forEach(t => observer.observe(t));
+</script>
+</body>
+</html>
