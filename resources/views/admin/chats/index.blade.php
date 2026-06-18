@@ -5,8 +5,7 @@
 @section('content')
     <div
         id="chat-app"
-        data-user-id="{{ Auth::id() }}"
-        data-props="{{ json_encode(['meId' => Auth::id(), 'selectableUsers' => $users->map(fn($u) => ['id' => $u->id, 'name' => $u->name])->values()]) }}"
+        data-props="@json(['meId' => Auth::id(), 'selectableUsers' => $users->map(fn($u) => ['id' => $u->id, 'name' => $u->name])->values()])"
     ></div>
 @endsection
 

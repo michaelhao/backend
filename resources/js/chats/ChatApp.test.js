@@ -43,7 +43,7 @@ function makeEchoMock() {
     return {
         join(channel) {
             if (channel === 'chat.online') { return presenceChannel; }
-            return presenceChannel;
+            return privateChannel;
         },
         private() { return privateChannel; },
         leave(channel) { leftChannels.push(channel); },
