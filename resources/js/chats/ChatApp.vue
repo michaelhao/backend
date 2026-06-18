@@ -223,18 +223,21 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import http from '@/lib/http';
 import { initials, formatListTime, formatDayLabel, formatTime, dayKey } from '@/chats/chatFormat';
 import { useChatBadge } from '@/composables/useChatBadge';
+import { useEcho } from '@/composables/useEcho';
 
 // ── Props ───────────────────────────────────────────────────────
 const props = defineProps({
     meId: { type: Number, required: true },
+    selectableUsers: { type: Array, default: () => [] },
 });
 
 // ── Composables ──────────────────────────────────────────────────
 const { refresh: refreshChatBadge } = useChatBadge();
+const { echo } = useEcho();
 
 // ── State ────────────────────────────────────────────────────────
 const conversations = ref([]);
@@ -243,16 +246,19 @@ const activeOtherId = ref(null);
 const activeOtherName = ref('');
 
 /** Rendered message list: items are either { type:'divider', key, label }
- *  or { type:'msg', key, id, mine, grouped, body, time, statusKey? } */
+ *  or { type:'msg', key, id, mine, grouped, body, time, pendingStatus?, retry? } */
 const messages = ref([]);
 
-/** Set of online user IDs — populated by task 4.5 realtime subscription */
-const onlineUsers = reactive(new Set());
+/**
+ * Set of online user IDs — stored in a ref so Vue tracks the reference.
+ * We replace with a new Set on each mutation to guarantee reactivity in all environments.
+ */
+const onlineUsers = ref(new Set());
 
-/** Dedup set for rendered message IDs — reused by task 4.4 optimistic send */
+/** Dedup set for rendered message IDs */
 const renderedMessageIds = new Set();
 
-/** Pending optimistic sends — populated/settled by task 4.4 */
+/** Pending optimistic sends */
 const pendingSends = [];
 
 // List panel states
@@ -276,9 +282,6 @@ const inputValue = ref('');
 const threadEl = ref(null);
 const inputEl = ref(null);
 
-// Selectable users for the "start new conversation" select (task 4.5 populates this via props/fetch)
-const selectableUsers = ref([]);
-
 // Timers (cleaned up on unmount)
 let hideTypingTimer = null;
 let listReloadTimer = null;
@@ -286,6 +289,9 @@ let listReloadTimer = null;
 // Rendering trackers (reset on each openConversation)
 let lastRenderedDateKey = null;
 let lastRenderedSenderId = null;
+
+// Echo channel tracking
+let conversationChannelId = null;
 
 // ── Helpers ─────────────────────────────────────────────────────
 const isNearBottom = () => {
@@ -329,7 +335,7 @@ const retryLoadConversations = () => {
     loadConversations();
 };
 
-/** Debounced list reload — used by task 4.4/4.5 after send/receive */
+/** Debounced list reload — called after send/receive */
 const scheduleListReload = () => {
     clearTimeout(listReloadTimer);
     listReloadTimer = setTimeout(loadConversations, 300);
@@ -338,10 +344,9 @@ const scheduleListReload = () => {
 // ── Message rendering ────────────────────────────────────────────
 /**
  * Append a message (or a date divider + message) to the `messages` ref array.
- * Mirrors appendMessage from index.js but works with the reactive array.
  *
  * @param {object} msg  - { id?, sender_id, body, created_at? }
- * @param {object} opts - { live?: boolean }  (live = realtime; deferred to task 4.5)
+ * @param {object} opts - { live?: boolean }
  */
 const appendMessage = (msg, { live = false } = {}) => {
     // Dedup by message id
@@ -349,7 +354,6 @@ const appendMessage = (msg, { live = false } = {}) => {
         if (renderedMessageIds.has(msg.id)) { return; }
 
         // 自身送出的廣播：認領對應的樂觀泡泡(以 body 依序配對),沿用該列不另渲染。
-        // 避免「廣播先到 → 重複泡泡」與移除樂觀列造成的分組間距錯亂。
         if (Number(msg.sender_id) === props.meId) {
             const pending = pendingSends.find((p) => !p.settled && p.body === msg.body);
             if (pending) {
@@ -402,12 +406,6 @@ const appendMessage = (msg, { live = false } = {}) => {
 // ── Optimistic send ──────────────────────────────────────────────
 /**
  * 樂觀送出的單一收斂點：POST 成功或自身廣播認領皆可結算。
- * 已結算者不再重複處理，避免「廣播認領為已送達」後 POST 回應遺失
- * 又被誤判為失敗而提供重送（造成重複送出）。
- *
- * @param {object}   pending - pendingSends 中的樂觀項目
- * @param {string}   status  - 'sent' | 'failed'
- * @param {Function} [retry] - 僅 failed 時傳入
  */
 const settle = (pending, status, retry) => {
     if (pending.settled) { return; }
@@ -450,10 +448,8 @@ const sendBody = async (body) => {
     const grouped = lastRenderedSenderId === props.meId;
     lastRenderedSenderId = props.meId;
 
-    // 建立唯一 key 供 settle 查找
     const pendingKey = `pending-${Date.now()}-${messages.value.length}`;
 
-    // 建立樂觀訊息項目（reactive，狀態欄位可後續 mutate）
     messages.value.push({
         type: 'msg',
         key: pendingKey,
@@ -476,15 +472,13 @@ const sendBody = async (body) => {
         const { data } = await http.post(`/chats/${targetId}/messages`, { body });
         const id = data.message?.id;
         if (id != null) {
-            renderedMessageIds.add(id); // 之後/已到的自身廣播據此去重
+            renderedMessageIds.add(id);
         }
-        settle(pending, 'sent'); // 若廣播已先認領，settled 為 true，這裡會跳過
+        settle(pending, 'sent');
         scheduleListReload();
     } catch {
-        // 廣播已確認送達 → 只是回應遺失，視為成功，不提供重送（避免重複送出）
         if (pending.settled) { return; }
         settle(pending, 'failed', () => {
-            // 重試：移除失敗列再重新送出
             const idx = messages.value.findIndex((m) => m._pendingKey === pending.pendingKey);
             if (idx !== -1) { messages.value.splice(idx, 1); }
             sendBody(body);
@@ -492,28 +486,43 @@ const sendBody = async (body) => {
     }
 };
 
+// ── Echo: subscribe to conversation channel ──────────────────────
+/**
+ * Subscribe to the private conversation channel for typing whispers.
+ * Leaves the previous channel if switching conversations.
+ * No-op if echo is null.
+ */
+const subscribeConversationChannel = (id) => {
+    if (!echo || conversationChannelId === id) { return; }
+    if (conversationChannelId) {
+        echo.leave(`chat.conversation.${conversationChannelId}`);
+    }
+    conversationChannelId = id;
+    echo.private(`chat.conversation.${id}`).listenForWhisper('typing', () => {
+        typing.value = true;
+        clearTimeout(hideTypingTimer);
+        hideTypingTimer = setTimeout(() => { typing.value = false; }, 2000);
+    });
+};
+
 // ── Open conversation ─────────────────────────────────────────────
 const openConversation = async (id, otherId, otherName) => {
-    // Set active state immediately
     activeId.value = id;
     activeOtherId.value = Number(otherId);
     activeOtherName.value = otherName;
 
-    // Reset thread state
     messages.value = [];
     renderedMessageIds.clear();
     lastRenderedDateKey = null;
     lastRenderedSenderId = null;
     scrollPill.value = false;
 
-    // Show skeleton
     threadLoading.value = true;
     threadError.value = false;
     threadWrap.value = false;
     emptyMessages.value = false;
     typing.value = false;
 
-    // Load messages
     let loadedMessages = null;
     try {
         const { data } = await http.get(`/chats/${id}/messages`);
@@ -527,8 +536,7 @@ const openConversation = async (id, otherId, otherName) => {
 
     threadLoading.value = false;
 
-    // Failure — show error, do NOT treat as empty conversation
-    if (loadedMessages === null) {
+    if (loadedMessages == null) {
         threadError.value = true;
         threadWrap.value = false;
         return;
@@ -536,22 +544,17 @@ const openConversation = async (id, otherId, otherName) => {
 
     threadWrap.value = true;
 
-    // Render messages in chronological order (API returns newest-first, so reverse)
     loadedMessages.slice().reverse().forEach((m) => appendMessage(m));
-
-    // Determine empty state from what was actually rendered
     emptyMessages.value = messages.value.length === 0;
 
-    // Scroll to bottom after render
-    await nextTick(); // wait for DOM to flush
+    await nextTick();
     forceScrollBottom();
 
-    // Task 4.5: subscribeConversationChannel(id)
+    // Subscribe to conversation channel for typing indicators
+    subscribeConversationChannel(id);
 
-    // Focus input
     if (inputEl.value) { inputEl.value.focus(); }
 
-    // Mark as read + refresh badge
     try {
         await http.patch(`/chats/${id}/read`);
         refreshChatBadge();
@@ -559,7 +562,6 @@ const openConversation = async (id, otherId, otherName) => {
         // non-critical
     }
 
-    // Reload conversation list to clear unread badge in sidebar
     await loadConversations();
 };
 
@@ -578,31 +580,81 @@ const onFormSubmit = () => {
     sendBody(body);
 };
 
-// ── Typing whisper (stub — task 4.5 wires Echo) ──────────────────
+// ── Typing whisper ────────────────────────────────────────────────
 const onInputTyping = () => {
-    // Stub: task 4.5 will whisper typing event via Echo
+    if (!activeId.value || !echo) { return; }
+    echo.private(`chat.conversation.${activeId.value}`).whisper('typing', { from: props.meId });
 };
 
-// ── User select (stub — task 4.5 implements POST /chats/start) ───
+// ── User select: start new conversation ──────────────────────────
 const onUserSelectChange = async (e) => {
     const targetId = e.target.value;
     if (!targetId) { return; }
-    // Stub: task 4.5 will POST /chats/start and call openConversation
-    e.target.value = '';
+    const option = e.target.options[e.target.selectedIndex];
+    const name = option ? option.textContent.trim() : '';
+    e.target.value = ''; // reset select
+
+    try {
+        const { data } = await http.post('/chats/start', { target_user_id: Number(targetId) });
+        await loadConversations();
+        openConversation(data.conversation_id, Number(targetId), name);
+    } catch {
+        // non-critical; user can retry
+    }
+};
+
+// ── window chat:message listener ─────────────────────────────────
+const onChatMessage = (e) => {
+    const msg = e.detail;
+    if (Number(msg.conversation_id) === activeId.value) {
+        appendMessage(msg, { live: true });
+        http.patch(`/chats/${activeId.value}/read`).then(() => refreshChatBadge()).catch(() => {});
+    }
+    scheduleListReload();
 };
 
 // ── Lifecycle ────────────────────────────────────────────────────
 onMounted(() => {
     loadConversations();
+
+    // Register window listener for incoming messages (from bootstrap.js global subscription)
+    window.addEventListener('chat:message', onChatMessage);
+
+    // Presence: online status — gracefully skipped when echo is null
+    if (echo) {
+        echo.join('chat.online')
+            .here((users) => {
+                const next = new Set(onlineUsers.value);
+                users.forEach((u) => next.add(Number(u.id)));
+                onlineUsers.value = next;
+            })
+            .joining((u) => {
+                const next = new Set(onlineUsers.value);
+                next.add(Number(u.id));
+                onlineUsers.value = next;
+            })
+            .leaving((u) => {
+                const next = new Set(onlineUsers.value);
+                next.delete(Number(u.id));
+                onlineUsers.value = next;
+            });
+    }
 });
 
 onBeforeUnmount(() => {
     clearTimeout(hideTypingTimer);
     clearTimeout(listReloadTimer);
-    // Task 4.5: leave Echo channels here
+    window.removeEventListener('chat:message', onChatMessage);
+
+    if (echo) {
+        echo.leave('chat.online');
+        if (conversationChannelId) {
+            echo.leave(`chat.conversation.${conversationChannelId}`);
+        }
+    }
 });
 
-// Expose for tests and task 4.4/4.5 integration
+// Expose for tests and integration
 defineExpose({
     loadConversations,
     openConversation,
