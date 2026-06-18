@@ -149,8 +149,21 @@
                                 <div :class="item.mine ? 'chat-bubble chat-bubble-out' : 'chat-bubble chat-bubble-in'">{{ item.body }}</div>
                                 <div class="chat-bubble-time">
                                     <span>{{ item.time }}</span>
-                                    <!-- status slot for task 4.4 optimistic send -->
-                                    <span v-if="item.statusKey" :data-status-key="item.statusKey" class="chat-status ml-1"></span>
+                                    <!-- 樂觀送出狀態 -->
+                                    <template v-if="item.pendingStatus">
+                                        <span
+                                            v-if="item.pendingStatus === 'sending'"
+                                            class="chat-status ml-1 text-slate-400"
+                                        >· 傳送中…</span>
+                                        <span
+                                            v-else-if="item.pendingStatus === 'sent'"
+                                            class="chat-status ml-1 text-slate-400"
+                                        >· 已送出</span>
+                                        <span
+                                            v-else-if="item.pendingStatus === 'failed'"
+                                            class="chat-status ml-1 text-red-500"
+                                        >· 傳送失敗 <button type="button" class="underline cursor-pointer" @click="item.retry && item.retry()">重試</button></span>
+                                    </template>
                                 </div>
                             </div>
                         </div>
@@ -186,13 +199,15 @@
                 對方正在輸入…
             </div>
 
-            <!-- 訊息表單 (stub: task 4.4 implements send) -->
+            <!-- 訊息表單 -->
             <form
+                id="message-form"
                 v-show="threadWrap"
                 class="border-t border-slate-200 p-3 flex gap-2"
                 @submit.prevent="onFormSubmit"
             >
                 <input
+                    id="message-input"
                     ref="inputEl"
                     type="text"
                     autocomplete="off"
@@ -333,12 +348,13 @@ const appendMessage = (msg, { live = false } = {}) => {
     if (msg.id != null) {
         if (renderedMessageIds.has(msg.id)) { return; }
 
-        // Task 4.4: self-sent broadcast claim against pendingSends (stub hook)
+        // 自身送出的廣播：認領對應的樂觀泡泡(以 body 依序配對),沿用該列不另渲染。
+        // 避免「廣播先到 → 重複泡泡」與移除樂觀列造成的分組間距錯亂。
         if (Number(msg.sender_id) === props.meId) {
             const pending = pendingSends.find((p) => !p.settled && p.body === msg.body);
             if (pending) {
                 renderedMessageIds.add(msg.id);
-                // settle(pending, 'sent') — implemented in task 4.4
+                settle(pending, 'sent');
                 return;
             }
         }
@@ -380,6 +396,99 @@ const appendMessage = (msg, { live = false } = {}) => {
         forceScrollBottom();
     } else if (live && !mine) {
         scrollPill.value = true;
+    }
+};
+
+// ── Optimistic send ──────────────────────────────────────────────
+/**
+ * 樂觀送出的單一收斂點：POST 成功或自身廣播認領皆可結算。
+ * 已結算者不再重複處理，避免「廣播認領為已送達」後 POST 回應遺失
+ * 又被誤判為失敗而提供重送（造成重複送出）。
+ *
+ * @param {object}   pending - pendingSends 中的樂觀項目
+ * @param {string}   status  - 'sent' | 'failed'
+ * @param {Function} [retry] - 僅 failed 時傳入
+ */
+const settle = (pending, status, retry) => {
+    if (pending.settled) { return; }
+    pending.settled = true;
+    const i = pendingSends.indexOf(pending);
+    if (i !== -1) { pendingSends.splice(i, 1); }
+    // 透過 pendingKey 在 reactive messages 陣列中找到對應項目並更新
+    const msgItem = messages.value.find((m) => m._pendingKey === pending.pendingKey);
+    if (msgItem) {
+        msgItem.pendingStatus = status;
+        if (status === 'failed') {
+            msgItem.retry = retry;
+        }
+    }
+};
+
+/**
+ * 送出訊息：樂觀插入 → POST → 成功 settle('sent') / 失敗 settle('failed', retry)
+ */
+const sendBody = async (body) => {
+    const targetId = activeId.value;
+    if (!body || !targetId) { return; }
+
+    emptyMessages.value = false;
+
+    const date = new Date();
+    const key = dayKey(date);
+
+    // 日期分隔
+    if (key !== lastRenderedDateKey) {
+        lastRenderedDateKey = key;
+        lastRenderedSenderId = null;
+        messages.value.push({
+            type: 'divider',
+            key: `divider-${key}`,
+            label: formatDayLabel(date),
+        });
+    }
+
+    const grouped = lastRenderedSenderId === props.meId;
+    lastRenderedSenderId = props.meId;
+
+    // 建立唯一 key 供 settle 查找
+    const pendingKey = `pending-${Date.now()}-${messages.value.length}`;
+
+    // 建立樂觀訊息項目（reactive，狀態欄位可後續 mutate）
+    messages.value.push({
+        type: 'msg',
+        key: pendingKey,
+        id: null,
+        mine: true,
+        grouped,
+        body,
+        time: formatTime(date),
+        pendingStatus: 'sending',
+        retry: null,
+        _pendingKey: pendingKey,
+    });
+
+    const pending = { body, settled: false, pendingKey };
+    pendingSends.push(pending);
+
+    forceScrollBottom();
+
+    try {
+        const { data } = await http.post(`/chats/${targetId}/messages`, { body });
+        const id = data.message?.id;
+        if (id != null) {
+            renderedMessageIds.add(id); // 之後/已到的自身廣播據此去重
+        }
+        settle(pending, 'sent'); // 若廣播已先認領，settled 為 true，這裡會跳過
+        scheduleListReload();
+    } catch {
+        // 廣播已確認送達 → 只是回應遺失，視為成功，不提供重送（避免重複送出）
+        if (pending.settled) { return; }
+        settle(pending, 'failed', () => {
+            // 重試：移除失敗列再重新送出
+            const idx = messages.value.findIndex((m) => m._pendingKey === pending.pendingKey);
+            if (idx !== -1) { messages.value.splice(idx, 1); }
+            sendBody(body);
+        });
     }
 };
 
@@ -460,9 +569,13 @@ const retryOpenConversation = () => {
     }
 };
 
-// ── Form (stub — task 4.4 implements send) ───────────────────────
+// ── Form ─────────────────────────────────────────────────────────
 const onFormSubmit = () => {
-    // Stub: task 4.4 will implement sendBody(inputValue.value.trim())
+    if (!activeId.value) { return; }
+    const body = inputValue.value.trim();
+    if (!body) { return; }
+    inputValue.value = '';
+    sendBody(body);
 };
 
 // ── Typing whisper (stub — task 4.5 wires Echo) ──────────────────
@@ -494,6 +607,8 @@ defineExpose({
     loadConversations,
     openConversation,
     appendMessage,
+    sendBody,
+    settle,
     scheduleListReload,
     conversations,
     messages,

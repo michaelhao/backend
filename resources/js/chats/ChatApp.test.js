@@ -109,3 +109,36 @@ describe('ChatApp 列表', () => {
         expect(w.get('[data-thread-wrap]').isVisible()).toBe(false);
     });
 });
+
+describe('ChatApp 送訊息', () => {
+    it('樂觀送出顯示訊息且成功標記已送出', async () => {
+        http.get.mockResolvedValue({ data: { conversations: [{ id: 1, other_user: { id: 9, name: 'Bob' }, last_message: '', last_message_at: null, unread_count: 0 } ] } });
+        const w = mount(ChatApp, { props: { meId: 1 } });
+        await flushPromises();
+        // 開對話
+        http.get.mockResolvedValueOnce({ data: { messages: [] } });
+        await w.get('[data-convo-id="1"]').trigger('click');
+        await flushPromises();
+        http.post.mockResolvedValueOnce({ data: { message: { id: 100 } } });
+        await w.get('#message-input').setValue('hello');
+        await w.get('#message-form').trigger('submit');
+        await flushPromises();
+        expect(w.text()).toContain('hello');
+        expect(http.post).toHaveBeenCalledWith('/chats/1/messages', { body: 'hello' });
+        expect(w.text()).toContain('已送出');
+    });
+
+    it('送出失敗顯示重試', async () => {
+        http.get.mockResolvedValue({ data: { conversations: [{ id: 1, other_user: { id: 9, name: 'Bob' }, last_message: '', last_message_at: null, unread_count: 0 }] } });
+        const w = mount(ChatApp, { props: { meId: 1 } });
+        await flushPromises();
+        http.get.mockResolvedValueOnce({ data: { messages: [] } });
+        await w.get('[data-convo-id="1"]').trigger('click');
+        await flushPromises();
+        http.post.mockRejectedValueOnce(new Error('net'));
+        await w.get('#message-input').setValue('boom');
+        await w.get('#message-form').trigger('submit');
+        await flushPromises();
+        expect(w.text()).toContain('傳送失敗');
+    });
+});
