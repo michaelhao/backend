@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import http from '@/lib/http';
 import GradeWeightField from '@/grades/GradeWeightField.vue';
@@ -12,6 +12,7 @@ const grades = [
 ];
 
 beforeEach(() => { http.get.mockReset(); });
+afterEach(() => { document.body.innerHTML = ''; });
 
 describe('GradeWeightField', () => {
     it('權重小於 1 顯示錯誤並停用送出', async () => {
@@ -35,8 +36,14 @@ describe('GradeWeightField', () => {
 
     it('合法權重插入預覽列(建立模式)', async () => {
         http.get.mockResolvedValue({ data: { duplicate: false, grades } });
-        const w = mount(GradeWeightField, { props: { excludeId: null, grades, checkUrl: '/grades/check-weight' } });
-        await w.get('#name').setValue('進階版');
+        // 設置外部 Blade #name input,讓 onMounted 能同步名稱
+        const container = document.createElement('div');
+        document.body.innerHTML = '<input id="name" value="進階版">';
+        document.body.appendChild(container);
+        const w = mount(GradeWeightField, {
+            props: { excludeId: null, grades, checkUrl: '/grades/check-weight' },
+            attachTo: container,
+        });
         await w.get('#weight').setValue('25');
         await w.get('#weight').trigger('change');
         await flushPromises();

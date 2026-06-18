@@ -1,102 +1,13 @@
-import axios from 'axios';
+import mountIsland from '@/lib/mountIsland';
+import GradeWeightField from './GradeWeightField.vue';
 
-document.addEventListener('DOMContentLoaded', () => {
-    const input   = document.getElementById('weight');
-    const errorEl = document.getElementById('weight-error');
-    const listEl  = document.getElementById('weight-list');
-    if (!input) return;
+const submitBtn = document.querySelector('#grade-weight-field')?.closest('form')?.querySelector('button[type="submit"]');
 
-    const excludeId = input.dataset.excludeId || null;
-    const isEdit    = !!excludeId;
-    const submitBtn = input.closest('form')?.querySelector('button[type="submit"]');
-
-    const setWeightError = (message) => {
-        errorEl.textContent = message;
-        errorEl.classList.remove('hidden');
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        }
-    };
-
-    const clearWeightError = () => {
-        errorEl.classList.add('hidden');
-        errorEl.textContent = '';
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
-    };
-
-    input.addEventListener('change', async function () {
-        const weight = this.value.trim();
-
-        listEl.querySelectorAll('.weight-row').forEach(r => r.classList.remove('text-red-600', 'font-semibold', 'text-blue-600', 'font-medium'));
-        listEl.querySelectorAll('.weight-preview').forEach(r => r.remove());
-        clearWeightError();
-
-        if (!weight) return;
-
-        if (parseInt(weight) < 1) {
-            setWeightError('版本權重最低為 1');
-            return;
-        }
-
-        let data;
-        try {
-            ({ data } = await axios.get('/grades/check-weight', {
-                params: { weight, exclude_id: excludeId || undefined },
-            }));
-        } catch {
-            return;
-        }
-
-        if (data.duplicate) {
-            setWeightError('請確認版本權重');
-            const conflictRow = listEl.querySelector(`.weight-row[data-id="${data.conflicting_grade.id}"]`);
-            if (conflictRow) conflictRow.classList.add('text-red-600', 'font-semibold');
-            return;
-        }
-
-        const rows    = [...listEl.querySelectorAll('.weight-row')];
-        const afterRow = rows.find(r => {
-            if (isEdit && r.dataset.id == excludeId) return false;
-            const g = data.grades.find(g => g.id == r.dataset.id);
-            return g && g.weight < parseInt(weight);
-        });
-
-        if (isEdit) {
-            const currentRow = listEl.querySelector(`.weight-row[data-id="${excludeId}"]`);
-            if (currentRow) {
-                currentRow.querySelectorAll('span')[1].textContent = weight;
-                currentRow.classList.add('text-blue-600', 'font-medium');
-                afterRow ? listEl.insertBefore(currentRow, afterRow) : listEl.appendChild(currentRow);
-            }
-        } else {
-            const nameInput = document.getElementById('name');
-            const label     = nameInput && nameInput.value.trim() ? nameInput.value.trim() : '（設定位置）';
-            const preview    = document.createElement('div');
-            preview.className = 'flex justify-between weight-preview text-blue-600 font-medium';
-            const nameSpan   = document.createElement('span');
-            const weightSpan = document.createElement('span');
-            nameSpan.textContent   = label;
-            weightSpan.textContent = weight;
-            preview.append(nameSpan, weightSpan);
-            afterRow ? listEl.insertBefore(preview, afterRow) : listEl.appendChild(preview);
-        }
-    });
-
-    const nameInput = document.getElementById('name');
-    if (nameInput) {
-        nameInput.addEventListener('input', function () {
-            const label = this.value.trim() || '（設定位置）';
-            if (isEdit) {
-                const currentRow = listEl.querySelector(`.weight-row[data-id="${excludeId}"] span`);
-                if (currentRow) currentRow.textContent = label;
-            } else {
-                const preview = listEl.querySelector('.weight-preview span');
-                if (preview) preview.textContent = label;
-            }
-        });
-    }
+mountIsland('grade-weight-field', GradeWeightField, {
+    'onUpdate:disabled': (disabled) => {
+        if (!submitBtn) { return; }
+        submitBtn.disabled = disabled;
+        submitBtn.classList.toggle('opacity-50', disabled);
+        submitBtn.classList.toggle('cursor-not-allowed', disabled);
+    },
 });
