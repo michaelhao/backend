@@ -3,13 +3,14 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import http from '@/lib/http';
 
 const props = defineProps({
-    excludeId: { type: Number, default: null },
+    excludeId: { type: [Number, null], default: null },
     grades: { type: Array, default: () => [] },
     checkUrl: { type: String, default: '/grades/check-weight' },
+    currentWeight: { type: [Number, String, null], default: null },
 });
 const emit = defineEmits(['update:disabled']);
 
-const weight = ref('');
+const weight = ref(props.currentWeight ?? '');
 const name = ref('');
 const error = ref('');
 const conflictId = ref(null);
@@ -90,7 +91,7 @@ onBeforeUnmount(() => {
         <span>{{ r.name }}</span><span>{{ r.weight }}</span>
       </div>
     </div>
-    <input id="weight" v-model="weight" type="number" class="form-control w-full mt-2" @change="onWeightChange">
+    <input id="weight" name="weight" v-model="weight" type="number" class="form-control w-full mt-2" @change="onWeightChange">
     <p id="weight-error" v-show="error" class="form-error">{{ error }}</p>
   </div>
 </template>

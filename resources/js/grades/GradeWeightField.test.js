@@ -15,6 +15,16 @@ beforeEach(() => { http.get.mockReset(); });
 afterEach(() => { document.body.innerHTML = ''; });
 
 describe('GradeWeightField', () => {
+    it('weight input 有 name="weight" 屬性', () => {
+        const w = mount(GradeWeightField, { props: { excludeId: null, grades, checkUrl: '/grades/check-weight' } });
+        expect(w.get('#weight').attributes('name')).toBe('weight');
+    });
+
+    it('currentWeight prop 初始化 weight 輸入值', () => {
+        const w = mount(GradeWeightField, { props: { excludeId: null, grades, checkUrl: '/grades/check-weight', currentWeight: 15 } });
+        expect(w.get('#weight').element.value).toBe('15');
+    });
+
     it('權重小於 1 顯示錯誤並停用送出', async () => {
         const w = mount(GradeWeightField, { props: { excludeId: null, grades, checkUrl: '/grades/check-weight' } });
         await w.get('#weight').setValue('0');
