@@ -9,10 +9,10 @@ import { useChatBadge } from '@/composables/useChatBadge';
 // 全站未讀 badge：一律向伺服器抓「權威」數字，避免本地累加在多分頁/競態下飄掉。
 window.refreshChatBadge = () => useChatBadge().refresh();
 
-const { echo } = useEcho();
+const { echo, userId } = useEcho();
 
 if (echo) {
-    echo.private(`chat.user.${window.currentUserId}`).listen('.message.sent', (event) => {
+    echo.private(`chat.user.${userId}`).listen('.message.sent', (event) => {
         // 廣播給聊天頁處理（若該頁開著）
         window.dispatchEvent(new CustomEvent('chat:message', { detail: event }));
         // 重新抓權威未讀數（自己送的訊息不計入未讀，故數字自然正確）
