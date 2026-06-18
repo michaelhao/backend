@@ -103,7 +103,7 @@
                 <h1 class="text-lg font-semibold text-slate-800">@yield('page-title', 'Dashboard')</h1>
 
                 <div class="flex items-center gap-4">
-                    <span id="session-timer" class="text-sm text-slate-400 font-mono" title="Session 剩餘時間"></span>
+                    <span id="session-timer"></span>
                     <span class="text-sm text-slate-600">{{ Auth::user()->name }}</span>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
