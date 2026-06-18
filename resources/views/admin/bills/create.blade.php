@@ -23,6 +23,7 @@
                     'today'         => now()->toDateString(),
                     'formAction'    => route('bills.store'),
                     'discounts'     => $discounts->map(fn ($d) => ['id' => $d->id, 'name' => $d->name])->values(),
+                    'userName'      => Auth::user()->name,
                 ])"
             ></div>
 

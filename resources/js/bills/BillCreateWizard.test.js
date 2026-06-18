@@ -56,7 +56,7 @@ const shopInfoData = {
         { id: 2, name: '旗艦版', weight: 10, price: 500, addons: [] },
         { id: 3, name: '進階版', weight: 15, price: 900, addons: [] },
     ],
-    addons: [{ id: 1, name: '額外空間', price: 100, type: '1' }],
+    addons: [{ id: 1, name: '額外空間', price: 100, type: 1 }, { id: 2, name: '配額項目', price: 200, type: 2 }],
     shop_addons: [],
     pending_bill_count: 0,
 };
@@ -211,5 +211,78 @@ describe('BillCreateWizard 折抵', () => {
         await flushPromises();
 
         expect(w.find('#discount-error').isVisible()).toBe(true);
+    });
+});
+
+// ─── Quota addon (CRITICAL 1) ─────────────────────────────────
+
+describe('BillCreateWizard 配額型 addon', () => {
+    async function mountWithAddon() {
+        http.get.mockResolvedValue({ data: { shops: [{ id: 10, label: '測試店' }] } });
+        const w = mount(BillCreateWizard, { props, attachTo: document.body });
+
+        // Step 1: search and select
+        await w.get('#shop-keyword').setValue('測試');
+        await w.get('#shop-search-btn').trigger('click');
+        await new Promise((r) => setTimeout(r, 350));
+        await flushPromises();
+        await w.get('.shop-option').trigger('click');
+
+        // shopInfo returns data with quota addon (type: 2, integer)
+        http.get.mockResolvedValueOnce({ data: { ...shopInfoData } });
+        // calculate default
+        http.get.mockResolvedValue({ data: { total_price: 500, expired_at: '2027-06-30' } });
+
+        await w.get('#shop-confirm-btn').trigger('click');
+        await flushPromises();
+
+        // Enable addon
+        await w.get('#toggle-addon-btn').trigger('click');
+        await flushPromises();
+
+        return w;
+    }
+
+    it('配額型 addon (type:2 整數) 選中後數量欄位顯示', async () => {
+        const w = await mountWithAddon();
+
+        // Select the quota addon (id=2, type:2)
+        const addonSelect = w.find('.addon-select');
+        await addonSelect.setValue('2');
+        await addonSelect.trigger('change');
+        await flushPromises();
+
+        // The qty column should now be visible
+        const qtyCol = w.find('.addon-qty-col');
+        expect(qtyCol.classes()).not.toContain('hidden');
+    });
+
+    it('配額型 addon qty=3 時計算金額為 unit total × 3', async () => {
+        const w = await mountWithAddon();
+
+        // calculate returns total_price=500 per unit
+        http.get.mockResolvedValue({ data: { total_price: 500, expired_at: '2027-06-30' } });
+
+        // Select quota addon
+        const addonSelect = w.find('.addon-select');
+        await addonSelect.setValue('2');
+        await addonSelect.trigger('change');
+        await flushPromises();
+
+        // Set months
+        const monthsSel = w.find('.addon-months');
+        await monthsSel.setValue('1');
+        await monthsSel.trigger('change');
+        await flushPromises();
+
+        // Set qty to 3
+        const qtyInput = w.find('.addon-qty');
+        await qtyInput.setValue(3);
+        await qtyInput.trigger('input');
+        await flushPromises();
+
+        // Amount displayed should be 500 * 3 = 1500
+        const amountInput = w.find('.addon-amount');
+        expect(amountInput.element.value).toContain('1,500');
     });
 });

@@ -1,7 +1,7 @@
 <template>
     <!-- Step 1: 搜尋商店 -->
     <div id="step-1" v-show="step === 1" class="bg-white rounded-lg shadow p-6">
-        <p class="text-lg text-gray-700 mb-1">Hi！請搜尋商店</p>
+        <p class="text-lg text-gray-700 mb-1">Hi！{{ userName }}</p>
         <p class="text-gray-500 mb-4">今天你要幫哪間商店處理帳務呢？</p>
         <div class="flex gap-2">
             <input
@@ -53,7 +53,7 @@
 
     <!-- Step 3: 商店資訊 + 選擇項目 -->
     <div id="step-3" v-show="step >= 3" class="bg-white rounded-lg shadow p-6">
-        <p class="text-lg text-gray-700 mb-4">Hi！<br><span class="text-gray-500">現在要處理的是</span></p>
+        <p class="text-lg text-gray-700 mb-4">Hi！{{ userName }}<br><span class="text-gray-500">現在要處理的是</span></p>
 
         <div
             id="pending-bill-warning"
@@ -413,6 +413,7 @@ const props = defineProps({
     today:         { type: String, required: true },
     formAction:    { type: String, default: '' },
     discounts:     { type: Array, default: () => [] },
+    userName:      { type: String, default: '' },
 });
 
 const { showFlash } = useFlash();
@@ -493,9 +494,7 @@ function toggleAddon() {
     if (addonEnabled.value && addonRows.value.length === 0) {
         addAddonRow();
     }
-    if (!addonEnabled.value) {
-        addonRows.value = [];
-    }
+    // Keep rows on toggle-off (mirrors original hide behaviour) so re-enabling restores them
 }
 
 // ─── Grade Block ──────────────────────────────────────────────
@@ -555,6 +554,12 @@ function onGradeSelectChange() {
 
 function onGradeStartAtChange() {
     checkGradeOverlapWarning();
+    // Reset months if current selection is no longer in the recomputed options
+    const opts = monthsOptions(gradeForm.value.startAt);
+    const valid = opts.some(o => String(o.v) === String(gradeForm.value.months));
+    if (!valid) {
+        gradeForm.value.months = '';
+    }
     triggerGradeCalculate();
 }
 
@@ -678,7 +683,7 @@ function removeAddonRow(row) {
 function onAddonSelectChange(row) {
     const addons = shopData.value?.addons ?? [];
     const addon = addons.find(a => String(a.id) === row.addonId);
-    row.isQuota = addon?.type === '2';
+    row.isQuota = Number(addon?.type) === 2;
     triggerAddonCalculate(row);
 }
 
@@ -729,9 +734,7 @@ const discountInfo  = ref('');
 const discountError = ref('');
 
 function onDiscountTypeChange() {
-    if (!discount.value.typeId) {
-        discount.value.amount = 0;
-    }
+    discount.value.amount = 0;
     discountInfo.value = '';
     discountError.value = '';
 }
@@ -772,6 +775,7 @@ const total = computed(() => Math.max(0, subtotal.value - effectiveDiscount.valu
 
 // ─── Submit ───────────────────────────────────────────────────
 const paymentMethod = ref(2);
+let formSubmitHandler = null;
 
 // Keys for detail hidden inputs (null/undefined entries are skipped by v-if)
 const detailKeys = [
@@ -779,31 +783,54 @@ const detailKeys = [
     'unit_price', 'total_price', 'name', 'start_at', 'expired_at', 'total_months',
 ];
 
-function onSubmit() {
+function validateSubmit() {
     const discAmt = discount.value.amount || 0;
     if (discAmt > subtotal.value) {
         discountError.value = '折抵金額不得大於小計';
-        return;
+        return false;
     }
     if (!shopData.value?.shop?.id) {
         showFlash('error', '請先搜尋並確認商店');
-        return;
+        return false;
     }
+    return true;
+}
+
+function onSubmit() {
+    if (!validateSubmit()) return;
 
     // Submit the ancestor <form id="bill-form"> natively (bypasses Vue to avoid infinite loop)
     const form = document.getElementById('bill-form');
     if (form) {
         HTMLFormElement.prototype.submit.call(form);
+    } else {
+        showFlash('error', '表單元素不存在，請重新整理頁面');
     }
 }
 
 // ─── Lifecycle ────────────────────────────────────────────────
 onMounted(() => {
     document.addEventListener('click', onDocumentClick);
+
+    // Guard Enter-key (and any non-button) submit against validation bypass
+    const form = document.getElementById('bill-form');
+    if (form) {
+        formSubmitHandler = (e) => {
+            if (!validateSubmit()) {
+                e.preventDefault();
+            }
+        };
+        form.addEventListener('submit', formSubmitHandler);
+    }
 });
 
 onBeforeUnmount(() => {
     clearTimeout(searchTimeout);
     document.removeEventListener('click', onDocumentClick);
+
+    const form = document.getElementById('bill-form');
+    if (form && formSubmitHandler) {
+        form.removeEventListener('submit', formSubmitHandler);
+    }
 });
 </script>
