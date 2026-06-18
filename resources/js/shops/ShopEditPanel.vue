@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import http from '@/lib/http';
 import { maskString } from '@/shops/maskString';
 
@@ -17,14 +17,20 @@ const resultCompanyName = ref('');
 const submitting = ref(false);
 const certDone = ref(false);
 
+// Event listener references for cleanup
+let emailToggle = null;
+let onToggleClick = null;
+let openCertBtn = null;
+let onOpenCertClick = null;
+
 onMounted(() => {
     // Wire email toggle
     const emailMasked = document.getElementById('admin-email-masked');
     const emailInput = document.getElementById('admin-email-input');
-    const emailToggle = document.getElementById('admin-email-toggle');
+    emailToggle = document.getElementById('admin-email-toggle');
 
     if (emailToggle) {
-        emailToggle.addEventListener('click', () => {
+        onToggleClick = () => {
             if (emailInput.classList.contains('hidden')) {
                 // Switch to editable
                 emailMasked.classList.add('hidden');
@@ -37,7 +43,8 @@ onMounted(() => {
                 emailInput.classList.add('hidden');
                 emailToggle.textContent = '修改';
             }
-        });
+        };
+        emailToggle.addEventListener('click', onToggleClick);
 
         if (props.adminEmailError) {
             emailToggle.click();
@@ -45,16 +52,26 @@ onMounted(() => {
     }
 
     // Wire open-cert-modal button
-    const openCertBtn = document.getElementById('open-cert-modal');
+    openCertBtn = document.getElementById('open-cert-modal');
     if (openCertBtn) {
-        openCertBtn.addEventListener('click', () => {
+        onOpenCertClick = () => {
             businessNumber.value = '';
             inputError.value = false;
             resultState.value = null;
             certDone.value = false;
             submitting.value = false;
             modalOpen.value = true;
-        });
+        };
+        openCertBtn.addEventListener('click', onOpenCertClick);
+    }
+});
+
+onBeforeUnmount(() => {
+    if (emailToggle && onToggleClick) {
+        emailToggle.removeEventListener('click', onToggleClick);
+    }
+    if (openCertBtn && onOpenCertClick) {
+        openCertBtn.removeEventListener('click', onOpenCertClick);
     }
 });
 
