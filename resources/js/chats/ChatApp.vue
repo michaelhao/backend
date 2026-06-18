@@ -208,17 +208,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount } from 'vue';
+import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import http from '@/lib/http';
 import { initials, formatListTime, formatDayLabel, formatTime, dayKey } from '@/chats/chatFormat';
 import { useChatBadge } from '@/composables/useChatBadge';
-// useEcho imported but realtime subscription deferred to task 4.5
-// import { useEcho } from '@/composables/useEcho';
 
 // ── Props ───────────────────────────────────────────────────────
 const props = defineProps({
     meId: { type: Number, required: true },
 });
+
+// ── Composables ──────────────────────────────────────────────────
+const { refresh: refreshChatBadge } = useChatBadge();
 
 // ── State ────────────────────────────────────────────────────────
 const conversations = ref([]);
@@ -433,7 +434,7 @@ const openConversation = async (id, otherId, otherName) => {
     emptyMessages.value = messages.value.length === 0;
 
     // Scroll to bottom after render
-    await Promise.resolve(); // let Vue flush
+    await nextTick(); // wait for DOM to flush
     forceScrollBottom();
 
     // Task 4.5: subscribeConversationChannel(id)
@@ -444,7 +445,7 @@ const openConversation = async (id, otherId, otherName) => {
     // Mark as read + refresh badge
     try {
         await http.patch(`/chats/${id}/read`);
-        useChatBadge().refresh();
+        refreshChatBadge();
     } catch {
         // non-critical
     }
