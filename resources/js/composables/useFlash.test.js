@@ -1,9 +1,13 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useFlash } from '@/composables/useFlash';
 
 beforeEach(() => {
     document.body.innerHTML = '<div class="flash-area"></div>';
     vi.useFakeTimers();
+});
+
+afterEach(() => {
+    vi.useRealTimers();
 });
 
 describe('useFlash', () => {

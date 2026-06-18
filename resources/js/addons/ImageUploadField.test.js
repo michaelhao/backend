@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import ImageUploadField from '@/addons/ImageUploadField.vue';
 
@@ -55,11 +55,11 @@ describe('ImageUploadField', () => {
             expect(removeFlag.value).toBe('0');
             expect(filenamEl.textContent).toBe('a.png');
 
-            // Wait for FileReader onload (async)
-            await new Promise((r) => setTimeout(r));
+            // Wait for FileReader onload (async) — robust regardless of timer state
+            await vi.waitFor(() => {
+                expect(preview.classList.contains('hidden')).toBe(false);
+            });
             await flushPromises();
-
-            expect(preview.classList.contains('hidden')).toBe(false);
             expect(holder.classList.contains('hidden')).toBe(true);
             expect(removeBtn.classList.contains('hidden')).toBe(false);
             expect(preview.getAttribute('src')).toMatch(/^data:/);
