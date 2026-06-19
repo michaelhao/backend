@@ -8,9 +8,11 @@
             'module' => $moduleLabel,
             'options' => $modulePermissions->map(function ($p) use ($moduleLabel) {
                 $label = $p->description ?? $p->name;
+                $action = $p->description ? (explode(' - ', $p->description)[1] ?? $p->action) : $p->action;
                 return [
                     'value' => $p->name,
                     'label' => $label,
+                    'action' => $action,
                     'search' => mb_strtolower($label . ' ' . $moduleLabel . ' ' . $p->name),
                 ];
             })->values(),

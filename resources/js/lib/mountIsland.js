@@ -1,19 +1,23 @@
 import { createApp } from 'vue';
 
+/** Parse an island element's `data-props` JSON, tolerating absent/invalid values. */
+export function readProps(el) {
+    if (!el.dataset.props) {
+        return {};
+    }
+    try {
+        return JSON.parse(el.dataset.props);
+    } catch {
+        return {};
+    }
+}
+
 export default function mountIsland(mountId, Component, extraProps = {}) {
     const el = document.getElementById(mountId);
     if (!el) {
         return null;
     }
-    let props = {};
-    if (el.dataset.props) {
-        try {
-            props = JSON.parse(el.dataset.props);
-        } catch {
-            props = {};
-        }
-    }
-    const app = createApp(Component, { ...props, ...extraProps });
+    const app = createApp(Component, { ...readProps(el), ...extraProps });
     app.mount(el);
     return app;
 }

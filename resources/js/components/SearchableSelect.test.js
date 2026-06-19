@@ -4,11 +4,11 @@ import SearchableSelect from '@/components/SearchableSelect.vue';
 
 const groups = [
     { module: '使用者', options: [
-        { value: 'User.index', label: '使用者 - 列表', search: '使用者 列表 user.index' },
-        { value: 'User.create', label: '使用者 - 新增', search: '使用者 新增 user.create' },
+        { value: 'User.index', label: '使用者 - 列表', action: '列表', search: '使用者 列表 user.index' },
+        { value: 'User.create', label: '使用者 - 新增', action: '新增', search: '使用者 新增 user.create' },
     ] },
     { module: '角色', options: [
-        { value: 'Role.index', label: '角色 - 列表', search: '角色 列表 role.index' },
+        { value: 'Role.index', label: '角色 - 列表', action: '列表', search: '角色 列表 role.index' },
     ] },
 ];
 
@@ -28,7 +28,7 @@ describe('SearchableSelect', () => {
         await w.get('.ss-input').setValue('角色');
         const visible = w.findAll('.ss-option').filter((o) => o.isVisible());
         expect(visible).toHaveLength(1);
-        expect(visible[0].text()).toContain('角色 - 列表');
+        expect(visible[0].text()).toBe('列表');
     });
 
     it('點選 option 寫入 hidden 值並顯示 label', async () => {

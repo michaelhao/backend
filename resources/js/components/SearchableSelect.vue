@@ -65,17 +65,16 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick));
       v-show="open"
       class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto ss-dropdown"
     >
-      <div v-for="g in groups" :key="g.module" v-show="visibleGroups.some((vg) => vg.module === g.module)" class="ss-group">
+      <div v-for="g in visibleGroups" :key="g.module" class="ss-group">
         <div class="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase bg-gray-50 sticky top-0">{{ g.module }}</div>
         <button
           v-for="o in g.options"
           :key="o.value"
           type="button"
-          v-show="matches(o, g.module)"
           class="w-full text-left px-3 py-2 pl-6 text-sm text-gray-700 hover:bg-blue-50 transition-colors ss-option"
           :class="{ 'bg-blue-50 text-blue-700 font-medium': selected === o.value }"
           @click="choose(o)"
-        >{{ o.label }}</button>
+        >{{ o.action }}</button>
       </div>
       <div v-show="!hasResults" class="px-3 py-2 text-sm text-gray-400 ss-no-results">無符合結果</div>
     </div>
