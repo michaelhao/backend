@@ -10,13 +10,14 @@
 
     <div class="max-w-3xl mx-auto space-y-6 font-[Noto_Sans_TC,sans-serif]">
 
+        <div class="flash-area"></div>
+
         <form id="bill-form" method="POST" action="{{ route('bills.store') }}">
             @csrf
 
             {{-- Vue island: the wizard renders all its UI + hidden inputs inside this form --}}
-            <div
-                id="bill-create-wizard"
-                data-props="@json([
+            @php
+                $wizardProps = [
                     'shopSearchUrl' => route('bills.shop-search'),
                     'shopInfoUrl'   => route('bills.shop-info'),
                     'calculateUrl'  => route('bills.calculate'),
@@ -24,7 +25,11 @@
                     'formAction'    => route('bills.store'),
                     'discounts'     => $discounts->map(fn ($d) => ['id' => $d->id, 'name' => $d->name])->values(),
                     'userName'      => Auth::user()->name,
-                ])"
+                ];
+            @endphp
+            <div
+                id="bill-create-wizard"
+                data-props='@json($wizardProps)'
             ></div>
 
             {{-- Blade validation errors (shown after server-side redirect with errors) --}}

@@ -13,12 +13,14 @@
         </x-permission>
     </div>
 
-    @if (session('success'))
-        <div class="flash flash-success flash-message">{{ session('success') }}</div>
-    @endif
-    @if (session('error'))
-        <div class="flash flash-error flash-message">{{ session('error') }}</div>
-    @endif
+    <div class="flash-area">
+        @if (session('success'))
+            <div class="flash flash-success flash-message">{{ session('success') }}</div>
+        @endif
+        @if (session('error'))
+            <div class="flash flash-error flash-message">{{ session('error') }}</div>
+        @endif
+    </div>
 
     {{-- 搜尋列 --}}
     <form method="GET" action="{{ route('bills.index') }}" class="mb-4 bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-end">

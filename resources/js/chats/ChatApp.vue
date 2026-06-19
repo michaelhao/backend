@@ -555,14 +555,11 @@ const openConversation = async (id, otherId, otherName) => {
 
     if (inputEl.value) { inputEl.value.focus(); }
 
-    try {
-        await http.patch(`/chats/${id}/read`);
-        refreshChatBadge();
-    } catch {
-        // non-critical
-    }
+    const markRead = http.patch(`/chats/${id}/read`)
+        .then(() => refreshChatBadge())
+        .catch(() => { /* non-critical */ });
 
-    await loadConversations();
+    await Promise.all([markRead, loadConversations()]);
 };
 
 const retryOpenConversation = () => {

@@ -107,8 +107,11 @@ describe('ShopEditPanel', () => {
         const certInput = wrapper.find('#cert-business-number');
         await certInput.setValue('1234');
 
-        // Click submit
-        await wrapper.find('button[type="button"]:not([class*="gray"])').trigger('click');
+        // Click submit (the 認證 button — not the cancel button)
+        const submitBtn = wrapper.findAll('button[type="button"]').find(
+            (b) => b.text() === '認證',
+        );
+        await submitBtn.trigger('click');
         await flushPromises();
 
         expect(wrapper.find('p').text()).toBe('請輸入 8 位數字');

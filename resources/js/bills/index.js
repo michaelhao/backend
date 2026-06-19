@@ -3,4 +3,4 @@ import BillsListModals from './BillsListModals.vue';
 import { useFlash } from '@/composables/useFlash';
 
 useFlash().autoDismissFlashes();
-mountIsland('bills-modals', BillsListModals, { csrfToken: document.querySelector('meta[name="csrf-token"]')?.content });
+mountIsland('bills-modals', BillsListModals);

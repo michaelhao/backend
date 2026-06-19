@@ -17,6 +17,8 @@
         </div>
     @endif
 
+    <div class="flash-area"></div>
+
     <form method="POST" action="{{ route('shops.update', $shop) }}"
           data-shop-edit
           data-cert-route="{{ route('shops.certify', $shop) }}"
@@ -177,8 +179,14 @@
     </form>
 
     {{-- Vue 島嶼：email toggle + 認證 Modal --}}
+    @php
+        $shopEditProps = [
+            'certRoute' => route('shops.certify', $shop),
+            'adminEmailError' => $errors->has('admin.email'),
+        ];
+    @endphp
     <div id="shop-edit-panel"
-         data-props="@json(['certRoute' => route('shops.certify', $shop), 'adminEmailError' => $errors->has('admin.email')])"></div>
+         data-props='@json($shopEditProps)'></div>
 @endsection
 
 @push('scripts')

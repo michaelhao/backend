@@ -59,6 +59,8 @@ beforeEach(() => {
     vi.resetAllMocks();
     // Default: no echo
     useEcho.mockReturnValue({ echo: null, userId: null });
+    // http.patch 預設回傳 resolved promise（真實 axios 必回 promise；openConversation 會並行呼叫）
+    http.patch.mockResolvedValue({});
 });
 
 // ── Helper: mount with one conversation already visible ───────────

@@ -4,6 +4,11 @@
                hover:bg-primary-hover transition-colors;
     }
 
+    .btn-danger {
+        @apply bg-danger text-white px-4 py-2 rounded-lg text-sm font-medium
+               hover:bg-danger-hover transition-colors;
+    }
+
     .btn-cancel {
         @apply px-4 py-2 text-sm text-gray-600 hover:text-gray-800;
     }

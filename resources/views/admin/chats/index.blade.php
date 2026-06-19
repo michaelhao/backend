@@ -3,9 +3,15 @@
 @section('page-title', '聊天')
 
 @section('content')
+    @php
+        $chatProps = [
+            'meId' => Auth::id(),
+            'selectableUsers' => $users->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])->values(),
+        ];
+    @endphp
     <div
         id="chat-app"
-        data-props="@json(['meId' => Auth::id(), 'selectableUsers' => $users->map(fn($u) => ['id' => $u->id, 'name' => $u->name])->values()])"
+        data-props='@json($chatProps)'
     ></div>
 @endsection
 

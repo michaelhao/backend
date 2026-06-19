@@ -16,9 +16,11 @@
             })->values(),
         ];
     })->values();
+
+    $ssProps = ['name' => $name, 'value' => $value, 'placeholder' => $placeholder, 'groups' => $ssGroups];
 @endphp
 
-<div class="ss-island" data-props="@json(['name' => $name, 'value' => $value, 'placeholder' => $placeholder, 'groups' => $ssGroups])"></div>
+<div class="ss-island" data-props='@json($ssProps)'></div>
 
 @once
     @push('scripts')

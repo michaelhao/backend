@@ -30,7 +30,15 @@
 
     <div>
         <p class="text-xs font-semibold text-gray-500 mb-2">grades weight</p>
-        <div id="grade-weight-field" data-props="@json(['excludeId' => $grade->id ?? null, 'grades' => $grades->map(fn ($g) => ['id' => $g->id, 'name' => $g->name, 'weight' => $g->weight])->values(), 'checkUrl' => route('grades.check-weight'), 'currentWeight' => old('weight', $grade->weight ?? null)])"></div>
+        @php
+            $gradeWeightProps = [
+                'excludeId' => $grade->id ?? null,
+                'grades' => $grades->map(fn ($g) => ['id' => $g->id, 'name' => $g->name, 'weight' => $g->weight])->values(),
+                'checkUrl' => route('grades.check-weight'),
+                'currentWeight' => old('weight', $grade->weight ?? null),
+            ];
+        @endphp
+        <div id="grade-weight-field" data-props='@json($gradeWeightProps)'></div>
         @error('weight')
             <p class="form-error">{{ $message }}</p>
         @enderror

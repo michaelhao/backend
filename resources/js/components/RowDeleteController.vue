@@ -15,7 +15,7 @@ const { showFlash } = useFlash();
 
 onMounted(() => {
     document.querySelectorAll('.delete-btn').forEach((btn) => {
-        btn.addEventListener('click', () => show({ url: btn.dataset.url, name: btn.dataset.name }));
+        btn.addEventListener('click', () => show({ url: btn.dataset.url, name: btn.dataset.name, btn }));
     });
 });
 
@@ -25,7 +25,7 @@ const confirm = async () => {
     busy.value = true;
     try {
         const res = await http.delete(url);
-        document.querySelector(`[data-url="${url}"]`)?.closest('tr')?.remove();
+        target.value?.btn?.closest('tr')?.remove();
         showFlash('success', res.data?.message ?? '已成功刪除');
     } catch (err) {
         showFlash('error', err.response?.data?.message ?? '刪除失敗，請稍後再試');

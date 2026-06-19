@@ -132,7 +132,7 @@ function closeModal() {
           inputmode="numeric"
           pattern="\d{8}"
           placeholder="請輸入統一編號"
-          class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono focus:border-blue-500 focus:outline-none"
+          class="w-full form-control font-mono"
           @input="onBusinessNumberInput"
         >
         <p v-if="inputError" class="mt-1 text-xs text-red-600">請輸入 8 位數字</p>
@@ -152,20 +152,20 @@ function closeModal() {
 
       <div class="modal-actions">
         <button type="button"
-                class="bg-gray-100 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors"
+                class="btn-cancel"
                 @click="closeModal">
           取消
         </button>
         <button v-if="!certDone"
                 type="button"
                 :disabled="submitting"
-                class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+                class="btn-primary disabled:opacity-50"
                 @click="submitCert">
           {{ submitting ? '認證中...' : '認證' }}
         </button>
         <button v-else
                 type="button"
-                class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                class="btn-primary"
                 @click="closeModal">
           完成
         </button>

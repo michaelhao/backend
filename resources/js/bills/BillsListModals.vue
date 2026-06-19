@@ -3,10 +3,6 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import http from '@/lib/http';
 import { useFlash } from '@/composables/useFlash';
 
-defineProps({
-    csrfToken: { type: String, default: '' },
-});
-
 const { showFlash } = useFlash();
 
 // ─── Constants ────────────────────────────────────────────────
@@ -225,7 +221,7 @@ onBeforeUnmount(() => {
 <template>
   <!-- Detail Modal -->
   <div v-if="detailOpen" class="modal-overlay" @click.self="closeDetail">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl p-6 max-h-[90vh] flex flex-col">
+    <div class="modal-panel max-w-3xl max-h-[90vh] flex flex-col">
       <div class="flex items-start justify-between mb-4">
         <div>
           <h3 class="text-lg font-semibold text-gray-800">帳單明細</h3>
@@ -320,7 +316,7 @@ onBeforeUnmount(() => {
 
       <div class="flex items-end justify-between gap-4">
         <button v-if="detailBill && detailBill.payment_status === 1"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium bg-accent-soft text-accent hover:bg-accent-soft-hover transition"
                 @click="doExport">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
@@ -345,7 +341,7 @@ onBeforeUnmount(() => {
 
   <!-- Writeoff Modal -->
   <div v-if="writeoffOpen" class="modal-overlay" @click.self="closeWriteoff">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl p-6 max-h-[90vh] flex flex-col">
+    <div class="modal-panel max-w-3xl max-h-[90vh] flex flex-col">
       <h3 class="text-lg font-semibold text-gray-800 mb-1">銷帳</h3>
       <p class="text-xs text-gray-500 font-mono mb-4">{{ writeoffBillNo }}</p>
       <hr class="mb-4">
@@ -401,7 +397,7 @@ onBeforeUnmount(() => {
       <hr class="mt-4 mb-4">
       <div class="modal-actions">
         <button class="btn-cancel" @click="closeWriteoff">取消</button>
-        <button class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+        <button class="btn-danger disabled:opacity-50"
                 :disabled="writeoffSubmitting"
                 data-writeoff-confirm
                 @click="confirmWriteoff">
@@ -420,7 +416,7 @@ onBeforeUnmount(() => {
         <div class="flex flex-col gap-1">
           <label class="text-xs text-gray-500">付款狀態</label>
           <select v-model="editPaymentStatus"
-                  class="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  class="form-control">
             <option value="1">待審核</option>
             <option value="2">待付款</option>
             <option value="3">已付款</option>
@@ -431,19 +427,19 @@ onBeforeUnmount(() => {
           <label class="text-xs text-gray-500">付款日期</label>
           <input v-model="editPaidAt"
                  type="date"
-                 class="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                 class="form-control">
         </div>
         <div class="flex flex-col gap-1">
           <label class="text-xs text-gray-500">發票號碼</label>
           <input v-model="editInvoiceNo"
                  type="text"
                  maxlength="100"
-                 class="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                 class="form-control">
         </div>
       </div>
       <div class="modal-actions mt-6">
         <button class="btn-cancel" @click="closeEdit">取消</button>
-        <button class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+        <button class="btn-primary disabled:opacity-50"
                 :disabled="editSubmitting"
                 data-edit-confirm
                 @click="confirmEdit">

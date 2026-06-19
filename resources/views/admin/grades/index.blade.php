@@ -13,13 +13,15 @@
         </x-permission>
     </div>
 
-    @if (session('success'))
-        <div class="flash flash-success flash-message">{{ session('success') }}</div>
-    @endif
+    <div class="flash-area">
+        @if (session('success'))
+            <div class="flash flash-success flash-message">{{ session('success') }}</div>
+        @endif
 
-    @if (session('error'))
-        <div class="flash flash-error flash-message">{{ session('error') }}</div>
-    @endif
+        @if (session('error'))
+            <div class="flash flash-error flash-message">{{ session('error') }}</div>
+        @endif
+    </div>
 
     <div class="card">
         <table class="table">

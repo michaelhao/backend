@@ -10,7 +10,7 @@
                 @input="onKeywordInput"
                 type="text"
                 placeholder="輸入商店 ID、代碼或名稱關鍵字"
-                class="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 outline-none"
+                class="flex-1 form-control"
             />
             <button id="shop-search-btn" type="button" @click="doSearch(keyword)" class="btn-primary">
                 搜尋
@@ -37,7 +37,7 @@
                 id="shop-confirm-btn"
                 type="button"
                 @click="confirmShop"
-                class="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-blue-700 transition-colors"
+                class="btn-primary px-3 py-1.5"
             >確認</button>
         </div>
     </div>
@@ -136,7 +136,7 @@
                         id="grade-select"
                         v-model="gradeForm.gradeId"
                         @change="onGradeSelectChange"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 outline-none"
+                        class="w-full form-control"
                     >
                         <option value="">— 請選擇版本 —</option>
                         <option
@@ -158,7 +158,7 @@
                         :min="gradeOp === 'upgrade' ? today : undefined"
                         :readonly="gradeOp !== 'upgrade'"
                         @change="onGradeStartAtChange"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 outline-none"
+                        class="w-full form-control"
                     />
                 </div>
                 <div>
@@ -167,7 +167,7 @@
                         id="grade-months"
                         v-model="gradeForm.months"
                         @change="triggerGradeCalculate"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 outline-none"
+                        class="w-full form-control"
                     >
                         <option value="">— 請選擇 —</option>
                         <option v-for="o in gradeMonthsOptions" :key="o.v" :value="String(o.v)">{{ o.l }}</option>
@@ -219,7 +219,7 @@
                         <div class="flex-1">
                             <label class="text-xs text-gray-500 mb-1 block">加購項目</label>
                             <select
-                                class="addon-select w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 outline-none"
+                                class="addon-select w-full form-control"
                                 v-model="row.addonId"
                                 @change="onAddonSelectChange(row)"
                             >
@@ -246,7 +246,7 @@
                                 min="1"
                                 v-model.number="row.qty"
                                 @input="triggerAddonCalculate(row)"
-                                class="addon-qty w-full rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-blue-500 outline-none"
+                                class="addon-qty w-full form-control px-2"
                             />
                         </div>
                         <div>
@@ -256,13 +256,13 @@
                                 v-model="row.startAt"
                                 :min="today"
                                 @change="onAddonStartAtChange(row)"
-                                class="addon-start-at w-full rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-blue-500 outline-none"
+                                class="addon-start-at w-full form-control px-2"
                             />
                         </div>
                         <div>
                             <label class="text-xs text-gray-500 mb-1 block">月數</label>
                             <select
-                                class="addon-months w-full rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-blue-500 outline-none"
+                                class="addon-months w-full form-control px-2"
                                 v-model="row.months"
                                 @change="triggerAddonCalculate(row)"
                             >
@@ -299,7 +299,7 @@
                         id="discount-type"
                         v-model="discount.typeId"
                         @change="onDiscountTypeChange"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 outline-none"
+                        class="w-full form-control"
                     >
                         <option value="">— 選擇方案 —</option>
                         <option v-for="d in discounts" :key="d.id" :value="String(d.id)" :data-name="d.name">{{ d.name }}</option>
@@ -315,7 +315,7 @@
                         :disabled="!discount.typeId"
                         v-model.number="discount.amount"
                         @input="onDiscountAmountInput"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-gray-50"
+                        class="w-full form-control disabled:bg-gray-50"
                     />
                 </div>
             </div>
@@ -364,7 +364,7 @@
             <select
                 id="payment-method-select"
                 v-model="paymentMethod"
-                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 outline-none"
+                class="w-full form-control"
             >
                 <option value="2">匯款轉帳</option>
             </select>
@@ -391,7 +391,7 @@
             <button
                 type="submit"
                 @click.prevent="onSubmit"
-                class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors"
+                class="w-full btn-primary py-3"
             >
                 送出帳單
             </button>
@@ -452,6 +452,7 @@ function selectShop(s) {
 }
 
 function onDocumentClick(e) {
+    if (!dropdownOpen.value) { return; }
     const dropdown = document.getElementById('shop-dropdown');
     const keywordEl = document.getElementById('shop-keyword');
     const searchBtn = document.getElementById('shop-search-btn');
