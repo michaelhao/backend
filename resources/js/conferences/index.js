@@ -1,5 +1,5 @@
-import { autoDismissFlashes } from '../utils/flash.js';
+import { useFlash } from '@/composables/useFlash';
 
 document.addEventListener('DOMContentLoaded', () => {
-    autoDismissFlashes();
+    useFlash().autoDismissFlashes();
 });

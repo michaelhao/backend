@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>原生 JS → Vue 島嶼 遷移實作計畫</title>
+<style>
+  :root {
+    --ink: #1e293b;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --blue: #2563eb;   --blue-bg: #eff6ff;   --blue-line: #bfdbfe;
+    --amber: #d97706;  --amber-bg: #fffbeb;  --amber-line: #fde68a;
+    --green: #059669;  --green-bg: #ecfdf5;  --green-line: #a7f3d0;
+    --gray: #6b7280;   --gray-bg: #f3f4f6;   --gray-line: #d1d5db;
+    --red: #dc2626;    --red-bg: #fef2f2;
+    --purple: #7c3aed; --purple-bg: #f5f3ff; --purple-line: #ddd6fe;
+    --sidebar-w: 272px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 0.86em;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+  pre {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 12.5px; line-height: 1.6;
+    background: #0f172a; color: #e2e8f0;
+    border-radius: 10px; padding: 14px 16px;
+    overflow-x: auto; margin: 10px 0;
+  }
+  pre .c { color: #64748b; }
+  pre .k { color: #93c5fd; }
+  pre .s { color: #86efac; }
+  pre .t { color: #fca5a5; }
+  pre .v { color: #c4b5fd; }
+
+  /* ===== 版面 ===== */
+  .layout { display: flex; min-height: 100vh; }
+  nav.toc {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: sticky; top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: #0f172a;
+    color: #cbd5e1;
+    padding: 20px 0 32px;
+  }
+  main {
+    flex: 1;
+    min-width: 0;
+    max-width: 920px;
+    padding: 32px 40px 96px;
+  }
+
+  /* ===== 側欄 ===== */
+  .toc-title { padding: 0 20px 12px; font-weight: 700; color: #fff; font-size: 16px; }
+  .toc-title small { display: block; font-weight: 400; color: #94a3b8; font-size: 11px; margin-top: 2px; }
+  .toc-group { margin-top: 14px; }
+  .toc-group-label {
+    padding: 0 20px; font-size: 11px; letter-spacing: .08em;
+    color: #94a3b8; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .toc a {
+    display: block; padding: 5px 20px 5px 34px;
+    color: #cbd5e1; text-decoration: none; font-size: 13px;
+    border-left: 3px solid transparent;
+  }
+  .toc a:hover { color: #fff; background: rgba(255,255,255,.06); }
+  .toc a.active { color: #fff; background: rgba(255,255,255,.1); border-left-color: #60a5fa; }
+
+  /* ===== Header ===== */
+  header h1 { font-size: 26px; margin: 0 0 4px; }
+  header .sub { color: var(--muted); margin-bottom: 16px; }
+  .lead {
+    background: var(--blue-bg); border: 1px solid var(--blue-line);
+    border-radius: 10px; padding: 14px 18px; font-size: 15px; margin-bottom: 12px;
+  }
+  .lead strong { color: var(--blue); }
+  .meta { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; }
+  .meta span { white-space: nowrap; }
+  .truth-note { font-size: 12.5px; color: var(--muted); margin-bottom: 24px; }
+
+  /* ===== 工具列 ===== */
+  .toolbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: flex-end; padding: 8px 0; background: linear-gradient(var(--bg) 80%, transparent); }
+  .toolbar button {
+    font: inherit; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card);
+    border-radius: 8px; padding: 6px 14px; color: var(--ink);
+  }
+  .toolbar button:hover { border-color: #94a3b8; }
+
+  /* ===== 區段標題 ===== */
+  h2.section {
+    font-size: 19px; margin: 44px 0 6px;
+    padding-left: 12px; border-left: 5px solid var(--c, var(--blue));
+    scroll-margin-top: 8px;
+  }
+  .section-desc { color: var(--muted); font-size: 13.5px; margin: 0 0 18px 17px; }
+
+  /* ===== 卡片 ===== */
+  .req {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 5px solid var(--c, var(--blue));
+    border-radius: 12px; padding: 18px 22px 14px; margin-bottom: 16px;
+    scroll-margin-top: 56px;
+  }
+  .req h3 { margin: 0 0 8px; font-size: 16px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .req h3 .no { color: var(--muted); font-size: 13px; font-weight: 600; }
+  .req .body { font-size: 14.5px; margin-bottom: 4px; }
+  .req .body p { margin: 0 0 10px; }
+  .goal { font-size: 14px; background: var(--blue-bg); border: 1px solid var(--blue-line); border-radius: 8px; padding: 8px 12px; margin: 4px 0 12px; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    border-radius: 5px; padding: 0 7px; vertical-align: 1px;
+  }
+  .badge.low { background: var(--green); color: #fff; }
+  .badge.mid { background: var(--amber); color: #fff; }
+  .badge.high { background: var(--red); color: #fff; }
+  .badge.tag { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-line); }
+  .note { font-size: 13px; color: var(--muted); background: var(--gray-bg); border-radius: 8px; padding: 8px 12px; margin-top: 8px; }
+  .subhead { font-size: 13px; font-weight: 700; color: var(--ink); margin: 12px 0 4px; }
+
+  /* ===== 特色條列 ===== */
+  ul.feat { list-style: none; padding: 0; margin: 6px 0 2px; }
+  ul.feat li { padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+  ul.feat li:last-child { border-bottom: none; }
+  ul.feat li b { color: var(--ink); }
+  ul.feat li .tip { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+
+  /* ===== 流程圖 ===== */
+  .flow {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px 24px; margin-bottom: 18px; overflow-x: auto;
+  }
+  .flow h3 { margin: 0 0 16px; font-size: 15px; }
+  .frow { display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap; min-width: max-content; }
+  .fnode {
+    border: 1.5px solid var(--blue-line); background: var(--blue-bg);
+    border-radius: 8px; padding: 7px 12px; font-size: 13px;
+    display: flex; flex-direction: column; justify-content: center;
+    text-align: center; max-width: 200px;
+  }
+  .fnode small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+  .fnode.start { border-color: #94a3b8; background: #f1f5f9; font-weight: 600; }
+  .fnode.ok { border-color: var(--green-line); background: var(--green-bg); }
+  .fnode.gate { border-color: var(--amber-line); background: var(--amber-bg); }
+  .fnode.risk { border-color: #fecaca; background: var(--red-bg); }
+  .farrow {
+    align-self: center; padding: 0 8px; color: var(--muted);
+    font-size: 12px; text-align: center; flex-shrink: 0; line-height: 1.3;
+  }
+  .farrow::after { content: "→"; display: block; font-size: 16px; color: #94a3b8; }
+
+  /* ===== 比較表 ===== */
+  table.cmp { width: 100%; border-collapse: collapse; margin: 6px 0 4px; font-size: 13.5px; }
+  table.cmp th, table.cmp td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  table.cmp thead th { background: #f1f5f9; font-size: 13px; }
+  table.cmp tbody th { background: var(--gray-bg); font-weight: 600; white-space: nowrap; }
+  table.cmp td.c { text-align: center; white-space: nowrap; }
+  table.cmp .arrow { color: var(--blue); font-weight: 700; }
+
+  /* ===== Scenario（可摺疊） ===== */
+  details.scn { border: 1px solid var(--line); border-radius: 10px; margin: 10px 0; background: #fcfdfe; }
+  details.scn summary {
+    cursor: pointer; padding: 9px 14px; font-size: 13.5px; font-weight: 600;
+    list-style: none; display: flex; align-items: center; gap: 8px;
+  }
+  details.scn summary::-webkit-details-marker { display: none; }
+  details.scn summary::before { content: "▸"; color: #94a3b8; transition: transform .15s; }
+  details.scn[open] summary::before { transform: rotate(90deg); }
+  .scn-body { padding: 2px 16px 14px; }
+
+  /* ===== 界定 ===== */
+  .req.excluded { border-left-color: var(--gray); background: #fafafa; }
+  .nots { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+  .not-card { border: 1px dashed var(--gray-line); border-radius: 10px; padding: 10px 14px; background: var(--card); font-size: 13.5px; }
+  .not-card .x { font-weight: 700; color: var(--gray); }
+  .not-card small { display: block; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+  footer { margin-top: 56px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+  @media (max-width: 860px) {
+    nav.toc { display: none; }
+    main { padding: 20px 18px 64px; }
+  }
+  @media print {
+    nav.toc, .toolbar { display: none; }
+    details.scn { open: true; }
+    .req { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <div class="toc-title">Vue 島嶼遷移計畫<small>原生 JS → Blade + Vue 3</small></div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--blue)"></span>總覽</div>
+    <a href="#overview">目標與架構</a>
+    <a href="#constraints">全域約束</a>
+    <a href="#order">遷移順序與風險</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--green)"></span>各階段</div>
+    <a href="#m0">M0 共用基建</a>
+    <a href="#m1">M1 試點</a>
+    <a href="#m2">M2 中小型 + 共用 modal</a>
+    <a href="#m3">M3 大型表單</a>
+    <a href="#m4">M4 聊天頁(壓軸)</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--amber)"></span>收尾</div>
+    <a href="#verify">驗證方式</a>
+    <a href="#scope">刻意界定</a>
+  </div>
+</nav>
+
+<main>
+<header>
+  <h1>原生 JS → Vue 島嶼 遷移實作計畫</h1>
+  <div class="sub">本頁為實作計畫的閱讀版,逐階段說明「做什麼、改哪些檔、改哪些功能」。逐步程式碼與 TDD checkbox 以 Markdown 計畫為準。</div>
+  <div class="lead">
+    <strong>目標：</strong>把 <code>resources/js</code> 下 <strong>18 支、約 2,077 行</strong>的原生 JS(對 Blade 已渲染 DOM 做命令式漸進增強)改寫為「<strong>Blade + Vue 3 島嶼</strong>」——每個 <code>@vite</code> entry 改用 <code>mountIsland()</code> 把一個 <code>.vue</code> 元件掛到 Blade 渲染的掛載點,以響應式狀態取代命令式 DOM。
+  </div>
+  <div class="meta">
+    <span>來源計畫:docs/superpowers/plans/2026-06-18-vue-islands-migration.md</span>
+    <span>分支:feat/vue-islands-migration</span>
+    <span>共 5 階段(M0~M4)</span>
+  </div>
+  <div class="truth-note">本 HTML 不重貼逐步程式碼(避免雙份維護);著重「修改內容(檔案)」與「修改功能(行為對照)」。</div>
+</header>
+
+<div class="toolbar"><button id="toggleAll" data-open="0">全部展開</button></div>
+
+<!-- ============ 總覽 ============ -->
+<h2 class="section" id="overview" style="--c:var(--blue)">目標與架構</h2>
+<p class="section-desc">島嶼模型如何運作、為什麼契合本專案。</p>
+
+<section class="req" id="overview-card" style="--c:var(--blue)">
+  <h3><span class="no">架構</span>每頁一島,Blade 出資料、Vue 接管互動</h3>
+  <div class="body">
+    <p>現況:每個 Blade 頁 <code>@vite('resources/js/&lt;feature&gt;/&lt;entry&gt;.js')</code> 載入專屬 JS,以 <code>getElementById</code> + <code>data-*</code> 讀資料、<code>querySelector</code> 綁事件、<code>classList</code> 切換顯示。這「每頁一 entry」結構天然對應 <strong>Vue 島嶼</strong>。</p>
+  </div>
+  <div class="subhead">改寫後的資料流</div>
+<pre><span class="c">{{-- Blade:渲染掛載點 + 注入伺服器資料 --}}</span>
+<span class="t">&lt;div</span> <span class="v">id</span>=<span class="s">"grade-weight-field"</span> <span class="v">data-props</span>=<span class="s">"@json([...])"</span><span class="t">&gt;&lt;/div&gt;</span>
+@vite('resources/js/grades/form.js')</pre>
+<pre><span class="c">// entry:不再操作 DOM,改掛載 Vue 元件</span>
+<span class="k">import</span> mountIsland <span class="k">from</span> <span class="s">'@/lib/mountIsland'</span>
+<span class="k">import</span> GradeWeightField <span class="k">from</span> <span class="s">'./GradeWeightField.vue'</span>
+<span class="v">mountIsland</span>(<span class="s">'grade-weight-field'</span>, GradeWeightField)</pre>
+  <div class="subhead">三類命令式寫法 → Vue 對應(全程一致)</div>
+  <table class="cmp">
+    <thead><tr><th>原生 JS 寫法</th><th></th><th>Vue 島嶼作法</th></tr></thead>
+    <tbody>
+      <tr><td><code>el.dataset.x</code> / <code>getElementById</code> 讀資料</td><td class="c arrow">→</td><td>Blade <code>@json</code> → <code>props</code></td></tr>
+      <tr><td><code>classList.toggle('hidden')</code></td><td class="c arrow">→</td><td><code>v-if</code> / <code>v-show</code> 綁狀態</td></tr>
+      <tr><td><code>querySelectorAll(...).addEventListener</code></td><td class="c arrow">→</td><td><code>@click</code> / <code>v-model</code> / <code>v-for</code></td></tr>
+      <tr><td><code>innerHTML = '...'</code> 拼字串</td><td class="c arrow">→</td><td>template + 響應式資料</td></tr>
+      <tr><td><code>window.axios</code> / 裸 <code>fetch</code></td><td class="c arrow">→</td><td><code>import http from '@/lib/http'</code>(可被測試 mock)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<h2 class="section" id="constraints" style="--c:var(--blue)">全域約束</h2>
+<p class="section-desc">每個任務都要遵守。</p>
+
+<section class="req" id="constraints-card" style="--c:var(--blue)">
+  <h3><span class="no">規則</span>不可踩的邊界</h3>
+  <ul class="feat">
+    <li><b>指令一律在 Docker 容器內</b><span class="tip"><code>docker compose exec backend-api npm run …</code>(或 <code>docker exec wsl-backend …</code>),不在 host 直接跑。</span></li>
+    <li><b>依賴變更需使用者核准</b><span class="tip">新增 <code>vue</code>、<code>@vitejs/plugin-vue</code>、<code>vitest</code>、<code>@vue/test-utils</code>、<code>jsdom</code>;M0 安裝前先確認同意。</span></li>
+    <li><b>不動後端</b><span class="tip">Laravel 路由 / Controller / Service / Repository / Model / 驗證 / 權限 / CSRF / migration 一律不改。只動 <code>resources/js</code>、<code>resources/views</code> 掛載點、<code>vite.config.js</code>、<code>package.json</code>、新增 <code>vitest.config.js</code>。</span></li>
+    <li><b>Tailwind v4 設計系統不分叉</b><span class="tip">沿用 <code>@theme</code> token 與既有元件類(<code>.form-control</code>、<code>.modal-overlay</code>、<code>.btn-primary</code>、<code>.flash-*</code>、<code>.chat-*</code>);Vue SFC 用 utility,避免 <code>&lt;style scoped&gt;</code>。</span></li>
+    <li><b>JS 契約 class 規則在島內調整</b><span class="tip">CLAUDE.md 要求 <code>hidden</code>、<code>.delete-btn</code>、<code>#delete-modal*</code>、<code>.flash-message</code> 以字面 class 留給 JS;<strong>島內</strong>改由 Vue 狀態驅動(<code>v-if/v-show</code>)後不再需要,<strong>島外未遷移頁</strong>仍維持原規則。</span></li>
+    <li><b>每島完成後</b><span class="tip"><code>npm run test</code>(該島 Vitest)綠燈 + <code>npm run build</code> 成功;commit 由人工同意,訊息結尾加 Co-Authored-By。</span></li>
+  </ul>
+</section>
+
+<h2 class="section" id="order" style="--c:var(--amber)">遷移順序與風險</h2>
+<p class="section-desc">由易到難、逐島可獨立上線與回退。</p>
+
+<div class="flow">
+  <h3>五階段路線</h3>
+  <div class="frow">
+    <div class="fnode start">M0 基建<small>build + 測試 + 共用件</small></div>
+    <div class="farrow"></div>
+    <div class="fnode ok">M1 試點<small>低風險立慣例</small></div>
+    <div class="farrow"></div>
+    <div class="fnode">M2 中小型<small>共用 modal/flash</small></div>
+    <div class="farrow"></div>
+    <div class="fnode gate">M3 大型表單<small>bills</small></div>
+    <div class="farrow"></div>
+    <div class="fnode risk">M4 聊天頁<small>即時,最高風險</small></div>
+  </div>
+</div>
+<section class="req" id="order-card" style="--c:var(--amber)">
+  <h3><span class="no">原則</span>並存、不設「切換日」</h3>
+  <div class="body"><p>每批可獨立上線、獨立回退(<code>git revert</code> 該島 commit);舊原生 JS 與新 Vue 島在不同頁面長期並存。高風險集中在 M3 <code>bills/create</code>(637 行精靈)與 M4 <code>chats</code>(534 行即時),排在最後、團隊熟悉後再動,並以雙人真實環境回歸。</p></div>
+</section>
+
+<!-- ============ M0 ============ -->
+<h2 class="section" id="m0" style="--c:var(--green)">M0 — 共用基建</h2>
+<p class="section-desc">先把 build、測試、共用模組就緒,後面每島才有地基。</p>
+
+<section class="req" id="m0-card" style="--c:var(--green)">
+  <h3><span class="no">M0</span>建立 Vue 編譯、測試與共用件 <span class="badge low">低風險</span></h3>
+  <div class="goal"><b>階段目標:</b>讓 <code>.vue</code> 能編譯與測試,並提供所有島共用的掛載器、HTTP、modal、flash、Echo、badge 模組。</div>
+
+  <div class="subhead">修改內容(檔案)</div>
+  <table class="cmp">
+    <thead><tr><th>檔案</th><th>動作</th><th>責任</th></tr></thead>
+    <tbody>
+      <tr><td><code>package.json</code></td><td class="c">改</td><td>加 vue / plugin-vue / vitest / test-utils / jsdom + <code>test</code> script</td></tr>
+      <tr><td><code>vite.config.js</code></td><td class="c">改</td><td>加 <code>vue()</code> plugin 與 <code>@ → resources/js</code> alias</td></tr>
+      <tr><td><code>vitest.config.js</code></td><td class="c">新增</td><td>jsdom 環境、<code>@</code> alias、globals</td></tr>
+      <tr><td><code>resources/js/lib/http.js</code></td><td class="c">新增</td><td>設定好的 axios 實例(可被測試 mock)</td></tr>
+      <tr><td><code>resources/js/lib/mountIsland.js</code></td><td class="c">新增</td><td>依 id 找掛載點、解析 <code>data-props</code>、<code>createApp().mount()</code></td></tr>
+      <tr><td><code>composables/useFlash.js</code></td><td class="c">新增</td><td>flash 提示(包裝 <code>.flash-area</code> DOM)</td></tr>
+      <tr><td><code>components/ConfirmModal.vue</code> + <code>composables/useConfirmModal.js</code></td><td class="c">新增</td><td>泛用確認 modal + 開關/busy 狀態</td></tr>
+      <tr><td><code>composables/useEcho.js</code> · <code>useChatBadge.js</code></td><td class="c">新增</td><td>Reverb Echo 取用 + 全站未讀 badge(供 M4)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="subhead">修改功能(行為)</div>
+  <ul class="feat">
+    <li><b>建立島嶼掛載慣例</b><span class="tip"><code>mountIsland(id, Component, extraProps)</code>:掛載點不存在回 <code>null</code>(該頁沒這島);有 <code>data-props</code> 就 <code>JSON.parse</code> 當 props。</span></li>
+    <li><b>HTTP 統一入口</b><span class="tip">取代分散的 <code>window.axios</code> 與裸 <code>fetch</code>,元件 <code>import http from '@/lib/http'</code>,測試 <code>vi.mock</code> 即可。</span></li>
+    <li><b>共用件先行</b><span class="tip"><code>useFlash</code> 等同原 <code>utils/flash.js</code> 行為;<code>ConfirmModal</code> 取代各頁重複的 <code>#delete-modal</code>/<code>#toggle-modal</code> overlay。</span></li>
+    <li><b>端到端煙霧驗證</b><span class="tip">用一個 hello-island 確認「<code>.vue</code> 能編譯 + 掛載 + Vitest 能測元件」後再刪除。</span></li>
+  </ul>
+  <div class="note">M0 不改任何既有頁面行為;純加基建。Task 0.1 安裝依賴前需取得使用者同意。</div>
+</section>
+
+<!-- ============ M1 ============ -->
+<h2 class="section" id="m1" style="--c:var(--green)">M1 — 試點(立慣例)</h2>
+<p class="section-desc">兩個島作為後續所有島的參考實作:props 傳入、http mock 測試、v-model / v-if 取代命令式。</p>
+
+<section class="req" id="m1-card" style="--c:var(--green)">
+  <h3><span class="no">M1</span>searchable-select、grades/form <span class="badge low">低風險</span></h3>
+  <div class="goal"><b>階段目標:</b>用兩個風險低、行為清楚的島,驗證並定下島嶼開發慣例(掛載點命名、資料傳遞、測試寫法)。</div>
+
+  <div class="subhead">修改內容(檔案)</div>
+  <table class="cmp">
+    <thead><tr><th>島</th><th>新增 .vue + .test.js</th><th>改 entry / Blade</th></tr></thead>
+    <tbody>
+      <tr><td>可搜尋下拉</td><td><code>components/SearchableSelect.vue</code></td><td><code>components/searchable-select.js</code><br><code>views/components/searchable-select.blade.php</code>(用於 <code>roles/_form</code>)</td></tr>
+      <tr><td>版本權重欄位</td><td><code>grades/GradeWeightField.vue</code></td><td><code>grades/form.js</code><br><code>views/admin/grades/create|edit.blade.php</code></td></tr>
+    </tbody>
+  </table>
+
+  <div class="subhead">修改功能(行為對照)</div>
+  <table class="cmp">
+    <thead><tr><th>原本(原生 JS)</th><th></th><th>改寫後(Vue)</th></tr></thead>
+    <tbody>
+      <tr><td>輸入過濾 group/option:<code>classList.toggle('hidden')</code></td><td class="c arrow">→</td><td><code>computed</code> 過濾 + <code>v-show</code></td></tr>
+      <tr><td>點選寫 hidden input、高亮:命令式改 DOM</td><td class="c arrow">→</td><td><code>v-model</code> 綁 <code>selected</code>、<code>:class</code> 綁選中</td></tr>
+      <tr><td>權重 <code>change</code> 打 <code>/grades/check-weight</code></td><td class="c arrow">→</td><td><code>http.get</code> + 響應式 <code>error</code>/<code>conflictId</code></td></tr>
+      <tr><td>插入「預覽列」、移動既有列:<code>createElement</code>/<code>insertBefore</code></td><td class="c arrow">→</td><td><code>computed rows</code> 依 weight 排序 + <code>v-for</code></td></tr>
+      <tr><td>送出鈕停用:<code>submitBtn.disabled</code> + class</td><td class="c arrow">→</td><td>元件 <code>emit('update:disabled')</code>,entry 套用到 Blade 送出鈕</td></tr>
+    </tbody>
+  </table>
+  <div class="note">保留語意:<code>SearchableSelect</code> 仍渲染 <code>&lt;input type="hidden" :name&gt;</code> 供既有表單 POST;「點元件外關閉」由元件 <code>onMounted</code> 的 document 監聽處理。</div>
+</section>
+
+<!-- ============ M2 ============ -->
+<h2 class="section" id="m2" style="--c:var(--blue)">M2 — 中小型頁 + 共用 modal / flash</h2>
+<p class="section-desc">先做共用 modal / flash,再逐頁接上;最後移除被取代的 utils。</p>
+
+<section class="req" id="m2-card" style="--c:var(--blue)">
+  <h3><span class="no">M2</span>9 個中小型島 + 共用件收斂 <span class="badge low">低風險</span></h3>
+  <div class="goal"><b>階段目標:</b>把列表頁的刪除/切換/憑證 modal、圖片上傳、session 計時器等改成 Vue,並沉澱可重用元件。</div>
+
+  <div class="subhead">修改內容(檔案)</div>
+  <table class="cmp">
+    <thead><tr><th>島 / 共用件</th><th>新增 .vue</th><th>影響頁 entry / Blade</th></tr></thead>
+    <tbody>
+      <tr><td>列表刪除</td><td><code>components/RowDeleteController.vue</code></td><td><code>users/index</code> · <code>roles/index</code> · <code>addons/index</code></td></tr>
+      <tr><td>版本啟用/停用</td><td><code>grades/GradeToggleController.vue</code></td><td><code>grades/index</code></td></tr>
+      <tr><td>憑證徽章 modal</td><td><code>shops/CertBadgeModal.vue</code></td><td><code>shops/index</code>(+ per-page select、flash)</td></tr>
+      <tr><td>商店編輯面板</td><td><code>shops/ShopEditPanel.vue</code> + <code>shops/maskString.js</code></td><td><code>shops/edit</code></td></tr>
+      <tr><td>圖片上傳預覽</td><td><code>addons/ImageUploadField.vue</code></td><td><code>addons/form</code></td></tr>
+      <tr><td>session 倒數</td><td><code>layouts/SessionTimer.vue</code></td><td><code>layouts/admin</code></td></tr>
+      <tr><td>雜項</td><td>—</td><td><code>conferences/index</code> 改用 <code>useFlash</code></td></tr>
+      <tr><td>清理</td><td>—</td><td>刪 <code>utils/flash.js</code> · <code>utils/deleteModal.js</code></td></tr>
+    </tbody>
+  </table>
+
+  <div class="subhead">修改功能(行為對照)</div>
+  <table class="cmp">
+    <thead><tr><th>原本</th><th></th><th>改寫後</th></tr></thead>
+    <tbody>
+      <tr><td><code>.delete-btn</code> 綁 click → <code>#delete-modal</code> 顯示 → <code>axios.delete</code> → 移除 <code>&lt;tr&gt;</code></td><td class="c arrow">→</td><td><code>RowDeleteController</code> + <code>ConfirmModal</code> + <code>useFlash</code>(成功移除列 + flash)</td></tr>
+      <tr><td>toggle 開關樣式手動切 class</td><td class="c arrow">→</td><td><code>http.patch</code> 後切 <code>data-active</code> 與開關樣式(保留視覺)</td></tr>
+      <tr><td>cert 認證裸 <code>fetch</code> + 手填多個 hidden</td><td class="c arrow">→</td><td><code>http.post</code> + 響應式狀態填值;<code>maskString</code> 抽純函式先測</td></tr>
+      <tr><td>圖片 <code>FileReader</code> 預覽、<code>classList</code> 切換、<code>remove_image</code> flag</td><td class="c arrow">→</td><td>響應式 <code>preview</code>/<code>pendingRemove</code> + <code>v-if</code></td></tr>
+      <tr><td>session 計時器 <code>setInterval</code> + 直接改 textContent/class</td><td class="c arrow">→</td><td><code>SessionTimer.vue</code> 響應式倒數、≤300 變紅、歸零導向</td></tr>
+    </tbody>
+  </table>
+  <div class="note">列仍由 Blade 渲染,<code>.delete-btn</code> 等觸發鈕保留在列上(元件 <code>onMounted</code> 綁定);移除 utils 前先 <code>grep</code> 確認無殘留 import。</div>
+</section>
+
+<!-- ============ M3 ============ -->
+<h2 class="section" id="m3" style="--c:var(--amber)">M3 — 大型表單 / 列表</h2>
+<p class="section-desc">bills 兩頁:狀態多、計算重,Vue 響應式收益最大,但需謹慎回歸。</p>
+
+<section class="req" id="m3-card" style="--c:var(--amber)">
+  <h3><span class="no">M3</span>bills/index、bills/create <span class="badge mid">中風險</span></h3>
+  <div class="goal"><b>階段目標:</b>把帳單列表的四個 modal、與建立帳單的逐步精靈改成 Vue,先抽純函式測試再組元件。</div>
+
+  <div class="subhead">修改內容(檔案)</div>
+  <table class="cmp">
+    <thead><tr><th>島</th><th>新增</th><th>改 entry / Blade</th></tr></thead>
+    <tbody>
+      <tr><td>帳單列表 modal</td><td><code>bills/BillsListModals.vue</code></td><td><code>bills/index.js</code><br><code>views/admin/bills/index.blade.php</code></td></tr>
+      <tr><td>建立帳單精靈</td><td><code>bills/BillCreateWizard.vue</code><br><code>bills/billMath.js</code>(純函式)</td><td><code>bills/create.js</code><br><code>views/admin/bills/create.blade.php</code></td></tr>
+    </tbody>
+  </table>
+
+  <div class="subhead">修改功能(行為)</div>
+  <ul class="feat">
+    <li><b>bills/index 四個 modal</b><span class="tip">明細(<code>GET /bills/{id}/detail</code> 渲染明細 + 作廢區 + 總計、付款狀態決定匯出鈕)、匯出(blob 下載、解析 Content-Disposition 檔名)、銷帳(勾選 → <code>POST writeoff</code> → reload)、編輯(<code>PATCH</code> → reload)。<code>innerHTML</code> 拼字串全改 <code>v-if/v-for</code>。</span></li>
+    <li><b>bills/create 精靈</b><span class="tip">搜尋商店(debounce)→ 載入 shop info → 切換 grade/addon → grade 區(op 日期約束、版本過濾排序、月數、<code>/calculate</code>、升級補差額、overlap 警告)→ addon 多列(配額數量、互斥標記、已包含/已購買後綴)→ 折抵上限驗證 → 訂單摘要 → 送出組 <code>details[i][...]</code> hidden + 驗證。</span></li>
+    <li><b>純函式先測</b><span class="tip"><code>billMath</code>:<code>fmt</code>、<code>monthsOptions</code>(月初不含「月底」)、<code>paymentTypeFromMonths</code> 抽出單測,降低大元件測試負擔。</span></li>
+    <li><b>後端 POST 不變</b><span class="tip">建立帳單仍走原生表單 POST(保留 <code>&lt;form&gt;</code> action/method/<code>@csrf</code>),hidden 欄位由元件 <code>v-for</code> 產生。</span></li>
+  </ul>
+  <div class="note">高風險點:金額計算與送出 payload 必須與舊版逐項一致 → 人工走完整建立流程對賬。</div>
+</section>
+
+<!-- ============ M4 ============ -->
+<h2 class="section" id="m4" style="--c:var(--red)">M4 — 聊天頁(壓軸)</h2>
+<p class="section-desc">即時 + 樂觀送出 + 線上狀態,狀態最複雜,風險最高,放最後。</p>
+
+<section class="req" id="m4-card" style="--c:var(--red)">
+  <h3><span class="no">M4</span>chats/index + bootstrap 收斂 <span class="badge high">高風險</span></h3>
+  <div class="goal"><b>階段目標:</b>先把 Echo/badge/格式化抽成 composable 與純函式,再分三步組 <code>ChatApp.vue</code>,確保即時與樂觀送出行為等價。</div>
+
+  <div class="subhead">修改內容(檔案)</div>
+  <table class="cmp">
+    <thead><tr><th>項目</th><th>新增</th><th>改</th></tr></thead>
+    <tbody>
+      <tr><td>共用</td><td><code>composables/useEcho.js</code> · <code>useChatBadge.js</code> · <code>chats/chatFormat.js</code></td><td><code>bootstrap.js</code>(改用 composable)</td></tr>
+      <tr><td>聊天本體</td><td><code>chats/ChatApp.vue</code>(+ <code>.test.js</code>)</td><td><code>chats/index.js</code><br><code>views/admin/chats/index.blade.php</code></td></tr>
+    </tbody>
+  </table>
+
+  <div class="subhead">修改功能(分三步實作)</div>
+  <ul class="feat">
+    <li><b>4.3 列表 + 開啟對話</b><span class="tip"><code>loadConversations</code> 成功/失敗骨架與錯誤狀態、空狀態、未讀 badge、線上點、active 高亮;<code>openConversation</code> 載入訊息、切換對話放棄渲染、失敗錯誤不誤當空對話、<code>PATCH read</code> + badge。</span></li>
+    <li><b>4.4 樂觀送出 + 去重 + 重試</b><span class="tip"><code>sendBody</code> 立即插入「傳送中」→ <code>POST</code> 成功「已送出」/ 失敗「傳送失敗 + 重試」;以 <code>renderedMessageIds</code> + <code>pendingSends</code> 對自送廣播去重認領(避免重複泡泡與重送的競態)。</span></li>
+    <li><b>4.5 即時 + typing + 線上 + 開新對話</b><span class="tip">presence <code>chat.online</code>(here/joining/leaving)、<code>chat.conversation.{id}</code> typing whisper、window <code>chat:message</code> 事件、<code>userSelect</code> 開新對話、retry。Echo 為 null 時全跳過(頁面仍可載入與送訊息)。</span></li>
+  </ul>
+
+  <div class="subhead">修改功能(行為對照)</div>
+  <table class="cmp">
+    <thead><tr><th>原本</th><th></th><th>改寫後</th></tr></thead>
+    <tbody>
+      <tr><td><code>els.list.innerHTML</code> 拼對話列</td><td class="c arrow">→</td><td>響應式 <code>conversations</code> + <code>v-for</code></td></tr>
+      <tr><td><code>buildMessageRow</code> 用 <code>createElement</code></td><td class="c arrow">→</td><td><code>messages</code> 陣列 + template(分組/日期分隔)</td></tr>
+      <tr><td><code>window.Echo</code>/<code>window.refreshChatBadge</code> 全域</td><td class="c arrow">→</td><td><code>useEcho()</code> / <code>useChatBadge().refresh()</code></td></tr>
+      <tr><td>骨架/錯誤/空狀態 <code>classList</code> 切換</td><td class="c arrow">→</td><td><code>threadLoading</code>/<code>threadError</code> 等狀態 + <code>v-if</code></td></tr>
+    </tbody>
+  </table>
+  <div class="note"><b>必做:</b>雙瀏覽器 session 人工測試(即時收訊、樂觀送出/失敗重試、typing、線上狀態、開新對話、未讀紅點、scroll pill、骨架與重試)。</div>
+</section>
+
+<!-- ============ 驗證 ============ -->
+<h2 class="section" id="verify" style="--c:var(--amber)">驗證方式</h2>
+<p class="section-desc">每島都要過的關卡。</p>
+
+<section class="req" id="verify-card" style="--c:var(--amber)">
+  <h3><span class="no">關卡</span>自動 + 人工雙軌</h3>
+  <ul class="feat">
+    <li><b>單元測試(Vitest)</b><span class="tip"><code>docker compose exec backend-api npm run test -- &lt;該島 .test.js&gt;</code>;每島 happy / 失敗 / 邊界。</span></li>
+    <li><b>建置</b><span class="tip"><code>docker compose exec backend-api npm run build</code> 成功、無未解析 import;改 token 後驗證全站樣式。</span></li>
+    <li><b>人工回歸</b><span class="tip">每島開對應頁實測;M3 走完整建立帳單對賬金額/payload;M4 雙人測即時行為。</span></li>
+    <li><b>收尾全量</b><span class="tip">全測試綠 + 全量 build + <code>grep</code> 掃描確認無大段命令式 UI 殘留。</span></li>
+  </ul>
+</section>
+
+<!-- ============ 界定 ============ -->
+<h2 class="section" id="scope" style="--c:var(--gray)">刻意界定</h2>
+<p class="section-desc">本 HTML 與計畫的分工。</p>
+
+<section class="req excluded" id="scope-card" style="--c:var(--gray)">
+  <h3><span class="no">界定</span>本頁不負責什麼</h3>
+  <div class="nots">
+    <div class="not-card"><span class="x">不含逐步程式碼</span><small>完整 TDD 步驟與程式碼在 <code>docs/superpowers/plans/2026-06-18-vue-islands-migration.md</code>,實作以該檔 checkbox 為準。</small></div>
+    <div class="not-card"><span class="x">不動程式 / 依賴</span><small>純文件;依賴變更(vue 等)實作 M0 時需使用者核准。</small></div>
+    <div class="not-card"><span class="x">不改後端</span><small>遷移僅限前端島嶼;Laravel 路由 / Controller / 認證不動。</small></div>
+  </div>
+</section>
+
+<footer>
+  原生 JS → Vue 島嶼 遷移實作計畫(閱讀版) · 產出日期 2026-06-18 · 分支 feat/vue-islands-migration ·
+  逐步程式碼見 docs/superpowers/plans/2026-06-18-vue-islands-migration.md。
+</footer>
+</main>
+</div>
+
+<script>
+const btn = document.getElementById('toggleAll');
+btn.addEventListener('click', () => {
+  const open = btn.dataset.open !== '1';
+  document.querySelectorAll('details.scn').forEach(d => d.open = open);
+  btn.dataset.open = open ? '1' : '0';
+  btn.textContent = open ? '全部收合' : '全部展開';
+});
+
+const links = [...document.querySelectorAll('.toc a')];
+const targets = links
+  .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+  .filter(Boolean);
+const byId = Object.fromEntries(links.map(a => [a.getAttribute('href').slice(1), a]));
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(a => a.classList.remove('active'));
+      byId[e.target.id]?.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -75% 0px' });
+targets.forEach(t => observer.observe(t));
+</script>
+</body>
+</html>

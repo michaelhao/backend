@@ -172,24 +172,7 @@
     </div>
 @endsection
 
-<div id="delete-modal" class="modal-overlay hidden">
-    <div class="modal-panel">
-        <h3 class="text-lg font-semibold text-gray-800 mb-2">確認刪除</h3>
-        <p class="text-sm text-gray-600 mb-6">
-            確定要刪除「<span id="delete-modal-name" class="font-medium text-gray-900"></span>」嗎？此操作無法復原。
-        </p>
-        <div class="modal-actions">
-            <button id="delete-modal-cancel"
-                    class="btn-cancel">
-                取消
-            </button>
-            <button id="delete-modal-confirm"
-                    class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors">
-                確認刪除
-            </button>
-        </div>
-    </div>
-</div>
+<div id="row-delete"></div>
 
 @push('scripts')
     @vite('resources/js/addons/index.js')

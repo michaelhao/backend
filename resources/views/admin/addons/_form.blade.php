@@ -142,6 +142,8 @@
         @error('image')
             <p class="form-error">{{ $message }}</p>
         @enderror
+
+        <div id="image-upload-field"></div>
     </div>
 
     <div class="flex items-center gap-4">

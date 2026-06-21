@@ -17,6 +17,8 @@
         </div>
     @endif
 
+    <div class="flash-area"></div>
+
     <form method="POST" action="{{ route('shops.update', $shop) }}"
           data-shop-edit
           data-cert-route="{{ route('shops.certify', $shop) }}"
@@ -176,33 +178,15 @@
         </div>
     </form>
 
-    {{-- 認證 Modal --}}
-    <div id="cert-modal" class="modal-overlay hidden">
-        <div class="modal-panel">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">商家認證</h3>
-
-            <div class="mb-4">
-                <label for="cert-business-number" class="form-label">統一編號（8 位數字）</label>
-                <x-form-input id="cert-business-number" maxlength="8" inputmode="numeric" pattern="\d{8}"
-                              placeholder="請輸入統一編號"
-                              class="w-full font-mono" />
-                <p id="cert-input-error" class="mt-1 text-xs text-red-600 hidden">請輸入 8 位數字</p>
-            </div>
-
-            <div id="cert-result" class="hidden mb-4 rounded-md p-3 text-sm"></div>
-
-            <div class="modal-actions">
-                <button id="cert-modal-close"
-                        class="bg-gray-100 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors">
-                    取消
-                </button>
-                <button id="cert-submit"
-                        class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
-                    認證
-                </button>
-            </div>
-        </div>
-    </div>
+    {{-- Vue 島嶼：email toggle + 認證 Modal --}}
+    @php
+        $shopEditProps = [
+            'certRoute' => route('shops.certify', $shop),
+            'adminEmailError' => $errors->has('admin.email'),
+        ];
+    @endphp
+    <div id="shop-edit-panel"
+         data-props='@json($shopEditProps)'></div>
 @endsection
 
 @push('scripts')

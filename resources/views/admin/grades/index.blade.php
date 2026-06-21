@@ -13,13 +13,15 @@
         </x-permission>
     </div>
 
-    @if (session('success'))
-        <div class="flash flash-success flash-message">{{ session('success') }}</div>
-    @endif
+    <div class="flash-area">
+        @if (session('success'))
+            <div class="flash flash-success flash-message">{{ session('success') }}</div>
+        @endif
 
-    @if (session('error'))
-        <div class="flash flash-error flash-message">{{ session('error') }}</div>
-    @endif
+        @if (session('error'))
+            <div class="flash flash-error flash-message">{{ session('error') }}</div>
+        @endif
+    </div>
 
     <div class="card">
         <table class="table">
@@ -71,18 +73,7 @@
             </tbody>
         </table>
     </div>
-    <div id="toggle-modal" class="modal-overlay hidden">
-        <div class="modal-panel">
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">確認狀態切換</h3>
-            <p class="text-sm text-gray-600 mb-6">
-                確定要<span id="toggle-modal-action" class="font-medium text-gray-900"></span>「<span id="toggle-modal-name" class="font-medium text-gray-900"></span>」嗎？
-            </p>
-            <div class="modal-actions">
-                <button id="toggle-modal-cancel" class="btn-cancel">取消</button>
-                <button id="toggle-modal-confirm" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors">確認</button>
-            </div>
-        </div>
-    </div>
+    <div id="grade-toggle"></div>
 @endsection
 
 @push('scripts')

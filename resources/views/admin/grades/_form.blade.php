@@ -30,23 +30,15 @@
 
     <div>
         <p class="text-xs font-semibold text-gray-500 mb-2">grades weight</p>
-        <div id="weight-list" class="text-sm text-gray-700 space-y-1 border rounded-lg p-3 bg-gray-50">
-            @foreach ($grades as $g)
-                <div class="flex justify-between weight-row" data-id="{{ $g->id }}">
-                    <span>{{ $g->name }}</span>
-                    <span>{{ $g->weight }}</span>
-                </div>
-            @endforeach
-        </div>
-    </div>
-
-    <div>
-        <label for="weight" class="form-label">版本權重</label>
-        <x-form-input type="number" name="weight"
-                      :value="old('weight', $grade->weight ?? '')"
-                      data-exclude-id="{{ $grade->id ?? '' }}"
-                      class="w-full" />
-        <div id="weight-error" class="form-error hidden"></div>
+        @php
+            $gradeWeightProps = [
+                'excludeId' => $grade->id ?? null,
+                'grades' => $grades->map(fn ($g) => ['id' => $g->id, 'name' => $g->name, 'weight' => $g->weight])->values(),
+                'checkUrl' => route('grades.check-weight'),
+                'currentWeight' => old('weight', $grade->weight ?? null),
+            ];
+        @endphp
+        <div id="grade-weight-field" data-props='@json($gradeWeightProps)'></div>
         @error('weight')
             <p class="form-error">{{ $message }}</p>
         @enderror

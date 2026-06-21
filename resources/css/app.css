@@ -18,6 +18,11 @@
     --color-overlay: rgb(0 0 0 / 0.5);
     --color-primary: var(--color-blue-600);
     --color-primary-hover: var(--color-blue-700);
+    --color-danger: var(--color-red-600);
+    --color-danger-hover: var(--color-red-700);
+    --color-accent: var(--color-indigo-700);
+    --color-accent-soft: var(--color-indigo-50);
+    --color-accent-soft-hover: var(--color-indigo-100);
     --color-online: var(--color-green-500);
     --color-unread: var(--color-red-500);
 }

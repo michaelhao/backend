@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JWT 技術分析 — JSON Web Token</title>
+<style>
+  :root {
+    --ink: #1e293b;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --blue: #2563eb;   --blue-bg: #eff6ff;   --blue-line: #bfdbfe;
+    --amber: #d97706;  --amber-bg: #fffbeb;  --amber-line: #fde68a;
+    --green: #059669;  --green-bg: #ecfdf5;  --green-line: #a7f3d0;
+    --gray: #6b7280;   --gray-bg: #f3f4f6;   --gray-line: #d1d5db;
+    --red: #dc2626;    --red-bg: #fef2f2;
+    --purple: #7c3aed; --purple-bg: #f5f3ff; --purple-line: #ddd6fe;
+    --sidebar-w: 264px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 0.86em;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+  pre {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 12.5px; line-height: 1.6;
+    background: #0f172a; color: #e2e8f0;
+    border-radius: 10px; padding: 14px 16px;
+    overflow-x: auto; margin: 10px 0;
+  }
+  pre .c { color: #64748b; }      /* 註解 */
+  pre .k { color: #93c5fd; }      /* 關鍵字 */
+  pre .s { color: #86efac; }      /* 字串 */
+  pre .h { color: #fca5a5; }      /* header 段 */
+  pre .p { color: #c4b5fd; }      /* payload 段 */
+  pre .g { color: #fcd34d; }      /* signature 段 */
+
+  /* ===== 版面 ===== */
+  .layout { display: flex; min-height: 100vh; }
+  nav.toc {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: sticky; top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: #0f172a;
+    color: #cbd5e1;
+    padding: 20px 0 32px;
+  }
+  main {
+    flex: 1;
+    min-width: 0;
+    max-width: 880px;
+    padding: 32px 40px 96px;
+  }
+
+  /* ===== 側欄 ===== */
+  .toc-title { padding: 0 20px 12px; font-weight: 700; color: #fff; font-size: 16px; }
+  .toc-title small { display: block; font-weight: 400; color: #94a3b8; font-size: 11px; margin-top: 2px; }
+  .toc-group { margin-top: 14px; }
+  .toc-group-label {
+    padding: 0 20px; font-size: 11px; letter-spacing: .08em;
+    color: #94a3b8; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .toc a {
+    display: block; padding: 5px 20px 5px 34px;
+    color: #cbd5e1; text-decoration: none; font-size: 13px;
+    border-left: 3px solid transparent;
+  }
+  .toc a:hover { color: #fff; background: rgba(255,255,255,.06); }
+  .toc a.active { color: #fff; background: rgba(255,255,255,.1); border-left-color: #60a5fa; }
+
+  /* ===== Header ===== */
+  header h1 { font-size: 26px; margin: 0 0 4px; }
+  header .sub { color: var(--muted); margin-bottom: 16px; }
+  .lead {
+    background: var(--blue-bg); border: 1px solid var(--blue-line);
+    border-radius: 10px; padding: 14px 18px; font-size: 15px; margin-bottom: 12px;
+  }
+  .lead strong { color: var(--blue); }
+  .meta { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; }
+  .meta span { white-space: nowrap; }
+  .truth-note { font-size: 12.5px; color: var(--muted); margin-bottom: 24px; }
+
+  /* ===== 工具列 ===== */
+  .toolbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: flex-end; padding: 8px 0; background: linear-gradient(var(--bg) 80%, transparent); }
+  .toolbar button {
+    font: inherit; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card);
+    border-radius: 8px; padding: 6px 14px; color: var(--ink);
+  }
+  .toolbar button:hover { border-color: #94a3b8; }
+
+  /* ===== 區段標題 ===== */
+  h2.section {
+    font-size: 19px; margin: 44px 0 6px;
+    padding-left: 12px; border-left: 5px solid var(--c, var(--blue));
+  }
+  .section-desc { color: var(--muted); font-size: 13.5px; margin: 0 0 18px 17px; }
+
+  /* ===== 卡片 ===== */
+  .req {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 5px solid var(--c, var(--blue));
+    border-radius: 12px; padding: 18px 22px 14px; margin-bottom: 16px;
+    scroll-margin-top: 56px;
+  }
+  .req h3 { margin: 0 0 8px; font-size: 16px; display: flex; align-items: baseline; gap: 10px; }
+  .req h3 .no { color: var(--muted); font-size: 13px; font-weight: 600; }
+  .req .body { font-size: 14.5px; margin-bottom: 4px; }
+  .req .body p { margin: 0 0 10px; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    border-radius: 5px; padding: 0 7px; vertical-align: 1px;
+  }
+  .badge.shall { background: var(--blue); color: #fff; }
+  .badge.mustnot { background: var(--red); color: #fff; }
+  .badge.tag { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-line); }
+  .note { font-size: 13px; color: var(--muted); background: var(--gray-bg); border-radius: 8px; padding: 8px 12px; margin-top: 8px; }
+
+  /* ===== 特色條列 ===== */
+  ul.feat { list-style: none; padding: 0; margin: 6px 0 2px; }
+  ul.feat li { padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+  ul.feat li:last-child { border-bottom: none; }
+  ul.feat li b { color: var(--ink); }
+  ul.feat li .tip { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+
+  /* ===== 流程圖 ===== */
+  .flow {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px 24px; margin-bottom: 18px; overflow-x: auto;
+  }
+  .flow h3 { margin: 0 0 16px; font-size: 15px; }
+  .frow { display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap; min-width: max-content; }
+  .fnode {
+    border: 1.5px solid var(--blue-line); background: var(--blue-bg);
+    border-radius: 8px; padding: 7px 12px; font-size: 13px;
+    display: flex; flex-direction: column; justify-content: center;
+    text-align: center; max-width: 190px;
+  }
+  .fnode small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+  .fnode.start { border-color: #94a3b8; background: #f1f5f9; font-weight: 600; }
+  .fnode.ok { border-color: var(--green-line); background: var(--green-bg); }
+  .fnode.gate { border-color: var(--amber-line); background: var(--amber-bg); }
+  .farrow {
+    align-self: center; padding: 0 8px; color: var(--muted);
+    font-size: 12px; text-align: center; flex-shrink: 0; line-height: 1.3;
+  }
+  .farrow::after { content: "→"; display: block; font-size: 16px; color: #94a3b8; }
+
+  /* ===== 雙欄優缺點 ===== */
+  .twocol { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 6px 0; }
+  .col { border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; background: var(--card); }
+  .col.pro { border-top: 4px solid var(--green); }
+  .col.con { border-top: 4px solid var(--red); }
+  .col h4 { margin: 0 0 8px; font-size: 15px; }
+  .col.pro h4 { color: var(--green); }
+  .col.con h4 { color: var(--red); }
+  .col ul { margin: 0; padding-left: 18px; font-size: 13.5px; }
+  .col ul li { margin: 6px 0; }
+  .col ul li b { color: var(--ink); }
+
+  /* ===== Scenario（可摺疊） ===== */
+  details.scn { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: #fcfdfe; }
+  details.scn summary {
+    cursor: pointer; padding: 9px 14px; font-size: 13.5px; font-weight: 600;
+    list-style: none; display: flex; align-items: center; gap: 8px;
+  }
+  details.scn summary::-webkit-details-marker { display: none; }
+  details.scn summary::before { content: "▸"; color: #94a3b8; transition: transform .15s; }
+  details.scn[open] summary::before { transform: rotate(90deg); }
+  .scn-body { padding: 2px 16px 14px; }
+
+  /* ===== 刻意不做 / 不建議 ===== */
+  .req.excluded { border-left-color: var(--gray); background: #fafafa; }
+  .nots { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+  .not-card { border: 1px dashed var(--gray-line); border-radius: 10px; padding: 10px 14px; background: var(--card); font-size: 13.5px; }
+  .not-card .x { font-weight: 700; color: var(--gray); }
+  .not-card small { display: block; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+  .verdict {
+    background: var(--red-bg); border: 1px solid #fecaca; border-radius: 10px;
+    padding: 12px 16px; font-size: 14.5px; margin-bottom: 14px;
+  }
+  .verdict strong { color: var(--red); }
+
+  footer { margin-top: 56px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+  @media (max-width: 860px) {
+    nav.toc { display: none; }
+    main { padding: 20px 18px 64px; }
+    .twocol { grid-template-columns: 1fr; }
+  }
+  @media print {
+    nav.toc, .toolbar { display: none; }
+    details.scn { open: true; }
+    .req { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <div class="toc-title">JWT 技術分析<small>JSON Web Token</small></div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--blue)"></span>概覽</div>
+    <a href="#overview">1. 專案核心概述</a>
+    <a href="#features">2. 核心功能與特色</a>
+    <a href="#use-cases">3. 主要應用場景</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--purple)"></span>原理</div>
+    <a href="#architecture">4. 架構與工作原理</a>
+    <a href="#example">5. 程式碼範例</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--amber)"></span>評估</div>
+    <a href="#pros-cons">6. 優缺點評估</a>
+    <a href="#fit">7. 本專案是否適合導入</a>
+  </div>
+</nav>
+
+<main>
+<header>
+  <h1>JSON Web Token（JWT）技術分析</h1>
+  <div class="sub">無狀態認證權杖的原理、應用場景、優缺點與本專案導入評估</div>
+  <div class="lead">
+    <strong>一句話：</strong>JWT 是一種<strong>自帶簽章、可獨立驗證</strong>的緊湊權杖格式（RFC 7519），讓伺服器不必查資料庫或保存 session，僅憑驗章就能信任請求者的身分與宣告。
+  </div>
+  <div class="meta">
+    <span>主題：JSON Web Token</span>
+    <span>標準：RFC 7519 / 7515(JWS) / 7516(JWE)</span>
+    <span>文件性質：技術選型分析</span>
+  </div>
+  <div class="truth-note">本頁為技術選型分析,非實作規格。第 7 節「是否適合導入」的結論依據本專案目前的認證架構現況。</div>
+</header>
+
+<div class="toolbar"><button id="toggleAll" data-open="0">全部展開</button></div>
+
+<!-- ============ 1. 概述 ============ -->
+<h2 class="section" id="overview" style="--c:var(--blue)">1. 專案核心概述</h2>
+<p class="section-desc">JWT 是什麼、解決了什麼痛點。</p>
+
+<section class="req" id="overview-card" style="--c:var(--blue)">
+  <h3><span class="no">概述</span>自帶簽章的無狀態身分權杖</h3>
+  <div class="body">
+    <p><b>JWT（JSON Web Token）</b>是一段以 <code>.</code> 分隔成三部分的字串,內含一組 JSON 宣告(claims)與一份數位簽章。伺服器只要用共享密鑰或公鑰<strong>驗證簽章</strong>,即可確信內容未被竄改,進而信任其中的使用者身分與權限——<strong>全程不需查 session 儲存體</strong>。</div>
+  <div class="body">
+    <p><b>它解決的痛點:</b>傳統 session 認證要求伺服器為每個登入者保存狀態(記憶體 / Redis / 資料庫),在<strong>水平擴展</strong>(多台無共享記憶體的伺服器)、<strong>跨網域</strong>(SPA / 行動 App 打不同網域的 API)、<strong>跨服務</strong>(microservices 互信)情境下,集中式 session 會成為瓶頸與耦合點。JWT 把「身分狀態」放進權杖本身交給用戶端攜帶,伺服器改為<strong>無狀態驗章</strong>,從而水平擴展與跨域變得簡單。</p>
+  </div>
+  <div class="note">關鍵心智模型:JWT 的預設保證是「<b>完整性 / 真實性</b>」(簽了章、沒被改),<b>不是機密性</b>。除非額外用 JWE 加密,否則 payload 任何人都能 Base64Url 解開閱讀。</div>
+</section>
+
+<!-- ============ 2. 核心功能與特色 ============ -->
+<h2 class="section" id="features" style="--c:var(--blue)">2. 核心功能與特色</h2>
+<p class="section-desc">最主要的技術亮點。</p>
+
+<section class="req" id="features-card" style="--c:var(--blue)">
+  <h3><span class="no">特色</span>技術亮點</h3>
+  <ul class="feat">
+    <li><b>三段式結構 <code>Header.Payload.Signature</code></b> <span class="badge tag">RFC 7519</span>
+      <span class="tip">三段各自 Base64Url 編碼後以 <code>.</code> 串接;Header 描述演算法、Payload 放宣告、Signature 保護前兩段。</span></li>
+    <li><b>無狀態(stateless)驗證</b>
+      <span class="tip">伺服器只需密鑰/公鑰即可離線驗章,不必查 DB 或集中式 session,天然適合水平擴展。</span></li>
+    <li><b>自帶標準宣告(claims)</b>
+      <span class="tip">內建 <code>iss</code>(簽發者)、<code>sub</code>(主體)、<code>aud</code>(受眾)、<code>exp</code>(到期)、<code>iat</code>(簽發時間)、<code>nbf</code>(生效時間)、<code>jti</code>(唯一 ID),亦可放自訂宣告(角色、權限)。</span></li>
+    <li><b>多種簽章演算法</b>
+      <span class="tip">對稱式 <code>HS256</code>(HMAC,單一密鑰簽與驗);非對稱式 <code>RS256</code>/<code>ES256</code>(私鑰簽、公鑰驗,適合多服務只發公鑰驗章)。</span></li>
+    <li><b>緊湊、URL-safe</b>
+      <span class="tip">Base64Url 編碼可安全放進 HTTP header(<code>Authorization: Bearer</code>)、query string 或 cookie。</span></li>
+    <li><b>跨語言、跨平台</b>
+      <span class="tip">JSON + 標準演算法,各語言皆有成熟函式庫,前後端 / 異質服務皆可互通。</span></li>
+    <li><b>可選加密(JWE)</b>
+      <span class="tip">需保護 payload 機密時,可用 JWE(RFC 7516)加密內容;一般認證情境僅用 JWS 簽章即可。</span></li>
+  </ul>
+</section>
+
+<!-- ============ 3. 主要應用場景 ============ -->
+<h2 class="section" id="use-cases" style="--c:var(--blue)">3. 主要應用場景</h2>
+<p class="section-desc">開發者在什麼情況下應該選擇使用 JWT。</p>
+
+<section class="req" id="use-cases-card" style="--c:var(--blue)">
+  <h3><span class="no">場景</span>適合採用 JWT 的情境</h3>
+  <ul class="feat">
+    <li><b>SPA / 行動 App 對後端 API 認證</b>
+      <span class="tip">前端(Vue/React/Next、iOS/Android)與 API 不同源、無共享 session 時,以 <code>Authorization: Bearer &lt;jwt&gt;</code> 攜帶身分。</span></li>
+    <li><b>無狀態水平擴展</b>
+      <span class="tip">多台 API 伺服器在負載平衡後方,不想共享 session 儲存;每台各自驗章即可。</span></li>
+    <li><b>Microservices 服務間互信</b>
+      <span class="tip">服務 A 簽發、服務 B 用公鑰驗章信任(RS256),免於共享 session 或互查使用者庫。</span></li>
+    <li><b>SSO / OAuth 2.0 / OIDC</b>
+      <span class="tip">OpenID Connect 的 <code>id_token</code> 本身就是 JWT;單一登入後以權杖在多系統間傳遞身分。</span></li>
+    <li><b>短效、單次用途的授權連結</b>
+      <span class="tip">email 驗證、密碼重設、限時下載等,把意圖與到期時間簽進權杖,免在 DB 另存狀態。</span></li>
+  </ul>
+  <div class="note">反向判準:若你的前端與後端<b>同源</b>且伺服器<b>本來就保有 session</b>(傳統 MPA / Blade / Inertia),JWT 帶來的「無狀態」優勢用不上,反而增加複雜度——此時 session cookie 通常是更好的選擇。</div>
+</section>
+
+<!-- ============ 4. 架構與工作原理 ============ -->
+<h2 class="section" id="architecture" style="--c:var(--purple)">4. 架構與工作原理</h2>
+<p class="section-desc">它是如何運作的。</p>
+
+<div class="flow">
+  <h3>典型認證流程</h3>
+  <div class="frow">
+    <div class="fnode start">用戶端登入<small>帶帳密</small></div>
+    <div class="farrow"></div>
+    <div class="fnode gate">伺服器驗證憑證<small>成功後簽發</small></div>
+    <div class="farrow">簽發</div>
+    <div class="fnode">Access Token (JWT)<small>含 sub/exp/角色<br>短效(如 15 分)</small></div>
+    <div class="farrow">回傳</div>
+    <div class="fnode">用戶端保存<small>記憶體 / cookie</small></div>
+  </div>
+  <div class="frow" style="margin-top:12px">
+    <div class="fnode start">後續請求<small>帶 Bearer token</small></div>
+    <div class="farrow"></div>
+    <div class="fnode gate">伺服器驗章 + 查 claims<small>驗簽、檢查 exp/aud</small></div>
+    <div class="farrow">通過</div>
+    <div class="fnode ok">放行,讀 sub/角色授權</div>
+    <div class="farrow">過期</div>
+    <div class="fnode">用 Refresh Token 換新<small>refresh 較長效、可撤銷</small></div>
+  </div>
+</div>
+
+<section class="req" id="architecture-card" style="--c:var(--purple)">
+  <h3><span class="no">原理</span>三段如何協作</h3>
+  <div class="body">
+    <p><b>1) Header</b>:JSON 描述權杖型別與簽章演算法,例如 <code>{"alg":"HS256","typ":"JWT"}</code>,Base64Url 編碼成第一段。</p>
+    <p><b>2) Payload</b>:JSON 宣告集合(標準 claims + 自訂 claims),Base64Url 編碼成第二段。<strong>僅編碼、未加密</strong>,不可放機密。</p>
+    <p><b>3) Signature</b>:對「<code>base64url(header) + "." + base64url(payload)</code>」用密鑰依 <code>alg</code> 演算法計算簽章,成第三段。任何人改動前兩段都會導致驗章失敗。</p>
+    <p><b>驗證</b>:伺服器以相同密鑰(HMAC)或對應公鑰(RSA/ECDSA)重算/驗證簽章,再檢查 <code>exp</code>(未過期)、<code>nbf</code>、<code>aud</code> 等宣告,全部通過才信任。</p>
+  </div>
+  <div class="note"><b>Access / Refresh 雙權杖</b>是常見實務:access token 短效以縮小被竊風險;refresh token 較長效、存於伺服器可撤銷,用來換發新的 access token——這也是 JWT「無法即時撤銷」缺點的常見緩解手段。</div>
+</section>
+
+<!-- ============ 5. 程式碼範例 ============ -->
+<h2 class="section" id="example" style="--c:var(--purple)">5. 程式碼範例</h2>
+<p class="section-desc">一個簡單的 JWT 流程範例(語言無關虛擬碼 + 結構拆解)。</p>
+
+<section class="req" id="example-card" style="--c:var(--purple)">
+  <h3><span class="no">範例</span>JWT 結構與簽發 / 驗證流程</h3>
+
+  <details class="scn" open><summary>JWT 字串長相(三段拆解)</summary>
+    <div class="scn-body">
+      <p style="font-size:13.5px;margin:4px 0 8px;color:var(--muted)">同一個權杖,上方是編碼後的實際字串(以顏色標出三段),下方是解碼後的內容。</p>
+<pre><span class="h">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9</span>.<span class="p">eyJzdWIiOiIxMjMiLCJuYW1lIjoiQW1
+5IiwiZXhwIjoxNzE4NzAwMDAwfQ</span>.<span class="g">SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c</span></pre>
+<pre><span class="c">// 第一段 Header（解碼後）</span>
+<span class="h">{ "alg": "HS256", "typ": "JWT" }</span>
+
+<span class="c">// 第二段 Payload（解碼後 — 任何人都能讀,勿放機密）</span>
+<span class="p">{ "sub": "123", "name": "Amy", "role": "admin", "exp": 1718700000 }</span>
+
+<span class="c">// 第三段 Signature = HMACSHA256(</span>
+<span class="c">//   base64url(header) + "." + base64url(payload), secret )</span>
+<span class="g">SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c</span></pre>
+    </div>
+  </details>
+
+  <details class="scn"><summary>簽發與驗證(語言無關虛擬碼)</summary>
+    <div class="scn-body">
+<pre><span class="c">// === 簽發(登入成功後)===</span>
+<span class="k">function</span> issueToken(user, secret) {
+  header  = { alg: <span class="s">"HS256"</span>, typ: <span class="s">"JWT"</span> }
+  payload = { sub: user.id, role: user.role,
+              iat: now(), exp: now() + <span class="s">900</span> }   <span class="c">// 15 分鐘後到期</span>
+  data = base64url(header) + <span class="s">"."</span> + base64url(payload)
+  sig  = hmacSha256(data, secret)
+  <span class="k">return</span> data + <span class="s">"."</span> + base64url(sig)
+}
+
+<span class="c">// === 驗證(每次受保護請求)===</span>
+<span class="k">function</span> verify(token, secret) {
+  [h, p, s] = token.split(<span class="s">"."</span>)
+  expected  = base64url(hmacSha256(h + <span class="s">"."</span> + p, secret))
+  <span class="k">if</span> (s != expected)        <span class="k">throw</span> <span class="s">"簽章無效"</span>   <span class="c">// 被竄改或偽造</span>
+  claims = jsonDecode(base64urlDecode(p))
+  <span class="k">if</span> (claims.exp &lt; now())   <span class="k">throw</span> <span class="s">"已過期"</span>
+  <span class="k">return</span> claims               <span class="c">// 信任 sub / role 做授權</span>
+}</pre>
+      <div class="note">Laravel 視角:若本專案真的要做 token 認證,<b>不會自刻上述邏輯</b>,而是用官方套件 <code>laravel/sanctum</code>(個人存取權杖,內建可撤銷)或 <code>laravel/passport</code>(完整 OAuth2,簽發 JWT)。自行實作簽章/驗章/金鑰輪替容易出安全漏洞。</div>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 6. 優缺點評估 ============ -->
+<h2 class="section" id="pros-cons" style="--c:var(--amber)">6. 優缺點評估</h2>
+<p class="section-desc">與同類方案(session cookie、不透明 token)相比的取捨。</p>
+
+<div class="twocol">
+  <div class="col pro">
+    <h4>優勢</h4>
+    <ul>
+      <li><b>無狀態</b>:伺服器免存 session,水平擴展與無共享部署簡單。</li>
+      <li><b>跨域 / 跨服務</b>:用 <code>Authorization</code> header 攜帶,不受 cookie 同源限制;非對稱簽章讓多服務只憑公鑰即可互信。</li>
+      <li><b>自帶宣告</b>:角色、權限可直接放進權杖,授權時免再查庫(注意時效)。</li>
+      <li><b>標準化、生態成熟</b>:RFC 7519,各語言函式庫齊全,與 OAuth2 / OIDC 無縫接軌。</li>
+      <li><b>效能</b>:驗章是本地運算,省去每次請求的 session 查詢。</li>
+    </ul>
+  </div>
+  <div class="col con">
+    <h4>潛在限制 / 缺點</h4>
+    <ul>
+      <li><b>難以即時撤銷</b>:權杖一旦簽發,在 <code>exp</code> 前都有效;要立即登出/封鎖需額外 blocklist 或短 exp + refresh,<b>反而退回有狀態</b>,抵銷無狀態優勢。</li>
+      <li><b>payload 非機密</b>:預設只簽不加密,任何人可解碼閱讀,敏感資料不可入內(除非 JWE)。</li>
+      <li><b>體積較大</b>:比 session id(一小串)大上許多,每次請求都要傳整個權杖。</li>
+      <li><b>用戶端儲存兩難</b>:放 <code>localStorage</code> 怕 XSS 竊取;放 cookie 又得處理 CSRF——沒有完全無痛的選項。</li>
+      <li><b>金鑰 / 時鐘管理成本</b>:密鑰輪替、<code>exp</code> 依賴各端時鐘同步,維運複雜度高於 session。</li>
+      <li><b>易誤用</b>:<code>alg:none</code>、弱密鑰、不驗 <code>aud</code> 等歷史漏洞,自行實作風險高。</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============ 7. 是否適合導入 ============ -->
+<h2 class="section" id="fit" style="--c:var(--gray)">7. 本專案是否適合導入</h2>
+<p class="section-desc">依本後端目前的認證架構現況評估。</p>
+
+<section class="req excluded" id="fit-card" style="--c:var(--gray)">
+  <h3><span class="no">評估</span>結論與理由</h3>
+  <div class="verdict">
+    <strong>結論:目前不建議導入 JWT。</strong>本專案是<b>同源、有狀態的 Laravel MPA</b>,既有的 session cookie 認證已完整滿足需求;JWT 的無狀態/跨域優勢在此用不上,導入只會增加複雜度與安全面。
+  </div>
+  <div class="body" style="margin-bottom:12px"><b>現況事實(探索所得):</b></div>
+  <div class="nots">
+    <div class="not-card"><span class="x">純 session-based</span><small><code>config/auth.php</code> 僅 <code>web</code>/<code>session</code> guard;無 Sanctum / Passport / JWT 套件。</small></div>
+    <div class="not-card"><span class="x">同源 MPA,非分離式前端</span><small>Blade 伺服器渲染 + 少量原生 JS;表單傳統 POST + 頁面重載,無獨立 SPA。</small></div>
+    <div class="not-card"><span class="x">無對外 API 層</span><small>無 <code>routes/api.php</code>;無 SPA / 行動 App / 第三方服務消費此後端。</small></div>
+    <div class="not-card"><span class="x">內部使用、非公網暴露</span><small>對齊既有威脅模型;正式環境無對外連線,無跨域/跨服務認證需求。</small></div>
+  </div>
+  <div class="body" style="margin:10px 0 4px"><b>導入成本 &gt; 收益:</b></div>
+  <div class="body" style="font-size:14px">
+    需重構 <code>AuthService</code> 的登入流程改為簽發權杖、前端改帶 <code>Authorization</code> header、捨棄 Blade 的 <code>@csrf</code> 模型、權限快取從 session 改為權杖內嵌(失效更難處理)、額外的金鑰管理——而這些全是為了換取本專案<b>用不到</b>的無狀態與跨域能力。
+  </div>
+  <div class="body" style="margin:12px 0 4px"><b>何時才該重新評估:</b></div>
+  <div class="nots">
+    <div class="not-card"><span class="x" style="text-decoration:none;color:var(--blue)">出現獨立 SPA / 行動 App</span><small>前端與後端不同源、需打 API 取資料時。</small></div>
+    <div class="not-card"><span class="x" style="text-decoration:none;color:var(--blue)">對外開放 API</span><small>需供第三方或外部系統以權杖存取。</small></div>
+    <div class="not-card"><span class="x" style="text-decoration:none;color:var(--blue)">拆分為 microservices</span><small>服務間需以權杖互信。</small></div>
+  </div>
+  <div class="note">屆時的優先選項仍是 Laravel 官方的 <code>laravel/sanctum</code>(多數 SPA / 行動 App 場景足夠且可撤銷)或 <code>laravel/passport</code>(需完整 OAuth2 時),而非自刻 JWT。</div>
+</section>
+
+<footer>
+  JSON Web Token 技術選型分析 · 產出日期 2026-06-18 · 結論:本專案(同源 Laravel MPA、session 認證、內部非公網)目前不需要也不建議導入 JWT。
+  參考標準:RFC 7519(JWT)、RFC 7515(JWS)、RFC 7516(JWE)。
+</footer>
+</main>
+</div>
+
+<script>
+// 全部展開 / 收合
+const btn = document.getElementById('toggleAll');
+btn.addEventListener('click', () => {
+  const open = btn.dataset.open !== '1';
+  document.querySelectorAll('details.scn').forEach(d => d.open = open);
+  btn.dataset.open = open ? '1' : '0';
+  btn.textContent = open ? '全部收合' : '全部展開';
+});
+
+// 側欄 scroll-spy
+const links = [...document.querySelectorAll('.toc a')];
+const targets = links
+  .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+  .filter(Boolean);
+const byId = Object.fromEntries(links.map(a => [a.getAttribute('href').slice(1), a]));
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(a => a.classList.remove('active'));
+      byId[e.target.id]?.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -75% 0px' });
+targets.forEach(t => observer.observe(t));
+</script>
+</body>
+</html>

@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite';
+import { fileURLToPath, URL } from 'node:url';
 import laravel from 'laravel-vite-plugin';
+import vue from '@vitejs/plugin-vue';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
@@ -25,8 +27,14 @@ export default defineConfig({
             ],
             refresh: true,
         }),
+        vue(),
         tailwindcss(),
     ],
+    resolve: {
+        alias: {
+            '@': fileURLToPath(new URL('./resources/js', import.meta.url)),
+        },
+    },
     server: {
         host: '0.0.0.0', // 關鍵：允許外部存取
         port: 5173,      // 預設埠位

@@ -1,12 +1,10 @@
-import { autoDismissFlashes } from '../utils/flash.js';
-import { initDeleteModal } from '../utils/deleteModal.js';
+import mountIsland from '@/lib/mountIsland';
+import RowDeleteController from '@/components/RowDeleteController.vue';
+import { useFlash } from '@/composables/useFlash';
 
-document.addEventListener('DOMContentLoaded', () => {
-    autoDismissFlashes();
+useFlash().autoDismissFlashes();
+mountIsland('row-delete', RowDeleteController);
 
-    document.getElementById('per-page-select')?.addEventListener('change', () => {
-        document.getElementById('per-page-form').submit();
-    });
-
-    initDeleteModal();
+document.getElementById('per-page-select')?.addEventListener('change', () => {
+    document.getElementById('per-page-form').submit();
 });

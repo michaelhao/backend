@@ -140,28 +140,8 @@
         </div>
     @endif
 
-    {{-- 認證詳情 Modal --}}
-    <div id="cert-modal" class="modal-overlay hidden">
-        <div class="modal-panel">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">認證資訊</h3>
-            <div class="space-y-3 text-sm">
-                <div class="flex gap-2">
-                    <span class="text-gray-500 w-24 flex-shrink-0">統一編號：</span>
-                    <span id="modal-business-number" class="text-gray-800 font-mono"></span>
-                </div>
-                <div class="flex gap-2">
-                    <span class="text-gray-500 w-24 flex-shrink-0">公司名稱：</span>
-                    <span id="modal-company-name" class="text-gray-800"></span>
-                </div>
-            </div>
-            <div class="mt-6 flex justify-end">
-                <button id="cert-modal-close"
-                        class="bg-gray-100 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors">
-                    關閉
-                </button>
-            </div>
-        </div>
-    </div>
+    {{-- 認證詳情 Modal (Vue island) --}}
+    <div id="cert-badge-modal"></div>
 @endsection
 
 @push('scripts')
