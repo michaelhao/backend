@@ -13,7 +13,7 @@ class DocsController extends Controller
      *
      * @var list<string>
      */
-    private const TECH_DIRS = ['jwt', 'nuxt-vue', 'chat'];
+    private const TECH_DIRS = ['jwt', 'nuxt-vue', 'chat', 'redis'];
 
     public function index(): View
     {
