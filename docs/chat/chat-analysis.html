@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>聊天功能 — 既有實作技術梳理(as-built)</title>
+<title>聊天功能 — 實際運作機制(逐層呼叫鏈)</title>
 <style>
   :root {
     --ink: #1e293b;
@@ -92,6 +92,11 @@
   .meta span { white-space: nowrap; }
   .legend { font-size: 12.5px; color: var(--muted); margin: 4px 0 24px; display: flex; flex-wrap: wrap; gap: 6px 16px; }
 
+  /* ===== 工具列 ===== */
+  .toolbar { position: sticky; top: 0; z-index: 5; margin: 0 0 10px; padding: 8px 0; background: linear-gradient(var(--bg) 70%, transparent); }
+  .toolbar button { font: inherit; font-size: 12.5px; cursor: pointer; border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 5px 12px; color: var(--ink); }
+  .toolbar button:hover { background: #f1f5f9; }
+
   /* ===== 區段標題 ===== */
   h2.section {
     font-size: 20px; margin: 48px 0 8px;
@@ -112,7 +117,7 @@
   .tag.bad { background: var(--red-bg); color: var(--red); border:1px solid #fecaca; }
   .tag.info { background: var(--blue-bg); color: var(--blue); border:1px solid var(--blue-line); }
 
-  /* ===== 流程圖(沿用 spec/architecture 系列元件) ===== */
+  /* ===== 流程圖 ===== */
   .flow {
     background: var(--card); border: 1px solid var(--line); border-radius: 12px;
     padding: 22px 24px; margin: 12px 0 18px; overflow-x: auto;
@@ -137,8 +142,28 @@
   }
   .farrow::after { content: "→"; display: block; font-size: 16px; color: #94a3b8; }
 
+  /* ===== 兩欄對比(設計取捨) ===== */
+  .twocol { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 10px 0 18px; }
+  .col { border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; background: var(--card); }
+  .col.pro { border-top: 4px solid var(--green); }
+  .col.con { border-top: 4px solid var(--red); }
+  .col h4 { margin: 0 0 8px; font-size: 14.5px; }
+  .col.pro h4 { color: var(--green); }
+  .col.con h4 { color: var(--red); }
+  .col ul { margin: 0; padding-left: 18px; font-size: 13px; }
+  .col ul li { margin: 5px 0; }
+  .col ul li b { color: var(--ink); }
+
+  /* ===== 可摺疊(坑點/邊界情況) ===== */
+  details.scn { border: 1px solid var(--line); border-radius: 10px; margin: 10px 0; background: var(--card); overflow: hidden; }
+  details.scn > summary { cursor: pointer; padding: 10px 16px; font-weight: 600; font-size: 13.5px; background: #f8fafc; list-style: none; }
+  details.scn > summary::-webkit-details-marker { display: none; }
+  details.scn > summary::before { content: "▸"; color: var(--muted); margin-right: 8px; }
+  details.scn[open] > summary::before { content: "▾"; }
+  .scn-body { padding: 4px 16px 14px; font-size: 13.5px; }
+
   /* ===== 表格 ===== */
-  table.cmp { border-collapse: collapse; width: 100%; font-size: 13.5px; margin: 10px 0 18px; }
+  table.cmp { border-collapse: collapse; width: 100%; font-size: 13px; margin: 10px 0 18px; }
   table.cmp th, table.cmp td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
   table.cmp th { background: #f1f5f9; font-size: 12.5px; }
   table.cmp tr.hl td { background: var(--blue-bg); }
@@ -157,18 +182,12 @@
   .code-label { font-size: 12.5px; color: var(--muted); margin: 16px 0 0; font-weight: 600; }
   .code-label code { font-weight: 400; }
 
-  /* ===== 檢查清單 ===== */
-  .checklist { list-style: none; padding-left: 0; }
-  .checklist li { padding-left: 26px; position: relative; margin: 7px 0; font-size: 14px; }
-  .checklist li.ok::before { content: "✓"; position: absolute; left: 0; color: var(--green); font-weight: 700; }
-  .checklist li.warn::before { content: "!"; position: absolute; left: 4px; color: var(--amber); font-weight: 700; }
-  .checklist li.bad::before { content: "✕"; position: absolute; left: 2px; color: var(--red); font-weight: 700; }
-
   footer { margin-top: 56px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
 
   @media (max-width: 880px) {
     nav.toc { display: none; }
     main { padding: 20px 18px 64px; }
+    .twocol { grid-template-columns: 1fr; }
   }
   @media print { nav.toc { display: none; } }
 </style>
@@ -177,57 +196,29 @@
 <div class="layout">
 
 <nav class="toc" id="toc">
-  <div class="toc-title">聊天功能 · 技術梳理<small>as-built / 讀碼產出 · 2026-06-16</small></div>
+  <div class="toc-title">聊天功能 · 運作機制<small>逐層呼叫鏈 · 讀碼產出 · 2026-06-22</small></div>
 
   <div class="toc-group">
     <div class="toc-group-label">總覽</div>
     <a href="#overview">架構總覽與技術棧</a>
+    <a href="#endpoints">七個進入點(路由表)</a>
   </div>
   <div class="toc-group">
-    <div class="toc-group-label"><span class="dot" style="background:var(--blue)"></span>一、完整流程</div>
-    <a href="#s1">流程總圖</a>
-    <a href="#s1-1">1. 發起對話</a>
-    <a href="#s1-2">2. 送出訊息(樂觀)</a>
-    <a href="#s1-3">3. 廣播與接收</a>
-    <a href="#s1-4">4. 已讀 / 未讀</a>
-    <a href="#s1-5">5. 儲存與顯示</a>
+    <div class="toc-group-label"><span class="dot" style="background:var(--blue)"></span>逐層呼叫鏈</div>
+    <a href="#chain-send">A. 送出訊息</a>
+    <a href="#chain-start">B. 發起 / 取得對話</a>
+    <a href="#chain-read">C. 讀清單 / 訊息分頁</a>
+    <a href="#chain-read-state">D. 已讀與未讀計數</a>
   </div>
   <div class="toc-group">
-    <div class="toc-group-label"><span class="dot" style="background:var(--amber)"></span>二、技術選型與機制</div>
-    <a href="#s2-1">技術棧與角色</a>
-    <a href="#s2-2">為何不是 Polling</a>
-    <a href="#s2-3">無 Echo 的降級行為</a>
+    <div class="toc-group-label"><span class="dot" style="background:var(--cyan)"></span>即時傳輸</div>
+    <a href="#realtime">廣播事件與頻道授權</a>
+    <a href="#realtime-front">前端訂閱鏈路</a>
+    <a href="#realtime-dedup">樂觀送出與去重</a>
   </div>
   <div class="toc-group">
-    <div class="toc-group-label"><span class="dot" style="background:var(--green)"></span>三、資料庫與模型</div>
-    <a href="#s3-1">三張資料表</a>
-    <a href="#s3-2">關聯拓撲</a>
-    <a href="#s3-3">索引與 Unique 評估</a>
-  </div>
-  <div class="toc-group">
-    <div class="toc-group-label"><span class="dot" style="background:var(--violet)"></span>四、後端邏輯與 API</div>
-    <a href="#s4-1">路由與分層</a>
-    <a href="#s4-2">核心 API 邏輯</a>
-    <a href="#s4-3">N+1 與 Eager Loading</a>
-    <a href="#s4-4">交易與一致性</a>
-    <a href="#s4-5">三層授權</a>
-  </div>
-  <div class="toc-group">
-    <div class="toc-group-label"><span class="dot" style="background:var(--cyan)"></span>五、傳輸與前後端協作</div>
-    <a href="#s5-1">頻道與廣播事件</a>
-    <a href="#s5-2">前端檔案與互動</a>
-    <a href="#s5-3">樂觀送出與去重</a>
-  </div>
-  <div class="toc-group">
-    <div class="toc-group-label"><span class="dot" style="background:var(--rose)"></span>六、關鍵核心實作</div>
-    <a href="#s6-1">送訊 + 交易 + 廣播</a>
-    <a href="#s6-2">批次未讀計數</a>
-    <a href="#s6-3">並發容錯建立對話</a>
-    <a href="#s6-4">前端 settle 去重</a>
-  </div>
-  <div class="toc-group">
-    <div class="toc-group-label"><span class="dot" style="background:var(--gray)"></span>七、風險評估與建議</div>
-    <a href="#s7">評估總表</a>
+    <div class="toc-group-label"><span class="dot" style="background:var(--green)"></span>資料層</div>
+    <a href="#schema">三張表與索引</a>
   </div>
   <div class="toc-group">
     <div class="toc-group-label">附錄</div>
@@ -237,373 +228,176 @@
 
 <main>
 <header>
-  <h1>聊天功能 — 既有實作技術梳理(as-built)</h1>
-  <div class="sub">後台一對一即時聊天:完整流程、技術機制、資料模型、後端邏輯、傳輸協作與風險評估</div>
+  <h1>聊天功能 — 實際運作機制(逐層呼叫鏈)</h1>
+  <div class="sub">後台一對一即時聊天:每個操作從 Controller 一路追到 DB,逐 method 說明做什麼、呼叫誰、為什麼這樣設計</div>
   <div class="banner">
     <strong>本文定位:</strong>忠實描述<strong>本專案目前真實程式碼</strong>(Laravel 13 + Reverb + 三張 <code>chat_*</code> 表)。
-    與同目錄另兩份文件分工:<code>chat-spec.html</code> 是<strong>行為規格</strong>(SHALL/Scenario)、<code>chat-architecture.html</code> 是<strong>通用即時架構教學</strong>(Node/Redis 示意,非本專案實作)。本文補上「實作梳理」這一塊。
+    以「一個請求進來後逐層 method 呼叫鏈」為主軸,搭配真實程式碼節錄與設計取捨。
+    與同目錄 <code>chat-spec.html</code>(行為規格 SHALL/Scenario)分工,本文是<strong>實作運作機制</strong>。
   </div>
   <div class="meta">
     <span>📦 Laravel v13 / PHP 8.5</span>
     <span>📡 Broadcasting:Laravel Reverb</span>
-    <span>🖥 前端:Vanilla JS + Laravel Echo</span>
-    <span>🗂 分層:Controller → Service → Repository</span>
+    <span>🖥 前端:Vue island + Laravel Echo</span>
+    <span>🗂 分層:Controller → Service → Repository → Model</span>
   </div>
   <div class="legend">
-    <span><span class="tag ok">✓ 已具備</span> 既有實作已處理</span>
-    <span><span class="tag warn">! 可改進</span> 現況可用、量大時建議優化</span>
-    <span><span class="tag bad">✕ 缺漏</span> 目前缺少</span>
+    <span><span class="tag info">鏈路</span> 一條 method 呼叫鏈</span>
+    <span><span class="tag ok">為什麼</span> 設計取捨</span>
+    <span><span class="tag warn">坑點</span> 邊界情況 / 容錯</span>
   </div>
 </header>
 
+<div class="toolbar"><button id="toggleAll" data-open="0">全部展開坑點</button></div>
+
 <!-- ===== 總覽 ===== -->
 <h2 class="section" id="overview" style="--c:#94a3b8">架構總覽與技術棧</h2>
-<p class="section-desc">一則訊息從「A 按下送出」到「B 螢幕渲染」的全貌;先看一張圖,再逐段深入。</p>
+<p class="section-desc">一則訊息從「A 按下送出」到「B 螢幕渲染」的全貌;先看一張圖,再逐條呼叫鏈深入。核心原則:<strong>先寫 DB(真相來源)、後廣播(即時通知)</strong>。</p>
 <div class="flow">
   <h4>系統元件與資料流</h4>
   <div class="frow">
     <div class="fnode start">瀏覽器 A<small>樂觀渲染「傳送中…」</small></div>
     <div class="farrow">HTTP POST</div>
-    <div class="fnode">Laravel(ChatService)<small>assertParticipant 鑑權</small></div>
+    <div class="fnode">ChatController<br>→ ChatService<small>assertParticipant 鑑權</small></div>
     <div class="farrow"></div>
     <div class="fnode store">DB::transaction<small>寫 chat_messages<br>+ 更新對話摘要</small></div>
-    <div class="farrow">event</div>
+    <div class="farrow">event()</div>
     <div class="fnode gate">Reverb(WebSocket)<small>私有頻道扇出<br>ShouldBroadcastNow</small></div>
     <div class="farrow">.message.sent</div>
-    <div class="fnode ok">瀏覽器 B<small>Echo 訂閱<br>去重 → 渲染 → 未讀</small></div>
+    <div class="fnode ok">瀏覽器 B<small>Echo 訂閱<br>去重 → 渲染 → 標已讀</small></div>
   </div>
 </div>
 <table class="cmp">
-  <tr><th>層</th><th>技術</th><th>角色</th></tr>
-  <tr><td>傳輸(即時)</td><td>Laravel Reverb(<code>^1.10</code>,走 Pusher 協定)</td><td>WebSocket 伺服器,負責私有/presence 頻道授權與訊息扇出</td></tr>
-  <tr><td>前端即時</td><td>laravel-echo <code>^2.3</code> + pusher-js <code>^8.5</code></td><td>訂閱頻道、收 <code>.message.sent</code>、發 typing whisper、presence 線上</td></tr>
-  <tr><td>前端 HTTP</td><td>Axios(vanilla JS,無 Vue/Alpine/React)</td><td>載對話、載歷史、送訊息、標已讀、抓未讀數</td></tr>
-  <tr><td>後端</td><td>Controller → Service → Repository</td><td>薄 Controller 驗證/回應;Service 業務邏輯;Repository 封裝 Eloquent</td></tr>
+  <tr><th>層</th><th>類別 / 檔案</th><th>角色</th></tr>
+  <tr><td>進入點</td><td><code>routes/web.php</code>(<code>auth</code> + <code>permission</code>)</td><td>7 條路由,全數要求 <code>Chat.index</code> 權限</td></tr>
+  <tr><td>Controller</td><td><code>app/Http/Controllers/ChatController.php</code></td><td>薄控制器:驗證、呼叫 Service、捕捉 <code>ChatOperationException</code> 轉 HTTP 狀態碼、回 JSON / View</td></tr>
+  <tr><td>Service</td><td><code>app/Services/ChatService.php</code></td><td>業務邏輯:鑑權、交易編排、廣播、未讀計算(7 個 public method)</td></tr>
+  <tr><td>Repository</td><td><code>ChatConversationRepository</code> / <code>ChatMessageRepository</code> / <code>ChatConversationParticipantRepository</code> / <code>UserRepository</code></td><td>封裝所有 Eloquent 查詢,Service 不直接碰 ORM</td></tr>
+  <tr><td>Model</td><td><code>ChatConversation</code> / <code>ChatMessage</code> / <code>ChatConversationParticipant</code></td><td>關聯、casts、<code>otherUserId()</code></td></tr>
+  <tr><td>即時</td><td><code>app/Events/MessageSent.php</code> + <code>routes/channels.php</code></td><td>廣播事件(<code>ShouldBroadcastNow</code>)與三個頻道授權</td></tr>
+  <tr><td>前端</td><td><code>resources/js/chats/ChatApp.vue</code> / <code>composables/useEcho.js</code> / <code>bootstrap.js</code></td><td>Vue island:訂閱 Echo、樂觀送出、去重、輸入中、線上狀態</td></tr>
   <tr><td>資料</td><td>三張表 <code>chat_conversations</code> / <code>chat_messages</code> / <code>chat_conversation_participants</code></td><td>對話(canonical pair)、訊息、參與者(兼已讀回條)</td></tr>
-  <tr><td>建置</td><td>Vite(entry <code>resources/js/chats/index.js</code>)</td><td>打包聊天頁 JS;<code>bootstrap.js</code> 初始化 Echo 與全站未讀 badge</td></tr>
 </table>
 
-<!-- ===== 一、完整流程 ===== -->
-<h2 class="section" id="s1" style="--c:var(--blue)">一、聊天完整流程(Workflow)</h2>
-<p class="section-desc">送訊主流程(含失敗分支)。注意:即時送達靠 WebSocket 廣播,但「真相來源」是 DB —— 先寫入後廣播。</p>
+<!-- ===== 進入點 ===== -->
+<h2 class="section" id="endpoints" style="--c:#94a3b8">七個進入點(路由表)</h2>
+<p class="section-desc">出自 <code>routes/web.php</code>(<code>auth</code> + <code>permission</code> 群組內)。每條路由對應下面哪一條呼叫鏈,先看全貌。</p>
+<table class="cmp">
+  <tr><th>Method</th><th>URI</th><th>name</th><th>Controller@action</th><th>回傳</th><th>呼叫鏈</th></tr>
+  <tr><td>GET</td><td><code>/chats</code></td><td><code>chats.index</code></td><td><code>index</code></td><td>View</td><td><a href="#chain-read">C</a></td></tr>
+  <tr><td>GET</td><td><code>/chats/conversations</code></td><td><code>chats.conversations</code></td><td><code>conversations</code></td><td>JSON</td><td><a href="#chain-read">C</a></td></tr>
+  <tr><td>GET</td><td><code>/chats/unread-count</code></td><td><code>chats.unread-count</code></td><td><code>unreadCount</code></td><td>JSON</td><td><a href="#chain-read-state">D</a></td></tr>
+  <tr><td>POST</td><td><code>/chats/start</code></td><td><code>chats.start</code></td><td><code>start</code></td><td>JSON</td><td><a href="#chain-start">B</a></td></tr>
+  <tr><td>GET</td><td><code>/chats/{conversation}/messages</code></td><td><code>chats.messages</code></td><td><code>messages</code></td><td>JSON</td><td><a href="#chain-read">C</a></td></tr>
+  <tr class="hl"><td>POST</td><td><code>/chats/{conversation}/messages</code></td><td><code>chats.store</code></td><td><code>store</code></td><td>JSON 201</td><td><a href="#chain-send">A</a></td></tr>
+  <tr><td>PATCH</td><td><code>/chats/{conversation}/read</code></td><td><code>chats.read</code></td><td><code>markRead</code></td><td>JSON</td><td><a href="#chain-read-state">D</a></td></tr>
+</table>
+<p>所有 action 都標註 <code>#[RequiresPermission('Chat.index')]</code>,進 Controller 前由 <code>permission</code> middleware 攔截權限。</p>
+
+<!-- ===== 呼叫鏈 A:送出訊息 ===== -->
+<h2 class="section" id="chain-send" style="--c:var(--blue)">A. 送出訊息(主流程)</h2>
+<p class="section-desc"><code>POST /chats/{conversation}/messages</code>。最關鍵的一條鏈:鑑權 → 交易寫入 → 廣播。</p>
 <div class="flow">
-  <h4>送訊息流程</h4>
+  <h4>store() 逐層流程</h4>
   <div class="frow">
-    <div class="fnode start">送出<small>樂觀 append<br>status=傳送中…</small></div>
-    <div class="farrow">POST</div>
-    <div class="fnode gate">assertParticipant<small>findOrFail 404<br>非參與者 403</small></div>
+    <div class="fnode start">ChatController::store<small>SendMessageRequest<br>body 必填 / max 5000</small></div>
+    <div class="farrow"></div>
+    <div class="fnode gate">ChatService::sendMessage<small>assertParticipant<br>404 / 403 鑑權</small></div>
     <div class="farrow">通過</div>
     <div class="fnode store">DB::transaction<small>create 訊息<br>+ touchLastMessage</small></div>
+    <div class="farrow">commit</div>
+    <div class="fnode">event(MessageSent)<small>load sender → 廣播</small></div>
     <div class="farrow"></div>
-    <div class="fnode">回 201 + 廣播<small>event(MessageSent)</small></div>
-    <div class="farrow">在線</div>
-    <div class="fnode ok">接收端<small>去重 · 已讀 · 未讀 badge</small></div>
-  </div>
-  <div class="frow" style="margin-top:12px">
-    <div class="fnode fail">非參與者 → 403,不寫入</div>
-    <div class="farrow"></div>
-    <div class="fnode fail">POST 失敗且廣播未認領 → 標「傳送失敗」可重試</div>
-    <div class="farrow"></div>
-    <div class="fnode fail">對方離線 → 訊息已落地,下次開對話補拉</div>
+    <div class="fnode ok">回 201 + message<small>含 sender</small></div>
   </div>
 </div>
 
-<h3 class="sub" id="s1-1">1. 發起對話</h3>
-<ul>
-  <li>聊天頁右上下拉選單選一位使用者 → 前端 <code>POST /chats/start { target_user_id }</code>。</li>
-  <li>後端 <code>getOrCreateConversation()</code>:擋「與自己對話」→ 以 canonical pair(較小 id 放 <code>user_one_id</code>、較大放 <code>user_two_id</code>)<strong>找既有或建立</strong>,回 <code>conversation_id</code>。</li>
-  <li>建立時同時寫入兩筆 <code>chat_conversation_participants</code>(兩位使用者各一)。</li>
-</ul>
-
-<h3 class="sub" id="s1-2">2. 送出訊息(樂觀更新)</h3>
-<ul>
-  <li>前端先在本地 <strong>立即渲染</strong>一個「傳送中…」泡泡(不等伺服器),推入 <code>pendingSends[]</code> 追蹤。</li>
-  <li>同時 <code>POST /chats/{conversation}/messages { body }</code>。<code>body</code> 驗證:必填、字串、<code>max:5000</code>。</li>
-  <li>後端 <code>sendMessage()</code> 先 <code>assertParticipant()</code> 鑑權,再於 <strong>交易</strong>內寫訊息 + 更新對話摘要,提交後派發 <code>MessageSent</code> 事件。</li>
-</ul>
-
-<h3 class="sub" id="s1-3">3. 廣播與接收</h3>
-<ul>
-  <li><code>MessageSent</code> 為 <code>ShouldBroadcastNow</code>(同步、不進 queue),廣播到<strong>兩個</strong>私有頻道:接收者 <code>chat.user.{recipientId}</code> 與送出者自己 <code>chat.user.{senderId}</code>(讓送出者其他分頁/裝置同步)。</li>
-  <li>接收端 <code>bootstrap.js</code> 在 <code>chat.user.{我}</code> 收到 <code>.message.sent</code> → 派發 <code>chat:message</code> 自訂事件 + 刷新未讀 badge。</li>
-  <li>聊天頁監聽 <code>chat:message</code>:若是<strong>當前開啟</strong>的對話 → <code>appendMessage()</code> 並立即 <code>PATCH 已讀</code>;否則僅排程重載列表。</li>
-</ul>
-
-<h3 class="sub" id="s1-4">4. 已讀 / 未讀</h3>
-<ul>
-  <li>開啟對話或收到當前對話新訊息 → <code>PATCH /chats/{conversation}/read</code>,後端把該使用者的 <code>chat_conversation_participants.last_read_at</code> 設為 <code>now()</code>。</li>
-  <li>未讀數<strong>不落欄位</strong>,而是即時用「<code>last_read_at</code> 之後、非自己送的訊息」計算(見 <a href="#s6-2">6-2</a>)。</li>
-  <li>全站未讀 badge 一律向 <code>GET /chats/unread-count</code> 抓<strong>權威數字</strong>,避免多分頁本地累加飄掉。</li>
-</ul>
-
-<h3 class="sub" id="s1-5">5. 儲存與顯示</h3>
-<ul>
-  <li>訊息永久存於 <code>chat_messages</code>;對話列上的「最後訊息/時間」由 <code>chat_conversations.last_message_id / last_message_at</code> 反正規化保存(送訊時 <code>touchLastMessage()</code> 更新)。</li>
-  <li>開對話 <code>GET /chats/{conversation}/messages</code> 以 <strong>cursor 分頁</strong>(<code>before_id</code>、每頁 30、<code>id</code> 由新到舊)取回,前端反轉成由舊到新渲染。</li>
-  <li>渲染:依日期插入分隔線、同一寄件者連續訊息分組、貼底才自動捲動(否則顯示「新訊息」浮標);訊息一律 <code>textContent</code> 跳脫,杜絕 XSS。</li>
-</ul>
-
-<!-- ===== 二、技術選型 ===== -->
-<h2 class="section" id="s2-1" style="--c:var(--amber)">二、技術選型與運作機制</h2>
-<h3 class="sub">技術棧與各自角色</h3>
-<ul>
-  <li><strong>Laravel Reverb</strong>:Laravel 第一方 WebSocket 伺服器,相容 Pusher 協定。<code>.env</code> <code>BROADCAST_CONNECTION=reverb</code> + <code>REVERB_*</code>;前端用 <code>VITE_REVERB_*</code>。</li>
-  <li><strong>Laravel Echo + pusher-js</strong>:前端訂閱私有/presence 頻道。<code>.private()</code> 收訊息、<code>.whisper()/.listenForWhisper()</code> 做「輸入中」、<code>.join()</code> 做線上狀態。</li>
-  <li><strong>後端事件廣播</strong>:<code>event(new MessageSent(...))</code> → Reverb 扇出。授權在 <code>routes/channels.php</code>。</li>
-  <li><strong>Axios</strong>:所有非即時操作(載入、送出、已讀、未讀數)走一般 HTTP JSON API。</li>
-</ul>
-
-<h3 class="sub" id="s2-2">為何是 WebSocket 而不是 Polling</h3>
 <table class="cmp">
-  <tr><th>機制</th><th>本專案是否採用</th><th>說明</th></tr>
-  <tr><td>HTTP 短輪詢(setInterval 打 API)</td><td><span class="tag bad">未採用</span></td><td>程式碼中<strong>沒有</strong>定時輪詢訊息;不會每幾秒打一次 API</td></tr>
-  <tr class="hl"><td><strong>WebSocket(Reverb + Echo)</strong></td><td><span class="tag ok">採用</span></td><td>持久連線即時推送 <code>.message.sent</code>、typing、presence</td></tr>
-  <tr><td>純同步 HTTP</td><td><span class="tag warn">部分</span></td><td>載入/送出/已讀走 HTTP;但「即時收訊」靠廣播,非請求輪詢</td></tr>
-</table>
-<p>對話<strong>列表</strong>的刷新也不是輪詢:收到廣播事件後以 <code>scheduleListReload()</code>(300ms debounce)收斂成一次重載,避免每則訊息都整包重抓。</p>
-
-<h3 class="sub" id="s2-3">無 Echo 時的降級行為</h3>
-<div class="card-box">
-  <p><code>bootstrap.js</code> 只有在 <code>VITE_REVERB_APP_KEY</code> 與 <code>meta[name="user-id"]</code> 都存在時才初始化 <code>window.Echo</code>;聊天頁的即時功能也都包在 <code>if (window.Echo)</code> 內。因此<strong>未設定 Reverb 時頁面仍可運作</strong>:</p>
-  <ul>
-    <li>✅ 仍可:載入對話/歷史、送訊息(POST)、標已讀、未讀 badge(進頁面抓一次)。</li>
-    <li>❌ 失去:即時收新訊息(需重新整理)、輸入中提示、線上狀態、跨分頁同步。</li>
-  </ul>
-</div>
-
-<!-- ===== 三、資料庫與模型 ===== -->
-<h2 class="section" id="s3-1" style="--c:var(--green)">三、資料庫與模型層</h2>
-<p class="section-desc">三張表,皆 <code>2026_06_15</code> 的 migration。欄位採 <code>created_at/updated_at</code>、<code>datetime</code> 格式(專案 migrate 規範)。</p>
-
-<p class="code-label"><code>chat_conversations</code> — 一對對話(canonical pair)</p>
-<table class="cmp">
-  <tr><th>欄位</th><th>型別</th><th>約束 / 索引</th><th>說明</th></tr>
-  <tr><td>id</td><td>bigint PK</td><td>—</td><td>對話 id</td></tr>
-  <tr><td>user_one_id</td><td>unsignedInteger</td><td rowspan="2"><span class="tag ok">UNIQUE</span> <code>chat_conv_pair_unique</code>(成對)</td><td>較小的 user id</td></tr>
-  <tr><td>user_two_id</td><td>unsignedInteger</td><td>較大的 user id</td></tr>
-  <tr><td>last_message_id</td><td>unsignedInteger?</td><td>—(非外鍵)</td><td>反正規化:最後一則訊息 id</td></tr>
-  <tr><td>last_message_at</td><td>datetime?</td><td><span class="tag info">INDEX</span></td><td>反正規化:列表排序用</td></tr>
+  <tr><th>層</th><th>method(簽章)</th><th>做什麼</th><th>呼叫誰</th></tr>
+  <tr><td>Controller</td><td><code>store(SendMessageRequest $request, int $conversation): JsonResponse</code></td><td>取已驗證 <code>body</code>、傳入 <code>auth()-&gt;id()</code>;捕捉 <code>ChatOperationException</code> → 403;成功回 <code>201</code></td><td>→ <code>ChatService::sendMessage</code></td></tr>
+  <tr><td>Service</td><td><code>sendMessage(int $conversationId, int $senderId, string $body): ChatMessage</code></td><td>先鑑權,再以交易寫入,最後廣播事件</td><td>→ <code>assertParticipant</code> → <code>DB::transaction</code> → <code>event()</code></td></tr>
+  <tr><td>Service</td><td><code>assertParticipant(int $conversationId, int $userId): ChatConversation</code></td><td>取對話,確認 user 是 <code>user_one_id</code> 或 <code>user_two_id</code>,否則丟例外</td><td>→ <code>ChatConversationRepository::findOrFail</code></td></tr>
+  <tr><td>Repository</td><td><code>ChatMessageRepository::create(array $data): ChatMessage</code></td><td><code>INSERT</code> 一筆訊息(<code>conversation_id, sender_id, body</code>)</td><td>→ <code>ChatMessage::create</code></td></tr>
+  <tr><td>Repository</td><td><code>ChatConversationRepository::touchLastMessage($conversation, $message): void</code></td><td>更新對話的 <code>last_message_id</code> / <code>last_message_at</code>(供清單排序與預覽)</td><td>→ <code>$conversation-&gt;update</code></td></tr>
+  <tr><td>Event</td><td><code>event(new MessageSent($message-&gt;load('sender:id,name'), $recipientId))</code></td><td>把訊息扇出到接收者與寄件者自己的私有頻道</td><td>→ Reverb(見<a href="#realtime">即時傳輸</a>)</td></tr>
 </table>
 
-<p class="code-label"><code>chat_messages</code> — 訊息</p>
-<table class="cmp">
-  <tr><th>欄位</th><th>型別</th><th>約束 / 索引</th><th>說明</th></tr>
-  <tr><td>id</td><td>bigint PK</td><td>—</td><td>訊息 id(亦作 cursor 分頁游標)</td></tr>
-  <tr><td>conversation_id</td><td>unsignedInteger</td><td rowspan="2"><span class="tag info">INDEX</span> <code>chat_msg_conv_idx</code> = (conversation_id, id)</td><td>所屬對話</td></tr>
-  <tr><td>sender_id</td><td>unsignedInteger</td><td>寄件者(<span class="tag warn">無獨立索引</span>)</td></tr>
-  <tr><td>body</td><td>text</td><td>—</td><td>內容</td></tr>
-  <tr><td>created_at</td><td>datetime?</td><td><span class="tag warn">無獨立索引</span></td><td>未讀計算用 <code>created_at &gt; last_read_at</code></td></tr>
-</table>
-
-<p class="code-label"><code>chat_conversation_participants</code> — 參與者(兼「已讀回條」)</p>
-<table class="cmp">
-  <tr><th>欄位</th><th>型別</th><th>約束 / 索引</th><th>說明</th></tr>
-  <tr><td>id</td><td>bigint PK</td><td>—</td><td>—</td></tr>
-  <tr><td>conversation_id</td><td>unsignedInteger</td><td rowspan="2"><span class="tag ok">UNIQUE</span> <code>chat_participant_unique</code>(conversation_id, user_id)</td><td>所屬對話</td></tr>
-  <tr><td>user_id</td><td>unsignedInteger</td><td>參與者(另有 <span class="tag info">INDEX</span> user_id)</td></tr>
-  <tr><td>last_read_at</td><td>datetime?</td><td>—</td><td>該使用者最後已讀時間;未讀計算基準</td></tr>
-</table>
-
-<h3 class="sub" id="s3-2">關聯拓撲</h3>
-<ul>
-  <li><strong>User ↔ Conversation</strong>:透過 <code>user_one_id</code> / <code>user_two_id</code> 兩個 <code>belongsTo</code>。對話正規化成 canonical min/max pair,等同<strong>一對一對話的唯一化</strong>(非傳統 M2M pivot)。</li>
-  <li><strong>Conversation 1—∗ Message</strong>(<code>hasMany messages</code>);另有 <code>belongsTo lastMessage</code> 指反正規化的最後一則。</li>
-  <li><strong>Conversation 1—∗ Participant</strong>(<code>hasMany participants</code>,恰 2 筆)。<code>participants</code> 表本質是「<strong>每位使用者在此對話的已讀回條</strong>」,不是傳統多對多中介表。</li>
-  <li>Model 方法:<code>ChatConversation::otherUserId($userId)</code> 由 pair 推出對方 id;<code>User::chatParticipants()</code> hasMany。</li>
-</ul>
-
-<h3 class="sub" id="s3-3">索引與 Unique Constraint 評估</h3>
-<table class="cmp">
-  <tr><th>面向</th><th>現況</th><th>評估</th></tr>
-  <tr><td>重複對話防護</td><td><code>UNIQUE(user_one_id, user_two_id)</code> + canonical pair</td><td><span class="tag ok">✓ 足夠</span>;併發撞鍵由 Service catch 後 findPair 收斂</td></tr>
-  <tr><td>重複參與者防護</td><td><code>UNIQUE(conversation_id, user_id)</code></td><td><span class="tag ok">✓ 足夠</span></td></tr>
-  <tr><td>訊息分頁/排序</td><td><code>(conversation_id, id)</code> 複合索引</td><td><span class="tag ok">✓ 良好</span>,正好吻合 <code>WHERE conversation_id=? ORDER BY id DESC</code></td></tr>
-  <tr><td>找使用者的對話</td><td><code>user_id</code> 索引(participants)+ conversations 雙欄 <code>where/orWhere</code></td><td><span class="tag ok">✓ 可用</span></td></tr>
-  <tr><td>未讀計數的時間比較</td><td>依賴 <code>chat_messages.created_at &gt; last_read_at</code>,但 <code>created_at</code> <strong>無索引</strong></td><td><span class="tag warn">! 量大時偏慢</span>;走 conversation_id 前綴後仍需逐列比 created_at</td></tr>
-  <tr><td>外鍵 / 參照完整性</td><td><strong>全表無 DB 外鍵</strong>(<code>conversation_id</code>/<code>sender_id</code>/<code>user_id</code> 皆無 FK)</td><td><span class="tag warn">! 靠應用層</span>;刪 user 不連動,可能留孤兒(已用 null 容錯,見下)</td></tr>
-  <tr><td>last_message 一致性</td><td><code>last_message_id</code> 反正規化、非外鍵</td><td><span class="tag warn">! 註記</span>;目前無刪訊息功能故不會 stale,未來若支援刪訊息需同步維護</td></tr>
-</table>
-<p><strong>有沒有漏 Unique 導致重複資料?</strong> —— 沒有。對話與參與者兩處該有的唯一鍵都在,真正「缺」的是 DB 外鍵(本專案改以應用層容錯替代,見 <a href="#s4-2">4-2</a> 的孤兒對話處理)。</p>
-
-<!-- ===== 四、後端邏輯與 API ===== -->
-<h2 class="section" id="s4-1" style="--c:var(--violet)">四、後端業務邏輯與 API</h2>
-<h3 class="sub">路由與分層</h3>
-<p>全部在 <code>auth → permission</code> 中介層群組內,且每個方法標 <code>#[RequiresPermission('Chat.index')]</code>。</p>
-<table class="cmp">
-  <tr><th>方法</th><th>URI</th><th>Controller</th><th>用途</th></tr>
-  <tr><td>GET</td><td>/chats</td><td>index</td><td>聊天頁(Blade view + 初始資料)</td></tr>
-  <tr><td>GET</td><td>/chats/conversations</td><td>conversations</td><td>對話列表(JSON)</td></tr>
-  <tr><td>GET</td><td>/chats/unread-count</td><td>unreadCount</td><td>全站未讀總數</td></tr>
-  <tr><td>POST</td><td>/chats/start</td><td>start</td><td>建立/取得對話</td></tr>
-  <tr><td>GET</td><td>/chats/{conversation}/messages</td><td>messages</td><td>歷史訊息(cursor <code>before_id</code>)</td></tr>
-  <tr><td>POST</td><td>/chats/{conversation}/messages</td><td>store</td><td>送訊息(回 201)</td></tr>
-  <tr><td>PATCH</td><td>/chats/{conversation}/read</td><td>markRead</td><td>標記已讀,回新的未讀總數</td></tr>
-</table>
-<p>分層:<strong>薄 Controller</strong>(僅驗證 FormRequest、呼叫 Service、回 JSON;<code>ChatOperationException</code> 轉 422/403)→ <strong>ChatService</strong>(業務邏輯)→ <strong>3 個 Repository</strong>(<code>ChatConversationRepository</code> / <code>ChatMessageRepository</code> / <code>ChatConversationParticipantRepository</code>)+ <code>UserRepository</code>。</p>
-
-<h3 class="sub" id="s4-2">核心 API 邏輯</h3>
-<ul>
-  <li><strong>對話列表</strong> <code>listConversations()</code>:先取批次未讀 map,再取對話(eager userOne/userTwo/lastMessage),map 成輸出;<strong>對方已被刪除</strong>(無 FK)時回 <code>null</code> 並 <code>filter()</code> 掉,避免存取 null 而 500。</li>
-  <li><strong>建立對話</strong> <code>getOrCreateConversation()</code>:擋自我對話 → findPair → 不存在則 <code>createWithParticipants()</code>;併發撞 unique 時 catch 後重新 findPair(見 <a href="#s6-3">6-3</a>)。</li>
-  <li><strong>取歷史</strong> <code>getMessages()</code>:先 <code>assertParticipant()</code> 再 <code>paginateForConversation()</code>(cursor)。</li>
-  <li><strong>送訊息</strong> <code>sendMessage()</code>:鑑權 → 交易(寫訊息 + touchLastMessage)→ 廣播(見 <a href="#s6-1">6-1</a>)。</li>
-  <li><strong>標已讀</strong> <code>markAsRead()</code>:鑑權 → 更新 <code>last_read_at</code> → 回 <code>totalUnread()</code>。</li>
-</ul>
-
-<h3 class="sub" id="s4-3">N+1 與 Eager Loading 評估 <span class="tag ok">✓ 無 N+1</span></h3>
-<table class="cmp">
-  <tr><th>操作</th><th>查詢數</th><th>預載入</th></tr>
-  <tr><td>對話列表</td><td><strong>2</strong>(未讀批次 1 + 對話 1)</td><td><code>with(['userOne:id,name','userTwo:id,name','lastMessage'])</code></td></tr>
-  <tr><td>歷史訊息</td><td><strong>1</strong></td><td><code>with('sender:id,name')</code></td></tr>
-  <tr><td>未讀計數</td><td><strong>1</strong>(JOIN + GROUP BY 批次)</td><td>不需,單一聚合查詢</td></tr>
-</table>
-<p class="code-label">對話列表 — 一次預載入避免逐列查使用者 · <code>app/Repositories/ChatConversationRepository.php</code></p>
-<pre class="code"><code>ChatConversation::with(['userOne:id,name', 'userTwo:id,name', 'lastMessage'])
-    -&gt;where(fn ($q) =&gt; $q-&gt;where('user_one_id', $userId)-&gt;orWhere('user_two_id', $userId))
-    -&gt;orderByDesc('last_message_at')
-    -&gt;get();</code></pre>
-<p>未讀數採<strong>單次批次查詢</strong>回 <code>[conversationId =&gt; 未讀數]</code>,而非每個對話各查一次(那才會 N+1)。<code>totalUnreadFor()</code> 直接 <code>array_sum()</code> 同一份結果,兩處未讀定義共用,不會走樣。</p>
-
-<h3 class="sub" id="s4-4">交易與一致性 <span class="tag ok">✓ 有用 DB::transaction</span></h3>
-<ul>
-  <li><strong>送訊息</strong>:寫 <code>chat_messages</code> + 更新對話 <code>last_message_*</code> 包在同一 <code>DB::transaction</code> —— 全有或全無,不會出現「有訊息但對話摘要沒更新」。</li>
-  <li><strong>建立對話</strong>:<code>createWithParticipants()</code> 把對話 + 兩筆參與者包在交易內。</li>
-  <li><strong>廣播時機</strong>:<code>event()</code> 在交易<strong>提交後</strong>才派發,確保推播出去的訊息一定已落地 DB。</li>
-</ul>
-
-<h3 class="sub" id="s4-5">三層授權</h3>
-<ul>
-  <li><strong>路由層</strong>:<code>permission</code> 中介層 + <code>#[RequiresPermission('Chat.index')]</code>。</li>
-  <li><strong>業務層</strong>:<code>assertParticipant()</code> = <code>findOrFail</code>(不存在 404)+ 比對 <code>user_one_id/user_two_id</code>(非參與者丟 <code>ChatOperationException</code> → 403)。直接用對話自身欄位判斷,<strong>省一次 participants 查詢</strong>。</li>
-  <li><strong>頻道層</strong>:<code>routes/channels.php</code> 對 <code>chat.user.{id}</code>(本人)、<code>chat.conversation.{id}</code>(isParticipant)、<code>chat.online</code>(presence)做授權。</li>
-</ul>
-
-<!-- ===== 五、傳輸與前後端協作 ===== -->
-<h2 class="section" id="s5-1" style="--c:var(--cyan)">五、傳輸機制與前後端協作</h2>
-<h3 class="sub">頻道與廣播事件</h3>
-<ul>
-  <li><code>MessageSent implements ShouldBroadcastNow</code> —— <strong>同步</strong>廣播(不進 queue),在送訊 request 內直接打 Reverb。</li>
-  <li><code>broadcastOn()</code> 回兩個 <code>PrivateChannel</code>:<code>chat.user.{recipientId}</code> 與 <code>chat.user.{senderId}</code>(送出者多裝置同步,前端再以訊息 id 去重)。</li>
-  <li><code>broadcastAs()</code> = <code>message.sent</code>;<code>broadcastWith()</code> 帶 <code>id, conversation_id, sender_id, sender_name, body, created_at</code>。</li>
-  <li>對話頻道 <code>chat.conversation.{id}</code> <strong>只承載「輸入中」whisper</strong>(訊息本身走個人頻道)。</li>
-</ul>
-<p class="code-label">頻道授權 · <code>routes/channels.php</code></p>
-<pre class="code"><code>// 私有頻道：個人頻道，承載 message.sent
-Broadcast::channel('chat.user.{userId}', function ($user, int $userId) {
-    return (int) $user-&gt;id === $userId;
-});
-
-// 私有頻道：對話頻道，僅承載「輸入中」whisper；參與者判斷重用 repository
-Broadcast::channel('chat.conversation.{conversationId}', function ($user, int $conversationId) {
-    return app(ChatConversationRepository::class)-&gt;isParticipant($conversationId, (int) $user-&gt;id);
-});
-
-// Presence 頻道：全後台線上狀態
-Broadcast::channel('chat.online', function ($user) {
-    return ['id' =&gt; $user-&gt;id, 'name' =&gt; $user-&gt;name];
-});</code></pre>
-
-<h3 class="sub" id="s5-2">前端檔案與互動</h3>
-<table class="cmp">
-  <tr><th>檔案</th><th>職責</th></tr>
-  <tr><td><code>resources/views/admin/chats/index.blade.php</code></td><td>版面:左對話列(骨架/空/錯誤態)、右訊息串(標頭/訊息/輸入中/輸入框)、root <code>#chat-app[data-user-id]</code></td></tr>
-  <tr><td><code>resources/js/bootstrap.js</code></td><td>Axios CSRF;條件式初始化 Echo;訂閱個人頻道 → 派發 <code>chat:message</code> + <code>refreshChatBadge()</code></td></tr>
-  <tr><td><code>resources/js/chats/index.js</code>(~535 行)</td><td>對話列、開對話、樂觀送出、去重渲染、輸入中 whisper、presence 線上點</td></tr>
-  <tr><td><code>resources/css/components/chat.css</code></td><td>泡泡、頭像、未讀 badge、線上點、輸入中動畫、骨架、「新訊息」浮標</td></tr>
-</table>
-<p class="code-label">Echo 訂閱個人頻道 · <code>resources/js/bootstrap.js</code></p>
-<pre class="code"><code>window.Echo = new Echo({
-    broadcaster: 'reverb',
-    key: reverbKey,
-    wsHost: import.meta.env.VITE_REVERB_HOST,
-    wsPort: reverbPort, wssPort: reverbPort,
-    forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
-    enabledTransports: ['ws', 'wss'],
-});
-
-// 收新訊息 → 丟給聊天頁(若開著)+ 刷新未讀 badge
-window.Echo.private(`chat.user.${window.currentUserId}`).listen('.message.sent', (event) =&gt; {
-    window.dispatchEvent(new CustomEvent('chat:message', { detail: event }));
-    window.refreshChatBadge();
-});</code></pre>
-<p><strong>互動流程速覽</strong>(前端呼叫的端點):載入列表 <code>GET /chats/conversations</code> → 開對話 <code>GET /chats/{id}/messages</code> + <code>PATCH /chats/{id}/read</code> → 送訊 <code>POST /chats/{id}/messages</code> → 收訊(Echo <code>.message.sent</code>)→ 開新對話 <code>POST /chats/start</code>。</p>
-
-<h3 class="sub" id="s5-3">樂觀送出與去重(前端最關鍵的一致性處理)</h3>
-<ul>
-  <li><strong>樂觀渲染</strong>:送出即顯示「傳送中…」泡泡並推入 <code>pendingSends[]</code>。</li>
-  <li><strong>雙到達來源</strong>:同一則訊息會<strong>同時</strong>從「POST 回應」與「自身廣播」回來 → 用 <code>renderedMessageIds</code>(Set)+ <code>settle()</code> 單一收斂點去重。</li>
-  <li><strong>失敗判定</strong>:POST 失敗時,若廣播已先認領(<code>settled</code>)→ 視為成功不重送(避免重複);只有<strong>真的兩邊都沒成功</strong>才標「傳送失敗」並給「重試」。</li>
-</ul>
-
-<!-- ===== 六、關鍵核心實作 ===== -->
-<h2 class="section" id="s6-1" style="--c:var(--rose)">六、關鍵核心實作(真實程式碼)</h2>
-<p class="section-desc">以下皆為專案<strong>實際程式碼</strong>節錄,非示意。</p>
-
-<h3 class="sub">6-1. 送訊:交易內寫入 + 交易後廣播</h3>
-<p class="code-label"><code>app/Services/ChatService.php</code></p>
+<p class="code-label">真實實作 — <code>app/Services/ChatService.php</code> ::sendMessage()</p>
 <pre class="code"><code>public function sendMessage(int $conversationId, int $senderId, string $body): ChatMessage
 {
-    // 先驗證 user 為對話參與者，否則丟 ChatOperationException → 403
-    $conversation = $this-&gt;assertParticipant($conversationId, $senderId);
+    $conversation = $this->assertParticipant($conversationId, $senderId);
 
-    // 寫訊息 + 更新對話摘要(last_message_id/at)同屬一筆交易：全有或全無
     $message = DB::transaction(function () use ($conversation, $senderId, $body): ChatMessage {
-        $message = $this-&gt;messageRepository-&gt;create([
-            'conversation_id' =&gt; $conversation-&gt;id,
-            'sender_id' =&gt; $senderId,
-            'body' =&gt; $body,
+        $message = $this->messageRepository->create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => $senderId,
+            'body' => $body,
         ]);
-        $this-&gt;conversationRepository-&gt;touchLastMessage($conversation, $message);
+        $this->conversationRepository->touchLastMessage($conversation, $message);
 
         return $message;
     });
 
-    // 交易提交後才廣播：確保推播出去的訊息一定已落地(同步 ShouldBroadcastNow)
-    event(new MessageSent($message-&gt;load('sender:id,name'), $conversation-&gt;otherUserId($senderId)));
+    event(new MessageSent($message->load('sender:id,name'), $conversation->otherUserId($senderId)));
 
     return $message;
 }</code></pre>
 
-<h3 class="sub" id="s6-2">6-2. 批次未讀計數(避免 N+1 的核心)</h3>
-<p class="code-label"><code>app/Repositories/ChatMessageRepository.php</code></p>
-<pre class="code"><code>public function unreadCountsByConversation(int $userId): array
-{
-    return ChatMessage::query()
-        // JOIN 參與者表，鎖定「我」在每個對話的 last_read_at
-        -&gt;join('chat_conversation_participants as p', function ($join) use ($userId) {
-            $join-&gt;on('p.conversation_id', '=', 'chat_messages.conversation_id')
-                -&gt;where('p.user_id', '=', $userId);
-        })
-        -&gt;where('chat_messages.sender_id', '!=', $userId)            // 排除自己送的
-        -&gt;where(function ($query) {
-            $query-&gt;whereNull('p.last_read_at')                      // 從未讀過 → 全未讀
-                -&gt;orWhereColumn('chat_messages.created_at', '&gt;', 'p.last_read_at');
-        })
-        -&gt;groupBy('chat_messages.conversation_id')
-        -&gt;selectRaw('chat_messages.conversation_id as conversation_id, COUNT(*) as aggregate')
-        -&gt;pluck('aggregate', 'conversation_id')                     // [conversationId =&gt; 未讀數]
-        -&gt;map(fn ($count) =&gt; (int) $count)
-        -&gt;all();
-}</code></pre>
+<p><span class="tag ok">為什麼用交易?</span> 「寫訊息」與「更新對話摘要(<code>last_message_*</code>)」必須同生同滅。若只寫了訊息卻沒更新摘要,對話清單會顯示過期的最後一句、排序也錯位。交易把兩個寫入綁成原子操作。</p>
 
-<h3 class="sub" id="s6-3">6-3. 並發容錯建立對話</h3>
-<p class="code-label"><code>app/Services/ChatService.php</code></p>
+<p><span class="tag ok">為什麼鑑權只看兩個欄位?</span> 對話是 canonical pair,參與者恆等於 <code>user_one_id</code> / <code>user_two_id</code>。直接比這兩欄即可判斷,省掉一次查 <code>participants</code> 表。對話不存在時 <code>findOrFail</code> 丟 <code>ModelNotFoundException</code>(Laravel 轉 404);存在但非參與者丟 <code>ChatOperationException</code>(Controller 轉 403)。</p>
+
+<h3 class="sub">設計取捨:同步廣播 vs 入隊</h3>
+<div class="twocol">
+  <div class="col pro">
+    <h4>現況:ShouldBroadcastNow(同步)</h4>
+    <ul>
+      <li><b>時機</b>:在 request 生命週期內同步打 Reverb,不進佇列。</li>
+      <li><b>優點</b>:訊息即時到達;部署簡單,<strong>不需要跑 queue worker</strong>。</li>
+      <li><b>代價</b>:Reverb 若慢,會拖長這個 HTTP response 時間。</li>
+      <li><b>適配</b>:後台內部使用、量不大,延遲可接受。</li>
+    </ul>
+  </div>
+  <div class="col con" style="border-top-color:var(--amber)">
+    <h4 style="color:var(--amber)">替代:ShouldBroadcast(入隊)</h4>
+    <ul>
+      <li><b>時機</b>:event 進佇列,背景 worker 派發廣播。</li>
+      <li><b>優點</b>:response 立刻回、與廣播解耦。</li>
+      <li><b>代價</b>:必須維運 queue worker;廣播可能稍延遲。</li>
+      <li><b>何時換</b>:廣播對象變多、或 Reverb 往返變慢時。</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== 呼叫鏈 B:發起對話 ===== -->
+<h2 class="section" id="chain-start" style="--c:var(--blue)">B. 發起 / 取得對話</h2>
+<p class="section-desc"><code>POST /chats/start</code>。點選一位使用者開始聊天:已存在就取回、不存在就建立。重點在 canonical pair 與併發容錯。</p>
+
+<table class="cmp">
+  <tr><th>層</th><th>method</th><th>做什麼</th></tr>
+  <tr><td>Controller</td><td><code>start(StartConversationRequest)</code></td><td>驗證 <code>target_user_id</code>(<code>exists:users</code> 且不得為自己);捕捉例外 → <strong>422</strong>;回 <code>conversation_id</code></td></tr>
+  <tr><td>Service</td><td><code>getOrCreateConversation(int $userId, int $targetUserId)</code></td><td>擋自我對話 → <code>findPair</code> 找既有 → 沒有就 <code>createWithParticipants</code></td></tr>
+  <tr><td>Repository</td><td><code>findPair($a, $b)</code></td><td>先 <code>orderPair</code> 規範成 <code>[min, max]</code>,再以兩欄查唯一對話</td></tr>
+  <tr><td>Repository</td><td><code>createWithParticipants($a, $b)</code></td><td>交易內 <code>create</code> 對話 + <code>participants()-&gt;createMany</code> 兩筆參與者</td></tr>
+</table>
+
+<p class="code-label">真實實作 — <code>app/Services/ChatService.php</code> ::getOrCreateConversation()</p>
 <pre class="code"><code>public function getOrCreateConversation(int $userId, int $targetUserId): ChatConversation
 {
     if ($userId === $targetUserId) {
         throw new ChatOperationException('無法與自己建立對話');
     }
 
-    $existing = $this-&gt;conversationRepository-&gt;findPair($userId, $targetUserId); // 順序無關
+    $existing = $this->conversationRepository->findPair($userId, $targetUserId);
     if ($existing) {
         return $existing;
     }
 
     try {
-        return $this-&gt;conversationRepository-&gt;createWithParticipants($userId, $targetUserId);
+        return $this->conversationRepository->createWithParticipants($userId, $targetUserId);
     } catch (QueryException $e) {
-        // 並發下另一請求已先建立同一對話(撞 chat_conv_pair_unique)→ 取回既有，而非回 500
-        $conversation = $this-&gt;conversationRepository-&gt;findPair($userId, $targetUserId);
+        // 並發下另一請求已建立同一對話（撞 unique index）→ 取回既有的，而非回 500
+        $conversation = $this->conversationRepository->findPair($userId, $targetUserId);
         if (! $conversation) {
             throw $e;
         }
@@ -612,118 +406,277 @@ window.Echo.private(`chat.user.${window.currentUserId}`).listen('.message.sent',
     }
 }</code></pre>
 
-<h3 class="sub" id="s6-4">6-4. 前端樂觀送出的單一收斂點 settle()</h3>
-<p class="code-label"><code>resources/js/chats/index.js</code></p>
-<pre class="code"><code>// POST 成功或「自身廣播認領」皆可結算；已結算者不再處理(避免重複送出)
-const settle = (pending, status, retry) =&gt; {
-    if (pending.settled) { return; }
-    pending.settled = true;
-    const i = pendingSends.indexOf(pending);
-    if (i !== -1) { pendingSends.splice(i, 1); }
-    setStatus(pending.statusEl, status, retry);
-};
+<p><span class="tag ok">為什麼要 canonical pair?</span> <code>orderPair()</code> 永遠把較小的 id 放 <code>user_one_id</code>、較大的放 <code>user_two_id</code>(<code>$a &lt; $b ? [$a,$b] : [$b,$a]</code>)。配合 <code>(user_one_id, user_two_id)</code> 唯一索引,(A,B) 與 (B,A) 必然落在同一列,從根本杜絕「同一對人有兩個對話」。</p>
 
-const sendBody = async (body) =&gt; {
-    // …樂觀 append「傳送中…」泡泡、推入 pendingSends…
-    try {
-        const { data } = await window.axios.post(`/chats/${targetId}/messages`, { body });
-        if (data.message?.id != null) { renderedMessageIds.add(data.message.id); } // 廣播回來據此去重
-        settle(pending, 'sent');          // 若廣播已先認領，settled=true，這裡會跳過
-        scheduleListReload();
-    } catch (e) {
-        if (pending.settled) { return; }  // 廣播已確認送達 → 只是回應遺失，視為成功(不重送)
-        settle(pending, 'failed', () =&gt; { pending.row.remove(); sendBody(body); });
-    }
-};</code></pre>
+<details class="scn">
+  <summary><span class="tag warn">坑點</span> 兩人同時點對方,誰先誰後?(併發建立)</summary>
+  <div class="scn-body">
+    <p><b>現象:</b>A、B 幾乎同時送出 <code>start</code>,兩個請求都 <code>findPair</code> 撲空、都嘗試 <code>createWithParticipants</code>。</p>
+    <p><b>機制:</b>唯一索引讓第二個 <code>INSERT</code> 拋 <code>QueryException</code>。Service <code>catch</code> 後<strong>重新 <code>findPair</code></strong>,取回第一個請求剛建好的那筆並正常回傳,而不是回 500。</p>
+    <p><b>為什麼這樣設計:</b>本專案三張 <code>chat_*</code> 表<strong>沒有 DB 外鍵</strong>,改以「唯一索引 + 應用層容錯」保證一致性。這是刻意的取捨(見<a href="#schema">資料層</a>)。</p>
+  </div>
+</details>
 
-<!-- ===== 七、風險評估 ===== -->
-<h2 class="section" id="s7" style="--c:var(--gray)">七、風險評估與建議</h2>
-<p class="section-desc">直接回答 raised 的工程問題。前提:本系統為<strong>後台內部使用、非公網暴露、低併發</strong>;以下「建議」多屬「資料量/併發上升時」才需處理。</p>
+<!-- ===== 呼叫鏈 C:讀清單 / 分頁 ===== -->
+<h2 class="section" id="chain-read" style="--c:var(--blue)">C. 讀對話清單 / 訊息分頁</h2>
+<p class="section-desc">首屏 <code>index</code> 與 <code>conversations</code> 走同一條清單鏈;<code>messages</code> 走訊息分頁鏈。重點在避免 N+1 與游標分頁。</p>
+
+<h3 class="sub">C-1 對話清單(含未讀數)</h3>
 <table class="cmp">
-  <tr><th>主題</th><th>現況</th><th>影響</th><th>建議</th><th>嚴重度</th></tr>
-  <tr>
-    <td>未讀查詢索引</td>
-    <td><code>chat_messages.created_at</code> 無索引;未讀靠即時 JOIN+GROUP BY,無反正規化計數</td>
-    <td>訊息量大時未讀統計逐漸變慢(每次列表/badge 都算)</td>
-    <td>加 <code>(conversation_id, created_at)</code> 複合索引;量再大可評估反正規化未讀數</td>
-    <td><span class="tag warn">中</span></td>
-  </tr>
-  <tr>
-    <td>DB 外鍵缺失</td>
-    <td>三表皆無 FK</td>
-    <td>刪 user 不連動、可能留孤兒列;靠應用層 null 容錯</td>
-    <td>視需求補 FK 或刪除使用者時的級聯清理;目前 <code>listConversations()</code> 已容錯不致 500</td>
-    <td><span class="tag warn">中</span></td>
-  </tr>
-  <tr>
-    <td>同步廣播</td>
-    <td><code>MessageSent</code> 用 <code>ShouldBroadcastNow</code></td>
-    <td>送訊 request 內同步打 Reverb;Reverb 慢時拖長回應</td>
-    <td>量大可改 <code>ShouldBroadcast</code>(進 queue)縮短回應時間,需有 queue worker</td>
-    <td><span class="tag info">低</span></td>
-  </tr>
-  <tr>
-    <td>last_message 反正規化</td>
-    <td><code>last_message_id</code> 非外鍵、手動維護</td>
-    <td>未來若支援刪訊息,會留 stale 指標</td>
-    <td>加刪訊息功能時一併維護/重算對話摘要</td>
-    <td><span class="tag info">低</span></td>
-  </tr>
-  <tr>
-    <td>Unique / 重複資料</td>
-    <td>對話 pair、參與者皆有 UNIQUE</td>
-    <td>—</td>
-    <td>無需處理(已涵蓋,且併發撞鍵有 Service 收斂)</td>
-    <td><span class="tag ok">無</span></td>
-  </tr>
+  <tr><th>層</th><th>method</th><th>做什麼</th></tr>
+  <tr><td>Controller</td><td><code>index()</code> / <code>conversations()</code></td><td><code>index</code> 回 View(順帶塞可選使用者);<code>conversations</code> 回 JSON。兩者都呼叫 <code>listConversations</code></td></tr>
+  <tr><td>Service</td><td><code>listConversations(int $userId): array</code></td><td>先一次取得<strong>所有對話的未讀數</strong>,再組裝每筆對話的 <code>other_user</code> / <code>last_message</code> / <code>unread_count</code></td></tr>
+  <tr><td>Repository</td><td><code>ChatMessageRepository::unreadCountsByConversation($userId)</code></td><td>一次 JOIN + <code>GROUP BY</code> 算出 <code>{conversation_id =&gt; 未讀數}</code></td></tr>
+  <tr><td>Repository</td><td><code>ChatConversationRepository::forUser($userId)</code></td><td>查使用者的對話,<code>with(['userOne:id,name','userTwo:id,name','lastMessage'])</code> eager load,依 <code>last_message_at</code> 倒序</td></tr>
 </table>
-<ul class="checklist">
-  <li class="ok"><strong>N+1:</strong>已用 eager loading + 批次未讀查詢妥善處理,無需改。</li>
-  <li class="ok"><strong>DB 交易:</strong>送訊、建立對話皆已正確使用 <code>DB::transaction</code>。</li>
-  <li class="ok"><strong>Unique:</strong>重複對話、重複參與者都有唯一鍵保護,無漏。</li>
-  <li class="warn"><strong>索引:</strong>內部低併發下夠用;資料量上升時建議補 <code>chat_messages(conversation_id, created_at)</code>。</li>
-  <li class="warn"><strong>外鍵:</strong>以應用層容錯替代 DB 外鍵,屬刻意取捨,留意刪使用者的孤兒清理。</li>
-</ul>
+
+<p><span class="tag ok">為什麼未讀數要批次算?</span> 若在組裝迴圈裡逐對話查未讀,N 個對話就 N 次查詢(N+1)。改用一次 JOIN 聚合,把整個使用者的未讀一次撈齊,再用陣列查表。</p>
+
+<div class="twocol">
+  <div class="col con">
+    <h4>逐對話查(N+1,未採用)</h4>
+    <ul>
+      <li>每筆對話呼叫一次 <code>unreadCountFor()</code>。</li>
+      <li>20 個對話 = 20 次 <code>COUNT</code> 查詢。</li>
+    </ul>
+  </div>
+  <div class="col pro">
+    <h4>一次 JOIN GROUP BY(現況)</h4>
+    <ul>
+      <li><code>unreadCountsByConversation()</code> 單次查詢。</li>
+      <li>JOIN <code>participants</code> 取 <code>last_read_at</code>,排除自己送的,<code>GROUP BY conversation_id</code>。</li>
+    </ul>
+  </div>
+</div>
+
+<p><span class="tag warn">坑點</span> eager load 一律用 <code>userOne:id,name</code> 限定欄位,避免把 <code>users</code> 整列(含敏感欄位)序列化進 JSON。另外,若對方使用者已被刪除(無外鍵),<code>listConversations</code> 會把該孤兒對話 <code>return null</code> 再 <code>filter()</code> 掉,避免存取 null 而 500。</p>
+
+<h3 class="sub">C-2 訊息分頁(游標)</h3>
+<table class="cmp">
+  <tr><th>層</th><th>method</th><th>做什麼</th></tr>
+  <tr><td>Controller</td><td><code>messages(int $conversation)</code></td><td>讀 query <code>before_id</code>(空則 null);捕捉例外 → 403;回 <code>messages</code></td></tr>
+  <tr><td>Service</td><td><code>getMessages($conversationId, $userId, ?$beforeId)</code></td><td>先 <code>assertParticipant</code> 鑑權,再分頁</td></tr>
+  <tr><td>Repository</td><td><code>paginateForConversation($conversationId, ?$beforeId, $perPage = 30)</code></td><td><code>where('id','&lt;',$beforeId)</code>(向上捲動載更舊)、<code>orderByDesc('id')</code>、<code>limit(30)</code>、<code>with('sender:id,name')</code></td></tr>
+</table>
+
+<p><span class="tag ok">為什麼用 <code>before_id</code> 游標而非 <code>offset</code> 分頁?</span> 聊天會持續有新訊息插入,<code>offset</code> 分頁會在資料位移時重複或漏抓。用「比某個 id 更小」的游標,翻頁結果穩定,且能吃 <code>(conversation_id, id)</code> 複合索引。前端取回後反轉成由舊到新顯示。</p>
+
+<!-- ===== 呼叫鏈 D:已讀 / 未讀 ===== -->
+<h2 class="section" id="chain-read-state" style="--c:var(--blue)">D. 已讀與未讀計數</h2>
+<p class="section-desc"><code>PATCH /chats/{conversation}/read</code> 與 <code>GET /chats/unread-count</code>。未讀數<strong>不落欄位</strong>,完全靠 <code>last_read_at</code> 即時算。</p>
+
+<table class="cmp">
+  <tr><th>層</th><th>method</th><th>做什麼</th></tr>
+  <tr><td>Controller</td><td><code>markRead(int $conversation)</code></td><td>呼叫 <code>markAsRead</code>,回最新全域未讀數</td></tr>
+  <tr><td>Service</td><td><code>markAsRead($conversationId, $userId): int</code></td><td>鑑權 → 更新該參與者 <code>last_read_at</code> → 重算全域未讀並回傳</td></tr>
+  <tr><td>Repository</td><td><code>ChatConversationParticipantRepository::markRead($conversationId, $userId)</code></td><td><code>UPDATE ... SET last_read_at = now()</code></td></tr>
+  <tr><td>Service</td><td><code>totalUnread($userId): int</code></td><td>代理到 <code>ChatMessageRepository::totalUnreadFor</code></td></tr>
+  <tr><td>Repository</td><td><code>totalUnreadFor($userId): int</code></td><td><code>array_sum(unreadCountsByConversation($userId))</code></td></tr>
+</table>
+
+<p><span class="tag ok">為什麼未讀數不存欄位?</span> 「未讀」= <em>對方送的、且 <code>created_at</code> 晚於我的 <code>last_read_at</code> 的訊息數</em>。只要每次進對話更新一個 <code>last_read_at</code> 時間戳,任何時刻都能即時算出未讀,不必在每次收訊時去維護一個容易飄掉的計數欄位(多分頁、競態下尤其安全)。</p>
+
+<p><span class="tag ok">為什麼 <code>totalUnreadFor</code> 複用 <code>unreadCountsByConversation</code>?</span> 「全域未讀」就是「各對話未讀」的加總。複用同一份 SQL 定義,避免兩處各寫一遍 <code>WHERE</code> 條件、日後改了一處另一處走樣。</p>
+
+<p class="code-label">真實實作 — <code>ChatMessageRepository::unreadCountsByConversation()</code></p>
+<pre class="code"><code>return ChatMessage::query()
+    ->join('chat_conversation_participants as p', function ($join) use ($userId) {
+        $join->on('p.conversation_id', '=', 'chat_messages.conversation_id')
+            ->where('p.user_id', '=', $userId);
+    })
+    ->where('chat_messages.sender_id', '!=', $userId)
+    ->where(function ($query) {
+        $query->whereNull('p.last_read_at')
+            ->orWhereColumn('chat_messages.created_at', '>', 'p.last_read_at');
+    })
+    ->groupBy('chat_messages.conversation_id')
+    ->selectRaw('chat_messages.conversation_id as conversation_id, COUNT(*) as aggregate')
+    ->pluck('aggregate', 'conversation_id')
+    ->map(fn ($count) => (int) $count)
+    ->all();</code></pre>
+
+<!-- ===== 即時傳輸 ===== -->
+<h2 class="section" id="realtime" style="--c:var(--cyan)">即時傳輸:廣播事件與頻道授權</h2>
+<p class="section-desc">送出鏈最後的 <code>event(MessageSent)</code> 如何變成對方螢幕上的新訊息。傳輸層用 Laravel Reverb(自架 WebSocket,走 Pusher 協定)。</p>
+
+<h3 class="sub">MessageSent 事件</h3>
+<table class="cmp">
+  <tr><th>成員</th><th>內容</th><th>用途</th></tr>
+  <tr><td><code>implements ShouldBroadcastNow</code></td><td>同步、不入隊</td><td>request 內直接扇出</td></tr>
+  <tr><td><code>broadcastOn()</code></td><td>兩個 <code>PrivateChannel</code>:<code>chat.user.{recipientId}</code> 與 <code>chat.user.{senderId}</code></td><td>通知接收者;同時通知寄件者自己(讓他其他分頁/裝置也同步)</td></tr>
+  <tr><td><code>broadcastAs()</code></td><td><code>'message.sent'</code></td><td>前端以 <code>.message.sent</code> 監聽</td></tr>
+  <tr><td><code>broadcastWith()</code></td><td><code>id, conversation_id, sender_id, sender_name, body, created_at</code></td><td>前端渲染所需最小欄位</td></tr>
+</table>
+
+<p><span class="tag ok">為什麼也廣播給寄件者自己?</span> 寄件者可能同時開了多個分頁/裝置。把訊息也送回 <code>chat.user.{senderId}</code>,其他分頁就能即時看到剛送出的訊息。本來送出那個分頁靠樂觀渲染已經先顯示了,所以前端用訊息 <code>id</code> 去重避免重複(見<a href="#realtime-dedup">下節</a>)。</p>
+
+<h3 class="sub">三個頻道與授權(routes/channels.php)</h3>
+<table class="cmp">
+  <tr><th>頻道</th><th>型別</th><th>授權條件</th><th>承載</th></tr>
+  <tr><td><code>chat.user.{userId}</code></td><td>private</td><td><code>(int)$user-&gt;id === $userId</code></td><td><code>message.sent</code>(驅動未讀 badge 與開啟中的對話)</td></tr>
+  <tr><td><code>chat.conversation.{conversationId}</code></td><td>private</td><td><code>ChatConversationRepository::isParticipant(...)</code></td><td>僅「輸入中」whisper</td></tr>
+  <tr><td><code>chat.online</code></td><td>presence</td><td>回傳 <code>{id, name}</code></td><td>全後台線上狀態</td></tr>
+</table>
+<p><span class="tag ok">為什麼對話頻道授權重用 repository?</span> <code>chat.conversation</code> 的參與者判斷直接呼叫 <code>ChatConversationRepository::isParticipant()</code>,與其他層走同一套查詢邏輯,授權規則不會在頻道層另寫一份而分歧。</p>
+
+<!-- ===== 前端鏈路 ===== -->
+<h2 class="section" id="realtime-front" style="--c:var(--cyan)">前端訂閱鏈路</h2>
+<p class="section-desc">三段接力:<code>useEcho</code> 建連線 → <code>bootstrap.js</code> 全站訂閱 → <code>ChatApp.vue</code> 處理。</p>
+
+<div class="flow">
+  <h4>廣播抵達前端後的傳遞</h4>
+  <div class="frow">
+    <div class="fnode gate">Reverb<small>.message.sent</small></div>
+    <div class="farrow">私有頻道</div>
+    <div class="fnode">bootstrap.js<small>echo.private(chat.user.id)<br>.listen('.message.sent')</small></div>
+    <div class="farrow">dispatch</div>
+    <div class="fnode">window 事件<small>CustomEvent('chat:message')<br>+ refreshChatBadge()</small></div>
+    <div class="farrow">監聽</div>
+    <div class="fnode ok">ChatApp.vue<small>onChatMessage<br>append + 自動 markRead</small></div>
+  </div>
+</div>
+
+<table class="cmp">
+  <tr><th>檔案</th><th>職責</th></tr>
+  <tr><td><code>composables/useEcho.js</code></td><td>建立 / 取回單一 <code>window.Echo</code>(broadcaster <code>reverb</code>)。讀 <code>meta[name=user-id]</code>;未登入或無 Reverb 設定 → 回 <code>{ echo: null }</code></td></tr>
+  <tr><td><code>bootstrap.js</code></td><td>有 echo 才訂閱 <code>chat.user.{userId}</code> 監聽 <code>.message.sent</code>:派發 <code>window</code> 的 <code>chat:message</code> 事件,並 <code>refreshChatBadge()</code> 向伺服器抓權威未讀數</td></tr>
+  <tr><td><code>chats/ChatApp.vue</code></td><td><code>onChatMessage</code>:若該訊息屬目前開著的對話 → <code>appendMessage(live)</code> 並自動 <code>PATCH /read</code>;否則只排程重載清單。另訂閱對話頻道收 typing whisper、join <code>chat.online</code> presence</td></tr>
+</table>
+
+<p class="code-label">真實實作 — <code>resources/js/bootstrap.js</code>(全站訂閱)</p>
+<pre class="code"><code>const { echo, userId } = useEcho();
+
+if (echo) {
+    echo.private(`chat.user.${userId}`).listen('.message.sent', (event) => {
+        // 廣播給聊天頁處理（若該頁開著）
+        window.dispatchEvent(new CustomEvent('chat:message', { detail: event }));
+        // 重新抓權威未讀數（自己送的訊息不計入未讀，故數字自然正確）
+        window.refreshChatBadge();
+    });
+}
+
+// 進入任一後台頁面即更新一次 badge（不論有無 Echo）
+window.refreshChatBadge();</code></pre>
+
+<p><span class="tag ok">為什麼 badge 一律回伺服器抓,而不本地 +1?</span> 多分頁、競態下本地累加容易飄。每次都向伺服器要「權威」未讀數(<code>unread-count</code> 端點),數字才不會錯。這也是為什麼即使<strong>沒有</strong> Echo,進任一頁都會 <code>refreshChatBadge()</code> 至少更新一次。</p>
+
+<details class="scn">
+  <summary><span class="tag warn">坑點</span> 無 Echo 時的降級行為</summary>
+  <div class="scn-body">
+    <p><code>useEcho</code> 在未登入、或缺 <code>VITE_REVERB_APP_KEY</code> / <code>meta[user-id]</code> 為空時回 <code>{ echo: null }</code>。此時:沒有即時推送,但 HTTP 路徑(送訊、載訊息、標已讀、抓未讀)全部照常運作,只是新訊息要靠重新整理 / 重載清單才看到。聊天功能<strong>不會整個壞掉</strong>,只是退化成非即時。</p>
+    <p>另一個防呆:<code>meta.content</code> 為空字串時 <code>Number('')=0</code> 會誤訂到 <code>chat.user.0</code>,故程式碼明確把空字串視為未登入直接退出。</p>
+  </div>
+</details>
+
+<!-- ===== 樂觀送出與去重 ===== -->
+<h2 class="section" id="realtime-dedup" style="--c:var(--cyan)">樂觀送出與去重(settle)</h2>
+<p class="section-desc">送出鏈在前端的對應:按下送出立刻顯示「傳送中」,不等伺服器。但這帶來「同一則訊息可能來兩次」的去重問題。</p>
+
+<div class="flow">
+  <h4>一則訊息在前端的生命週期</h4>
+  <div class="frow">
+    <div class="fnode start">按送出<small>樂觀 push<br>status=傳送中</small></div>
+    <div class="farrow">POST</div>
+    <div class="fnode">收到 201<small>記下 message.id<br>到 renderedMessageIds</small></div>
+    <div class="farrow"></div>
+    <div class="fnode ok">settle('sent')<small>泡泡轉為已送出</small></div>
+    <div class="farrow">同時</div>
+    <div class="fnode gate">自身廣播回來<small>同一 id<br>→ 命中去重,丟棄</small></div>
+  </div>
+</div>
+
+<p>兩個訊息來源會抵達送出者的畫面:① <code>POST</code> 的 <code>201</code> response;② <code>chat.user.{senderId}</code> 自身廣播。前端在收到 <code>201</code> 時把 <code>message.id</code> 記進 <code>renderedMessageIds</code>;之後廣播帶著<strong>同一個 id</strong> 回來時就被去重丟棄,不會重複顯示。</p>
+
+<details class="scn">
+  <summary><span class="tag warn">坑點</span> 送出失敗 → settle('failed') 與重試</summary>
+  <div class="scn-body">
+    <p><code>sendBody</code> 先樂觀 <code>push</code> 一個 <code>pending</code> 泡泡並 <code>forceScrollBottom()</code>;<code>POST</code> 成功 → <code>settle('sent')</code>;失敗 → <code>settle('failed', retry)</code> 掛上重試 callback(移除舊泡泡並重送)。<code>pending.settled</code> 旗標確保一個 pending 只結算一次,避免 response 與例外路徑重複處理。</p>
+  </div>
+</details>
+
+<!-- ===== 資料層 ===== -->
+<h2 class="section" id="schema" style="--c:var(--green)">三張表與索引</h2>
+<p class="section-desc">migration <code>2026_06_15_000001~3</code>。每個索引都對應上面某條呼叫鏈的查詢。三張表<strong>刻意不設 DB 外鍵</strong>,改以唯一索引 + 應用層容錯。</p>
+
+<h3 class="sub">chat_conversations(對話,canonical pair)</h3>
+<table class="cmp">
+  <tr><th>欄位 / 鍵</th><th>用途</th><th>支撐哪條鏈</th></tr>
+  <tr><td><code>user_one_id</code> / <code>user_two_id</code></td><td>規範化的一對(min / max)</td><td>—</td></tr>
+  <tr><td><code>last_message_id</code> / <code>last_message_at</code></td><td>最後訊息摘要(由 <code>touchLastMessage</code> 維護)</td><td><a href="#chain-send">A</a> 寫入 / <a href="#chain-read">C</a> 顯示</td></tr>
+  <tr><td><code>unique(user_one_id, user_two_id)</code></td><td>同一對人只能一個對話;併發 <code>INSERT</code> 撞它觸發容錯</td><td><a href="#chain-start">B</a> <code>findPair</code> / 容錯</td></tr>
+  <tr><td><code>index(last_message_at)</code></td><td>對話清單 <code>ORDER BY last_message_at DESC</code></td><td><a href="#chain-read">C</a> <code>forUser</code></td></tr>
+</table>
+
+<h3 class="sub">chat_messages(訊息)</h3>
+<table class="cmp">
+  <tr><th>欄位 / 鍵</th><th>用途</th><th>支撐哪條鏈</th></tr>
+  <tr><td><code>conversation_id</code> / <code>sender_id</code> / <code>body</code></td><td>訊息本體(<code>body</code> 為 <code>text</code>,validation 限 5000 字)</td><td><a href="#chain-send">A</a></td></tr>
+  <tr><td><code>index(conversation_id, id)</code></td><td>取某對話訊息 + 以 <code>id</code> 游標分頁</td><td><a href="#chain-read">C-2</a> <code>paginateForConversation</code></td></tr>
+</table>
+
+<h3 class="sub">chat_conversation_participants(參與者 / 已讀回條)</h3>
+<table class="cmp">
+  <tr><th>欄位 / 鍵</th><th>用途</th><th>支撐哪條鏈</th></tr>
+  <tr><td><code>last_read_at</code></td><td>該使用者在此對話的已讀時間;未讀計算的基準</td><td><a href="#chain-read-state">D</a></td></tr>
+  <tr><td><code>unique(conversation_id, user_id)</code></td><td>一個對話每人一筆參與者</td><td><a href="#chain-start">B</a> <code>createMany</code></td></tr>
+  <tr><td><code>index(user_id)</code></td><td>未讀聚合 JOIN 以 <code>user_id</code> 過濾</td><td><a href="#chain-read-state">D</a> <code>unreadCountsByConversation</code></td></tr>
+</table>
+
+<p><span class="tag ok">為什麼參與者要獨立成一張表?</span> 對話本身只記「是哪兩個人」;但「每個人各自的已讀進度(<code>last_read_at</code>)」是 per-user 狀態,放在 participants 表,建立對話時一次寫兩筆(<code>createMany</code>)。未讀計算就靠 JOIN 這張表的 <code>last_read_at</code> 與訊息 <code>created_at</code> 比對。</p>
 
 <!-- ===== 附錄 ===== -->
-<h2 class="section" id="files" style="--c:#94a3b8">附錄:相關檔案索引</h2>
+<h2 class="section" id="files" style="--c:var(--gray)">附錄:相關檔案索引</h2>
 <table class="cmp">
   <tr><th>層</th><th>檔案</th></tr>
-  <tr><td>路由</td><td><code>routes/web.php</code>(7 條 chat 路由)、<code>routes/channels.php</code>(3 個頻道)</td></tr>
+  <tr><td>路由</td><td><code>routes/web.php</code>(chats 群組)、<code>routes/channels.php</code></td></tr>
   <tr><td>Controller</td><td><code>app/Http/Controllers/ChatController.php</code></td></tr>
-  <tr><td>FormRequest</td><td><code>app/Http/Requests/SendMessageRequest.php</code>、<code>StartConversationRequest.php</code></td></tr>
+  <tr><td>FormRequest</td><td><code>app/Http/Requests/StartConversationRequest.php</code>、<code>app/Http/Requests/SendMessageRequest.php</code></td></tr>
   <tr><td>Service</td><td><code>app/Services/ChatService.php</code></td></tr>
-  <tr><td>Repository</td><td><code>app/Repositories/ChatConversationRepository.php</code>、<code>ChatMessageRepository.php</code>、<code>ChatConversationParticipantRepository.php</code></td></tr>
+  <tr><td>Repository</td><td><code>app/Repositories/ChatConversationRepository.php</code>、<code>ChatMessageRepository.php</code>、<code>ChatConversationParticipantRepository.php</code>、<code>UserRepository.php</code></td></tr>
   <tr><td>Model</td><td><code>app/Models/ChatConversation.php</code>、<code>ChatMessage.php</code>、<code>ChatConversationParticipant.php</code></td></tr>
   <tr><td>Event / Exception</td><td><code>app/Events/MessageSent.php</code>、<code>app/Exceptions/ChatOperationException.php</code></td></tr>
-  <tr><td>Migration</td><td><code>database/migrations/2026_06_15_000001..000003_*</code></td></tr>
-  <tr><td>前端</td><td><code>resources/views/admin/chats/index.blade.php</code>、<code>resources/js/bootstrap.js</code>、<code>resources/js/chats/index.js</code>、<code>resources/css/components/chat.css</code></td></tr>
-  <tr><td>測試</td><td><code>tests/Feature/Chat/*</code>(Service / 訊息 / 對話 / 未讀 / 頻道授權 / Repository)</td></tr>
+  <tr><td>Migration</td><td><code>database/migrations/2026_06_15_000001~3_create_chat_*_table.php</code></td></tr>
+  <tr><td>前端</td><td><code>resources/views/admin/chats/index.blade.php</code>、<code>resources/js/chats/ChatApp.vue</code>、<code>resources/js/chats/index.js</code>、<code>resources/js/composables/useEcho.js</code>、<code>resources/js/bootstrap.js</code></td></tr>
 </table>
 
 <footer>
-  聊天功能 as-built 技術梳理 · 由閱讀現行程式碼產出 · 2026-06-16。<br>
-  相關文件:行為規格 <code>/docs/chat/chat-spec</code>;通用即時架構教學 <code>/docs/chat/chat-architecture</code>(Node/Redis 示意,非本專案實作)。
+  聊天功能 — 實際運作機制(逐層呼叫鏈) · 讀碼產出,忠實對應 2026-06-22 當下程式碼 · 與 <code>chat-spec.html</code>(行為規格)分工。
 </footer>
 </main>
 </div>
 
 <script>
-// 側欄 scroll-spy
-const links = [...document.querySelectorAll('.toc a')];
-const targets = links
-  .map(a => document.getElementById(a.getAttribute('href').slice(1)))
-  .filter(Boolean);
-const byId = Object.fromEntries(links.map(a => [a.getAttribute('href').slice(1), a]));
-const observer = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      links.forEach(a => a.classList.remove('active'));
-      byId[e.target.id]?.classList.add('active');
-    }
+// ── scroll-spy:側欄高亮目前章節 ──
+(function () {
+  const links = [...document.querySelectorAll('.toc a')];
+  const byId = Object.fromEntries(links.map(a => [a.getAttribute('href').slice(1), a]));
+  const targets = links
+    .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+    .filter(Boolean);
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) {
+        links.forEach(a => a.classList.remove('active'));
+        byId[e.target.id]?.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-10% 0px -75% 0px' });
+
+  targets.forEach(t => observer.observe(t));
+})();
+
+// ── 全部展開 / 收合坑點 ──
+(function () {
+  const btn = document.getElementById('toggleAll');
+  if (!btn) { return; }
+  btn.addEventListener('click', () => {
+    const open = btn.dataset.open === '0';
+    document.querySelectorAll('details.scn').forEach(d => { d.open = open; });
+    btn.dataset.open = open ? '1' : '0';
+    btn.textContent = open ? '全部收合坑點' : '全部展開坑點';
   });
-}, { rootMargin: '-10% 0px -75% 0px' });
-targets.forEach(t => observer.observe(t));
+})();
 </script>
 </body>
 </html>
