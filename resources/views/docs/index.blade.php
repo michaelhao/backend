@@ -4,7 +4,7 @@
 
 @section('content')
     @php
-        $labels = ['spec' => '規格文件', 'flow' => '開發流程'];
+        $labels = ['spec' => '規格文件', 'flow' => '開發流程', 'tech' => '技術分析'];
         $grouped = $docs->groupBy('category');
     @endphp
 
