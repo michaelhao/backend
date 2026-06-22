@@ -25,10 +25,13 @@ class DocsTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('系統文件');
         $response->assertSee('規格文件');
+        $response->assertSee('技術分析');
         $response->assertSee('開發流程');
         $response->assertSee('auth-spec.html');
         $response->assertSee('登入 / 節流 / 密碼重設');
         $response->assertSee('chat/chat-spec.html'); // 子資料夾文件遞迴列出
+        $response->assertSee('jwt/jwt-analysis.html'); // 技術目錄歸入「技術分析」
+        $response->assertSee('chat/chat-analysis.html'); // chat 目錄非 spec 檔歸入「技術分析」
     }
 
     public function test_authenticated_user_can_view_a_doc(): void

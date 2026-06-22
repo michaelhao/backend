@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>技術分析：Redis 核心機制與 Laravel 應用指南</title>
+<style>
+  :root {
+    --ink: #1e293b;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --blue: #2563eb;   --blue-bg: #eff6ff;   --blue-line: #bfdbfe;
+    --amber: #d97706;  --amber-bg: #fffbeb;  --amber-line: #fde68a;
+    --green: #059669;  --green-bg: #ecfdf5;  --green-line: #a7f3d0;
+    --gray: #6b7280;   --gray-bg: #f3f4f6;   --gray-line: #d1d5db;
+    --red: #dc2626;    --red-bg: #fef2f2;
+    --purple: #7c3aed; --purple-bg: #f5f3ff; --purple-line: #ddd6fe;
+    --sidebar-w: 264px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 0.86em;
+    background: #f1f5f9;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+  pre {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 12.5px; line-height: 1.6;
+    background: #0f172a; color: #e2e8f0;
+    border-radius: 10px; padding: 14px 16px;
+    overflow-x: auto; margin: 10px 0;
+  }
+  pre .c { color: #64748b; }      /* 註解 */
+  pre .k { color: #93c5fd; }      /* 關鍵字 */
+  pre .s { color: #86efac; }      /* 字串 */
+  pre .h { color: #fca5a5; }      /* header 段 */
+  pre .p { color: #c4b5fd; }      /* payload 段 */
+  pre .g { color: #fcd34d; }      /* signature 段 */
+
+  /* ===== 版面 ===== */
+  .layout { display: flex; min-height: 100vh; }
+  nav.toc {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: sticky; top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: #0f172a;
+    color: #cbd5e1;
+    padding: 20px 0 32px;
+  }
+  main {
+    flex: 1;
+    min-width: 0;
+    max-width: 880px;
+    padding: 32px 40px 96px;
+  }
+
+  /* ===== 側欄 ===== */
+  .toc-title { padding: 0 20px 12px; font-weight: 700; color: #fff; font-size: 16px; }
+  .toc-title small { display: block; font-weight: 400; color: #94a3b8; font-size: 11px; margin-top: 2px; }
+  .toc-group { margin-top: 14px; }
+  .toc-group-label {
+    padding: 0 20px; font-size: 11px; letter-spacing: .08em;
+    color: #94a3b8; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .toc a {
+    display: block; padding: 5px 20px 5px 34px;
+    color: #cbd5e1; text-decoration: none; font-size: 13px;
+    border-left: 3px solid transparent;
+  }
+  .toc a:hover { color: #fff; background: rgba(255,255,255,.06); }
+  .toc a.active { color: #fff; background: rgba(255,255,255,.1); border-left-color: #60a5fa; }
+
+  /* ===== Header ===== */
+  header h1 { font-size: 26px; margin: 0 0 4px; }
+  header .sub { color: var(--muted); margin-bottom: 16px; }
+  .lead {
+    background: var(--blue-bg); border: 1px solid var(--blue-line);
+    border-radius: 10px; padding: 14px 18px; font-size: 15px; margin-bottom: 12px;
+  }
+  .lead strong { color: var(--blue); }
+  .meta { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; }
+  .meta span { white-space: nowrap; }
+  .truth-note { font-size: 12.5px; color: var(--muted); margin-bottom: 24px; }
+
+  /* ===== 工具列 ===== */
+  .toolbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: flex-end; padding: 8px 0; background: linear-gradient(var(--bg) 80%, transparent); }
+  .toolbar button {
+    font: inherit; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card);
+    border-radius: 8px; padding: 6px 14px; color: var(--ink);
+  }
+  .toolbar button:hover { border-color: #94a3b8; }
+
+  /* ===== 區段標題 ===== */
+  h2.section {
+    font-size: 19px; margin: 44px 0 6px;
+    padding-left: 12px; border-left: 5px solid var(--c, var(--blue));
+  }
+  .section-desc { color: var(--muted); font-size: 13.5px; margin: 0 0 18px 17px; }
+
+  /* ===== 卡片 ===== */
+  .req {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 5px solid var(--c, var(--blue));
+    border-radius: 12px; padding: 18px 22px 14px; margin-bottom: 16px;
+    scroll-margin-top: 56px;
+  }
+  .req h3 { margin: 0 0 8px; font-size: 16px; display: flex; align-items: baseline; gap: 10px; }
+  .req h3 .no { color: var(--muted); font-size: 13px; font-weight: 600; }
+  .req .body { font-size: 14.5px; margin-bottom: 4px; }
+  .req .body p { margin: 0 0 10px; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    border-radius: 5px; padding: 0 7px; vertical-align: 1px;
+  }
+  .badge.shall { background: var(--blue); color: #fff; }
+  .badge.mustnot { background: var(--red); color: #fff; }
+  .badge.tag { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-line); }
+  .note { font-size: 13px; color: var(--muted); background: var(--gray-bg); border-radius: 8px; padding: 8px 12px; margin-top: 8px; }
+
+  /* ===== 特色條列 ===== */
+  ul.feat { list-style: none; padding: 0; margin: 6px 0 2px; }
+  ul.feat li { padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+  ul.feat li:last-child { border-bottom: none; }
+  ul.feat li b { color: var(--ink); }
+  ul.feat li .tip { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+
+  /* ===== 流程圖 ===== */
+  .flow {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px 24px; margin-bottom: 18px; overflow-x: auto;
+  }
+  .flow h3 { margin: 0 0 16px; font-size: 15px; }
+  .frow { display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap; min-width: max-content; }
+  .fnode {
+    border: 1.5px solid var(--blue-line); background: var(--blue-bg);
+    border-radius: 8px; padding: 7px 12px; font-size: 13px;
+    display: flex; flex-direction: column; justify-content: center;
+    text-align: center; max-width: 190px;
+  }
+  .fnode small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+  .fnode.start { border-color: #94a3b8; background: #f1f5f9; font-weight: 600; }
+  .fnode.ok { border-color: var(--green-line); background: var(--green-bg); }
+  .fnode.gate { border-color: var(--amber-line); background: var(--amber-bg); }
+  .farrow {
+    align-self: center; padding: 0 8px; color: var(--muted);
+    font-size: 12px; text-align: center; flex-shrink: 0; line-height: 1.3;
+  }
+  .farrow::after { content: "→"; display: block; font-size: 16px; color: #94a3b8; }
+
+  /* ===== 雙欄優缺點 ===== */
+  .twocol { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 6px 0; }
+  .col { border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; background: var(--card); }
+  .col.pro { border-top: 4px solid var(--green); }
+  .col.con { border-top: 4px solid var(--red); }
+  .col h4 { margin: 0 0 8px; font-size: 15px; }
+  .col.pro h4 { color: var(--green); }
+  .col.con h4 { color: var(--red); }
+  .col ul { margin: 0; padding-left: 18px; font-size: 13.5px; }
+  .col ul li { margin: 6px 0; }
+  .col ul li b { color: var(--ink); }
+
+  /* ===== Scenario（可摺疊） ===== */
+  details.scn { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: #fcfdfe; }
+  details.scn summary {
+    cursor: pointer; padding: 9px 14px; font-size: 13.5px; font-weight: 600;
+    list-style: none; display: flex; align-items: center; gap: 8px;
+  }
+  details.scn summary::-webkit-details-marker { display: none; }
+  details.scn summary::before { content: "▸"; color: #94a3b8; transition: transform .15s; }
+  details.scn[open] summary::before { transform: rotate(90deg); }
+  .scn-body { padding: 2px 16px 14px; }
+
+  /* ===== 刻意不做 / 不建議 ===== */
+  .req.excluded { border-left-color: var(--gray); background: #fafafa; }
+  .nots { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+  .not-card { border: 1px dashed var(--gray-line); border-radius: 10px; padding: 10px 14px; background: var(--card); font-size: 13.5px; }
+  .not-card .x { font-weight: 700; color: var(--gray); }
+  .not-card small { display: block; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+  .verdict {
+    background: var(--red-bg); border: 1px solid #fecaca; border-radius: 10px;
+    padding: 12px 16px; font-size: 14.5px; margin-bottom: 14px;
+  }
+  .verdict strong { color: var(--red); }
+
+  footer { margin-top: 56px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+  @media (max-width: 860px) {
+    nav.toc { display: none; }
+    main { padding: 20px 18px 64px; }
+    .twocol { grid-template-columns: 1fr; }
+  }
+  @media print {
+    nav.toc, .toolbar { display: none; }
+    details.scn { open: true; }
+    .req { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <div class="toc-title">Redis 技術分析<small>核心機制與 Laravel 應用指南</small></div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--blue)"></span>入門</div>
+    <a href="#intro">1. Redis 是什麼</a>
+    <a href="#why">2. 為什麼需要 Redis</a>
+    <a href="#features">3. 核心特性</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--purple)"></span>運作機制</div>
+    <a href="#cache-flow">4. 讀寫流程(Hit / Miss)</a>
+    <a href="#persistence">5. 持久化(RDB / AOF)</a>
+    <a href="#eviction">6. 記憶體淘汰策略</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--green)"></span>Laravel 實務</div>
+    <a href="#laravel">7. 四大應用場景</a>
+  </div>
+  <div class="toc-group">
+    <div class="toc-group-label"><span class="dot" style="background:var(--amber)"></span>實戰建議</div>
+    <a href="#pitfalls">8. 新手坑點與最佳實踐</a>
+  </div>
+</nav>
+
+<main>
+<header>
+  <h1>技術分析：Redis 核心機制與 Laravel 應用指南</h1>
+  <div class="sub">從關聯式資料庫工程師的角度，理解記憶體資料儲存庫的本質、運作機制與 Laravel 整合應用</div>
+  <div class="lead">
+    <strong>一句話：</strong>Redis 是一個<strong>把資料直接放在記憶體裡</strong>的 key-value 資料結構儲存庫，讀寫不碰磁碟、不解析 SQL，所以速度比 MySQL 快上幾個數量級——它不是來取代資料庫，而是擋在資料庫前面，吸收掉那些「一直重複問、又算得很慢」的請求。
+  </div>
+  <div class="meta">
+    <span>主題：Redis（REmote DInctionary Server）</span>
+    <span>定位：In-memory Key-Value Store / Cache / Message Broker</span>
+    <span>文件性質：技術概念與整合分析</span>
+  </div>
+  <div class="truth-note">本頁為技術理解文件，協助具 MySQL 經驗、無 Redis 生產經驗的後端工程師快速建立心智模型；Laravel 程式碼為示意片段，非完整可貼上的設定。</div>
+</header>
+
+<div class="toolbar"><button id="toggleAll" data-open="0">全部展開</button></div>
+
+<!-- ============ 1. Redis 是什麼 ============ -->
+<h2 class="section" id="intro" style="--c:var(--blue)">1. Redis 是什麼？（入門與核心概念）</h2>
+<p class="section-desc">用大白話建立第一個心智模型。</p>
+
+<section class="req" id="intro-card" style="--c:var(--blue)">
+  <h3><span class="no">本質</span>記憶體裡的 Key-Value 資料結構儲存庫</h3>
+  <div class="body">
+    <p>你可以把 Redis 想成一個<strong>巨大的、放在記憶體（RAM）裡的關聯陣列（associative array）</strong>。在 PHP 裡你寫 <code>$data['user:1'] = ...</code>，Redis 做的是同一件事——只是這個陣列<strong>跨程序、跨機器共享</strong>，所有 API 伺服器都能讀寫同一份。</p>
+  </div>
+  <div class="body">
+    <p>它和 MySQL 最根本的兩個差異：<b>(1) 資料放在記憶體</b>而非磁碟，所以沒有磁碟 I/O 的等待；<b>(2) 用 key 直接定位</b>而非掃描資料表、解析 SQL、跑查詢計畫。這兩點讓單次操作落在<strong>微秒（µs）等級</strong>，而 MySQL 的查詢通常是毫秒（ms）等級——差距常達數百倍。</p>
+  </div>
+  <div class="note">名稱由來：Redis = <b>RE</b>mote <b>DI</b>ctionary <b>S</b>erver。記住「遠端的字典」這個詞，它的本質就講完一半了。</div>
+</section>
+
+<!-- ============ 2. 為什麼需要 ============ -->
+<h2 class="section" id="why" style="--c:var(--blue)">2. 為什麼需要 Redis？它解決了 MySQL 的什麼痛點</h2>
+<p class="section-desc">從你熟悉的關聯式資料庫痛點切入。</p>
+
+<section class="req" id="why-card" style="--c:var(--blue)">
+  <h3><span class="no">類比</span>倉庫 vs. 手邊的抽屜</h3>
+  <div class="body">
+    <p><b>MySQL 像大型倉庫</b>：東西全、可靠、能用複雜條件查（JOIN、WHERE、GROUP BY），但每次拿東西都要走進倉庫、找貨架、搬出來——慢，而且人一多就塞車。<b>Redis 像你手邊的抽屜</b>：只放最常用、剛拿過的東西，伸手就到。常用資料放抽屜，要找冷門或完整資料才進倉庫。</p>
+  </div>
+  <div class="body"><b>具體解決的 MySQL 痛點：</b></div>
+  <ul class="feat">
+    <li><b>磁碟 I/O 延遲</b>
+      <span class="tip">MySQL 資料最終落在磁碟，即使有 buffer pool，複雜查詢仍可能觸發磁碟讀取。Redis 全程在記憶體，省去這段等待。</span></li>
+    <li><b>重複的昂貴查詢</b>
+      <span class="tip">首頁排行榜、熱門商品、權限選單這類「結果幾乎不變、卻每次請求都重算」的查詢，算一次存進 Redis，後續直接取，DB 不必再跑同樣的 JOIN/聚合。</span></li>
+    <li><b>高併發讀取壓力</b>
+      <span class="tip">流量尖峰時，成千上萬的相同讀取若全打到 MySQL，連線數與 CPU 會被打爆。Redis 以遠高於 DB 的吞吐量擋在前面，DB 只處理真正需要它的請求。</span></li>
+    <li><b>天生的單機 session 困境</b>
+      <span class="tip">多台 API 在負載平衡後方時，session 存在各自的本機檔案會導致「換一台機器就登出」。把 session 集中放 Redis，所有機器共享一份。</span></li>
+  </ul>
+  <div class="note">關鍵觀念：Redis <b>不是取代 MySQL</b>。MySQL 仍是「真相來源（source of truth）」，負責持久、完整、可複雜查詢的資料；Redis 是擋在前面的加速層與共享狀態層。兩者分工，不是二選一。</div>
+</section>
+
+<!-- ============ 3. 核心特性 ============ -->
+<h2 class="section" id="features" style="--c:var(--blue)">3. 核心特性簡述</h2>
+<p class="section-desc">高效能、記憶體、單執行緒，與「資料結構」儲存庫的含意。</p>
+
+<section class="req" id="features-card" style="--c:var(--blue)">
+  <h3><span class="no">特性</span>四個你必須先建立的認知</h3>
+  <ul class="feat">
+    <li><b>In-Memory（記憶體優先）→ 高效能</b>
+      <span class="tip">資料主要存在 RAM，讀寫不碰磁碟，單次操作微秒等級、單機可達每秒數萬至數十萬次操作（OPS）。代價是記憶體有限且較貴，所以只放該放的東西（見第 6 節淘汰策略）。</span></li>
+    <li><b>單執行緒（single-threaded）命令處理 → 簡單且原子</b>
+      <span class="tip">Redis 處理命令的核心是<strong>單執行緒、一條一條依序執行</strong>。聽起來像缺點，實際上：(1) 沒有多執行緒的鎖競爭與 context switch 開銷；(2) 每條命令天然<strong>原子（atomic）</strong>，例如 <code>INCR</code> 不會有兩個請求互相覆蓋的競態。因為操作都在記憶體、夠快，單執行緒反而簡單又夠用。</span></li>
+    <li><b>不只是 String，而是「資料結構」儲存庫</b>
+      <span class="tip">value 可以是多種型別：<code>String</code>（快取 JSON / 計數器）、<code>Hash</code>（存物件欄位，如 user 的多個屬性）、<code>List</code>（佇列、時間軸）、<code>Set</code>（去重集合、標籤）、<code>Sorted Set / ZSet</code>（帶分數排序，做排行榜的利器）。選對結構，很多功能用幾個命令就完成。</span></li>
+    <li><b>每個 Key 可設定到期時間（TTL）</b>
+      <span class="tip"><code>SET key value EX 600</code> 表示 600 秒後此 key 自動消失。這是快取「自動過期、自動更新」的基礎，也是後面所有快取策略的核心開關。</span></li>
+  </ul>
+  <div class="note">補充：「單執行緒」指的是<b>命令執行的主迴圈</b>。現代 Redis（6.0+）在網路 I/O 等部分已可多執行緒，但你寫的命令邏輯仍是依序原子執行——心智模型維持單執行緒即可。</div>
+</section>
+
+<!-- ============ 4. 讀寫流程 ============ -->
+<h2 class="section" id="cache-flow" style="--c:var(--purple)">4. 讀寫流程圖解：Cache Hit 與 Cache Miss</h2>
+<p class="section-desc">最常見的 Cache-Aside（旁路快取）模式：應用程式同時管理快取與資料庫。</p>
+
+<div class="flow">
+  <h3>① 快取命中（Cache Hit）— 理想路徑，DB 完全不參與</h3>
+  <div class="frow">
+    <div class="fnode start">後端收到請求<small>需要某筆資料</small></div>
+    <div class="farrow">先問</div>
+    <div class="fnode gate">查 Redis<small>GET key</small></div>
+    <div class="farrow">命中</div>
+    <div class="fnode ok">Redis 回傳資料<small>µs 等級</small></div>
+    <div class="farrow">回應</div>
+    <div class="fnode ok">直接回給用戶端</div>
+  </div>
+</div>
+
+<div class="flow">
+  <h3>② 快取失效（Cache Miss）— 回源資料庫，並寫回快取</h3>
+  <div class="frow">
+    <div class="fnode start">後端收到請求</div>
+    <div class="farrow">先問</div>
+    <div class="fnode gate">查 Redis<small>GET key</small></div>
+    <div class="farrow">沒有 (nil)</div>
+    <div class="fnode">查 MySQL<small>跑真正的查詢</small></div>
+    <div class="farrow">取得</div>
+    <div class="fnode">寫回 Redis<small>SET key + TTL</small></div>
+    <div class="farrow">回應</div>
+    <div class="fnode ok">回給用戶端<small>下次就會命中</small></div>
+  </div>
+</div>
+
+<div class="flow">
+  <h3>③ 資料更新時 — 更新 DB，然後「刪除」快取</h3>
+  <div class="frow">
+    <div class="fnode start">後端要寫入 / 更新</div>
+    <div class="farrow">先寫</div>
+    <div class="fnode">寫入 MySQL<small>真相來源</small></div>
+    <div class="farrow">再</div>
+    <div class="fnode gate">刪除 Redis 的 key<small>DEL key</small></div>
+    <div class="farrow">下次讀</div>
+    <div class="fnode ok">自然走 Miss 重建<small>讀到最新資料</small></div>
+  </div>
+</div>
+
+<section class="req" id="flow-note" style="--c:var(--purple)">
+  <h3><span class="no">為什麼</span>更新時是「刪快取」而非「改快取」</h3>
+  <div class="body">
+    <p>更新資料時，最穩健的做法是 <strong>Cache-Aside：先更新 DB，再刪掉快取</strong>（而不是去更新快取的值）。原因：(1) <b>惰性重建</b>——這個 key 不一定馬上有人讀，刪掉它、等下次有人要時才重算，避免做白工；(2) <b>避免併發寫入造成的髒資料</b>——兩個請求同時「算好新值再寫快取」可能互相覆蓋出舊值，而「刪除」是冪等且安全的。</p>
+  </div>
+  <div class="note">這就是 Laravel 對應到 <code>Cache::remember()</code>（讀：先查快取、Miss 才回源並寫回）與 <code>Cache::forget()</code>（寫：更新 DB 後刪 key）的心智模型。</div>
+</section>
+
+<!-- ============ 5. 持久化 ============ -->
+<h2 class="section" id="persistence" style="--c:var(--purple)">5. 資料持久化機制（Persistence）：斷電不遺失</h2>
+<p class="section-desc">記憶體斷電就清空，Redis 靠 RDB 與 AOF 把資料寫到磁碟。</p>
+
+<section class="req" id="persistence-card" style="--c:var(--purple)">
+  <h3><span class="no">核心問題</span>記憶體的東西，重啟後怎麼還在？</h3>
+  <div class="body">
+    <p>Redis 雖然在記憶體運作，但會<strong>定期把資料寫到磁碟</strong>，重啟時再從磁碟載回記憶體。它提供兩種互補的機制——<b>RDB（快照）</b>與 <b>AOF（操作日誌）</b>。</p>
+  </div>
+</section>
+
+<div class="twocol">
+  <div class="col pro">
+    <h4>RDB — Snapshot（快照）</h4>
+    <ul>
+      <li><b>原理</b>：在某個時間點，把整個記憶體資料「拍一張照片」，壓縮成一個二進位檔（<code>dump.rdb</code>）。</li>
+      <li><b>觸發</b>：依設定條件，如「900 秒內有 1 次寫入」「300 秒內有 10 次寫入」就存一次。</li>
+      <li><b>優點</b>：檔案<b>緊湊小巧</b>、<b>復原快</b>（直接載入整份）；很適合做<b>備份與災難復原</b>。</li>
+      <li><b>缺點</b>：兩次快照之間若當機，<b>會遺失這段期間的資料</b>（可能是幾分鐘）。</li>
+      <li><b>場景</b>：能容忍少量資料遺失、重視復原速度與備份（如純快取、可重建的資料）。</li>
+    </ul>
+  </div>
+  <div class="col con" style="border-top-color:var(--blue)">
+    <h4 style="color:var(--blue)">AOF — Append Only File（日誌）</h4>
+    <ul>
+      <li><b>原理</b>：把<b>每一條寫入命令</b>依序追加到日誌檔；重啟時重新執行一遍，重建出資料。</li>
+      <li><b>觸發</b>：依 <code>appendfsync</code> 設定寫入磁碟——<code>always</code>（每條都寫，最安全最慢）、<code>everysec</code>（每秒一次，最常用的折衷）、<code>no</code>（交給作業系統）。</li>
+      <li><b>優點</b>：<b>資料遺失風險低</b>（everysec 最多丟 1 秒）；日誌可讀、可修復。</li>
+      <li><b>缺點</b>：檔案<b>比 RDB 大</b>、<b>復原較慢</b>（要重放命令）。</li>
+      <li><b>場景</b>：對資料一致性要求較高、不能輕易遺失的情境。</li>
+    </ul>
+  </div>
+</div>
+
+<section class="req" id="persistence-mix" style="--c:var(--purple)">
+  <h3><span class="no">結論</span>實務上常「兩者並用」</h3>
+  <div class="body">
+    <p>現代 Redis 建議<strong>同時開啟 RDB + AOF</strong>：平時用 AOF 保證資料遺失最少，需要快速復原或備份時用 RDB 快照。Redis 4.0+ 還支援<b>混合持久化</b>——AOF 重寫時前段用 RDB 格式（載入快）、後段接續命令日誌（遺失少），兼得兩者優點。</p>
+  </div>
+  <div class="note">給快取場景的提醒：如果 Redis 對你<b>純粹是快取</b>（資料 MySQL 都有、丟了能重建），其實可以接受較寬鬆的持久化甚至不持久化，重點放在效能。是否要嚴格持久化，取決於你把 Redis 當「快取」還是「主要資料儲存」。</div>
+</section>
+
+<!-- ============ 6. 淘汰策略 ============ -->
+<h2 class="section" id="eviction" style="--c:var(--purple)">6. 記憶體淘汰機制（Eviction Policies）</h2>
+<p class="section-desc">記憶體有限，滿了之後 Redis 怎麼決定丟掉誰？</p>
+
+<section class="req" id="eviction-card" style="--c:var(--purple)">
+  <h3><span class="no">前提</span>用 <code>maxmemory</code> 設上限，搭配淘汰策略</h3>
+  <div class="body">
+    <p>你會用 <code>maxmemory</code> 設定 Redis 最多用多少記憶體（例如 2GB）。一旦逼近上限，Redis 依設定的 <code>maxmemory-policy</code> <strong>淘汰（evict）部分舊資料</strong>挪出空間。關鍵要先理解兩種篩選範圍：</p>
+  </div>
+  <ul class="feat">
+    <li><b><code>allkeys-*</code></b><span class="tip">從<strong>所有 key</strong> 中挑選要淘汰的對象。適合「整個 Redis 就是快取」的用途。</span></li>
+    <li><b><code>volatile-*</code></b><span class="tip">只從<strong>有設定 TTL（會過期）</strong>的 key 中淘汰；沒設過期的 key 受保護不被丟。適合「快取與重要資料混存」時保護後者。</span></li>
+  </ul>
+</section>
+
+<section class="req" id="eviction-policies" style="--c:var(--purple)">
+  <h3><span class="no">策略</span>常見的淘汰演算法</h3>
+  <ul class="feat">
+    <li><b>LRU（Least Recently Used，最近最少使用）</b> <span class="badge tag">最常用</span>
+      <span class="tip">丟掉<strong>最久沒被存取</strong>的 key。背後假設：很久沒用的，之後也大概用不到。對應策略：<code>allkeys-lru</code>、<code>volatile-lru</code>。</span></li>
+    <li><b>LFU（Least Frequently Used，最不常使用）</b>
+      <span class="tip">丟掉<strong>使用次數最少</strong>的 key（看頻率而非時間）。能避免 LRU 的盲點——某個 key 偶爾被掃到一次就「顯得最近用過」，但其實平常很冷門。對應：<code>allkeys-lfu</code>、<code>volatile-lfu</code>。Redis 4.0+ 提供。</span></li>
+    <li><b>TTL / Random</b>
+      <span class="tip"><code>volatile-ttl</code>：優先淘汰<strong>最接近過期</strong>的 key；<code>allkeys-random</code> / <code>volatile-random</code>：隨機挑。較少用，特定場景才選。</span></li>
+    <li><b><code>noeviction</code>（不淘汰）</b> <span class="badge mustnot">注意</span>
+      <span class="tip">預設值。記憶體滿了之後<strong>拒絕所有寫入並回傳錯誤</strong>（讀取仍可）。若你把 Redis 當主要資料儲存、不想被默默丟資料，會用這個——但務必監控記憶體，否則寫入會直接失敗。</span></li>
+  </ul>
+  <div class="note">給快取場景的常見選擇：<b><code>allkeys-lru</code></b>（純快取、希望自動淘汰冷資料）。若有「快取 + 不可丟的資料」混存，改用 <b><code>volatile-lru</code></b> 並只給快取類 key 設 TTL。</div>
+</section>
+
+<!-- ============ 7. Laravel 實務 ============ -->
+<h2 class="section" id="laravel" style="--c:var(--green)">7. Laravel 實務應用場景</h2>
+<p class="section-desc">身為 Laravel 開發者，Redis 最常出現在這四個地方。</p>
+
+<section class="req" id="laravel-cache" style="--c:var(--green)">
+  <h3><span class="no">場景 1</span>Cache 快取（最常見入口）</h3>
+  <div class="body">
+    <p>Laravel 的 <code>Cache</code> facade 已把 Cache-Aside 流程封裝成 <code>Cache::remember()</code>：<strong>先查快取，命中就回；Miss 才執行 closure 回源 DB，並自動寫回快取</strong>——就是第 4 節那張流程圖。</p>
+  </div>
+  <pre><span class="c">// 設定 Redis 為快取驅動 — .env</span>
+<span class="k">CACHE_STORE</span>=redis        <span class="c"># Laravel 11/12 用 CACHE_STORE；舊版為 CACHE_DRIVER</span>
+<span class="k">REDIS_CLIENT</span>=phpredis    <span class="c"># 建議裝 phpredis 擴充，比 predis 快</span>
+
+<span class="c">// 讀取：命中直接回，Miss 才查 DB 並快取 600 秒</span>
+<span class="k">use</span> Illuminate\Support\Facades\Cache;
+
+$ranking = Cache::remember(<span class="s">'ranking:top10'</span>, <span class="k">600</span>, <span class="k">function</span> () {
+    <span class="k">return</span> Order::query()
+        -&gt;selectRaw(<span class="s">'product_id, SUM(qty) AS sold'</span>)
+        -&gt;groupBy(<span class="s">'product_id'</span>)
+        -&gt;orderByDesc(<span class="s">'sold'</span>)
+        -&gt;limit(<span class="k">10</span>)
+        -&gt;get();
+});
+
+<span class="c">// 更新資料後：刪 key，下次讀自然重建（對應流程圖 ③）</span>
+Cache::forget(<span class="s">'ranking:top10'</span>);</pre>
+  <div class="note">心智銜接：<code>Cache::remember()</code> = 你以前手寫的「先 <code>SELECT</code> 快取表、沒有再查主表、再寫回」整套邏輯，現在一行搞定。</div>
+</section>
+
+<section class="req" id="laravel-session" style="--c:var(--green)">
+  <h3><span class="no">場景 2</span>Session 儲存（多機共享登入狀態）</h3>
+  <div class="body">
+    <p>預設 session 存檔案，多台伺服器時會「換機就登出」。改存 Redis，所有機器共享，且讀寫快。只要改一個環境變數：</p>
+  </div>
+  <pre><span class="c"># .env — 把 session 從 file 改存 redis</span>
+<span class="k">SESSION_DRIVER</span>=redis
+<span class="k">SESSION_LIFETIME</span>=120</pre>
+  <div class="note">Session 是「天生需要共享、又讀寫頻繁」的狀態，正是 Redis 的理想用途。</div>
+</section>
+
+<section class="req" id="laravel-queue" style="--c:var(--green)">
+  <h3><span class="no">場景 3</span>Queue 佇列（非同步任務）</h3>
+  <div class="body">
+    <p>寄信、產報表、呼叫外部 API 這類耗時工作，不該讓使用者卡著等。把任務丟進 Redis 佇列，由背景 worker 慢慢處理。Redis 的 <code>List</code> 結構天生適合當佇列。</p>
+  </div>
+  <pre><span class="c"># .env</span>
+<span class="k">QUEUE_CONNECTION</span>=redis</pre>
+  <pre><span class="c">// 派送任務（請求很快回應，不等寄信完成）</span>
+SendWelcomeEmail::dispatch($user);
+
+<span class="c">// 背景啟動 worker 消化佇列（通常用 supervisor 常駐）</span>
+<span class="c">// php artisan queue:work redis --tries=3</span></pre>
+  <div class="note">進階可搭配 <b>Laravel Horizon</b>——專為 Redis queue 設計的儀表板，可視化監控任務量、失敗重試與吞吐。</div>
+</section>
+
+<section class="req" id="laravel-ratelimit" style="--c:var(--green)">
+  <h3><span class="no">場景 4</span>Rate Limiting 流量限制</h3>
+  <div class="body">
+    <p>限制「每分鐘最多幾次請求」需要一個<strong>跨請求、跨機器的共享計數器</strong>，且要能原子地累加——正好是 Redis <code>INCR</code> 的強項。Laravel 的限流底層就用快取（Redis）記錄次數。</p>
+  </div>
+  <pre><span class="c">// routes/api.php — 內建 throttle middleware：每分鐘 60 次</span>
+Route::middleware(<span class="s">'throttle:60,1'</span>)-&gt;group(<span class="k">function</span> () {
+    Route::get(<span class="s">'/posts'</span>, [PostController::<span class="k">class</span>, <span class="s">'index'</span>]);
+});
+
+<span class="c">// 自訂具名限流 — AppServiceProvider boot()</span>
+<span class="k">use</span> Illuminate\Support\Facades\RateLimiter;
+<span class="k">use</span> Illuminate\Cache\RateLimiting\Limit;
+
+RateLimiter::for(<span class="s">'uploads'</span>, <span class="k">function</span> ($request) {
+    <span class="k">return</span> Limit::perMinute(<span class="k">10</span>)-&gt;by($request-&gt;user()?-&gt;id ?: $request-&gt;ip());
+});</pre>
+  <div class="note">本專案備註：威脅模型為內部使用、非公網暴露，流量限制的優先度依實際對外需求評估即可。</div>
+</section>
+
+<!-- ============ 8. 坑點與最佳實踐 ============ -->
+<h2 class="section" id="pitfalls" style="--c:var(--amber)">8. 給新手的建議與坑點（Best Practices）</h2>
+<p class="section-desc">第一次用 Redis 最容易踩的雷，先看過一遍能省下很多 debug 時間。</p>
+
+<section class="req" id="pitfall-three" style="--c:var(--amber)">
+  <h3><span class="no">三大經典</span>穿透、擊穿、雪崩</h3>
+
+  <details class="scn" open>
+    <summary>快取穿透（Cache Penetration）— 查一個「根本不存在」的資料</summary>
+    <div class="scn-body">
+      <p><b>現象：</b>惡意或異常請求一直查不存在的 key（如 <code>user:-1</code>）。因為 DB 也查不到，永遠寫不進快取，於是<strong>每一次都直接打到 MySQL</strong>，快取形同虛設。</p>
+      <p><b>對策：</b>(1) <b>快取空值</b>——查不到時也把「空結果」寫進 Redis 並給短 TTL（如 60 秒），擋住後續相同查詢；(2) 入口先做<b>參數合法性檢查</b>；(3) 量大時用<b>布隆過濾器（Bloom Filter）</b>先判斷 key 是否可能存在，不可能存在就直接擋掉。</p>
+    </div>
+  </details>
+
+  <details class="scn">
+    <summary>快取擊穿（Cache Breakdown）— 單一「熱點 key」剛好過期</summary>
+    <div class="scn-body">
+      <p><b>現象：</b>某個超熱門的 key（如首頁 banner）TTL 到期的那一瞬間，大量併發請求同時 Miss，<strong>全部一起湧向 DB 重算同一筆</strong>，瞬間壓垮資料庫。</p>
+      <p><b>對策：</b>(1) <b>互斥鎖（mutex）</b>——只放一個請求去重算並寫回快取，其餘短暫等待後讀新快取（Laravel 可用 <code>Cache::lock()</code>）；(2) <b>邏輯過期</b>——不設真實 TTL，由背景任務定期更新，避免「過期瞬間」這個空窗。</p>
+    </div>
+  </details>
+
+  <details class="scn">
+    <summary>快取雪崩（Cache Avalanche）— 大量 key 在同一時間集體過期</summary>
+    <div class="scn-body">
+      <p><b>現象：</b>一批 key 設了相同 TTL（例如系統啟動時一起寫入、都設 1 小時），於是一小時後<strong>同時失效</strong>，請求海量回源，DB 被打垮——甚至 Redis 整個掛掉也算雪崩。</p>
+      <p><b>對策：</b>(1) <b>TTL 加隨機抖動</b>——例如 <code>3600 + rand(0, 300)</code> 秒，把過期時間打散；(2) Redis 做<b>高可用</b>（主從 + 哨兵 / 叢集）避免單點全掛；(3) 重要服務加<b>降級保護</b>（DB 扛不住時回傳預設值或排隊）。</p>
+    </div>
+  </details>
+</section>
+
+<section class="req" id="pitfall-keys" style="--c:var(--amber)">
+  <h3><span class="no">習慣</span>Key 命名、TTL 與 Big Key</h3>
+  <ul class="feat">
+    <li><b>Key 命名用冒號分層</b>
+      <span class="tip">慣例是 <code>模組:實體:識別碼</code>，例如 <code>user:1:profile</code>、<code>ranking:top10</code>。好處：語意清楚、易於用 <code>SCAN</code> 模式匹配管理。團隊先約定好前綴規範，避免 key 撞名或一團亂。</span></li>
+    <li><b>幾乎每個快取 key 都該設 TTL</b>
+      <span class="tip">沒有 TTL 的 key 會永久占用記憶體、且永遠不會自動更新成新資料。除非你很清楚它該常駐，否則一律設過期時間。</span></li>
+    <li><b>避免 Big Key（單一超大 value）</b>
+      <span class="tip">把幾十 MB 的東西塞進一個 key，或一個 Hash/List 存上百萬筆——讀寫它會<strong>長時間占用單執行緒</strong>，阻塞其他所有命令（記得 Redis 是單執行緒）。拆小、分片、或根本不該放 Redis。</span></li>
+    <li><b>正式環境別用 <code>KEYS *</code></b> <span class="badge mustnot">禁止</span>
+      <span class="tip"><code>KEYS *</code> 會掃描全部 key 並阻塞整個 Redis。要遍歷請用<strong>非阻塞的 <code>SCAN</code></strong> 分批迭代。</span></li>
+  </ul>
+</section>
+
+<section class="req" id="pitfall-consistency" style="--c:var(--amber)">
+  <h3><span class="no">一致性</span>快取與 DB 不同步</h3>
+  <div class="body">
+    <p>最常見的 bug：改了 MySQL，卻忘了讓 Redis 失效，使用者一直看到舊資料。<strong>更新流程固定為「先更新 DB，再刪除快取」</strong>（見第 4 節流程圖 ③），不要「更新 DB 又同時更新快取」——後者在併發下容易寫出舊值。</p>
+  </div>
+  <div class="note">心法：快取是「真相的副本」，不是真相本身。讓它過期、讓它被刪、讓它重建，都比讓它「自以為是最新」要安全。</div>
+</section>
+
+<footer>
+  Redis 核心機制與 Laravel 應用指南 · 技術理解文件 · 產出日期 2026-06-22 ·
+  重點回顧：Redis 是擋在 MySQL 前的記憶體加速層（非取代）；讀走 Cache-Aside、寫走「更新 DB 再刪快取」；持久化看 RDB（快/可丟）vs AOF（穩/較慢），常並用；記憶體滿了靠 maxmemory + LRU/LFU 淘汰；Laravel 四大入口為 Cache / Session / Queue / Rate Limiting；新手務必防穿透、擊穿、雪崩，並養成 key 命名與 TTL 習慣。
+</footer>
+</main>
+</div>
+
+<script>
+// 全部展開 / 收合
+const btn = document.getElementById('toggleAll');
+btn.addEventListener('click', () => {
+  const open = btn.dataset.open !== '1';
+  document.querySelectorAll('details.scn').forEach(d => d.open = open);
+  btn.dataset.open = open ? '1' : '0';
+  btn.textContent = open ? '全部收合' : '全部展開';
+});
+
+// 側欄 scroll-spy
+const links = [...document.querySelectorAll('.toc a')];
+const targets = links
+  .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+  .filter(Boolean);
+const byId = Object.fromEntries(links.map(a => [a.getAttribute('href').slice(1), a]));
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(a => a.classList.remove('active'));
+      byId[e.target.id]?.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -75% 0px' });
+targets.forEach(t => observer.observe(t));
+</script>
+</body>
+</html>

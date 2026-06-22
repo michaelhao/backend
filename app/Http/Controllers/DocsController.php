@@ -8,6 +8,13 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class DocsController extends Controller
 {
+    /**
+     * 歸入「技術分析」分類的 feature 目錄(規格文件仍優先依標題判定)。
+     *
+     * @var list<string>
+     */
+    private const TECH_DIRS = ['jwt', 'nuxt-vue', 'chat', 'redis'];
+
     public function index(): View
     {
         $docs = collect(File::allFiles(base_path('docs')))
@@ -26,10 +33,20 @@ class DocsController extends Controller
                     $heading = $isSpec ? $right : $left;
                 }
 
+                // 判定優先序:規格 → 技術目錄 → 開發流程
+                $dir = str_contains($name, '/') ? explode('/', $name)[0] : '';
+                if ($isSpec) {
+                    $category = 'spec';
+                } elseif (in_array($dir, self::TECH_DIRS, true)) {
+                    $category = 'tech';
+                } else {
+                    $category = 'flow';
+                }
+
                 return [
                     'name' => $name,
                     'heading' => $heading,
-                    'category' => $isSpec ? 'spec' : 'flow',
+                    'category' => $category,
                     'modified' => date('Y-m-d', $file->getMTime()),
                 ];
             })
